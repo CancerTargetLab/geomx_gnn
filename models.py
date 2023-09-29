@@ -167,9 +167,8 @@ class ProjectionHead(nn.Module):
     Implemented in torch following the example of 
     https://github.com/google-research/simclr/blob/master/model_util.py#L141
     """
-    def __init__(self, input_dim, output_dim, num_layers=2, use_bn=True, mode='pretrain'):
+    def __init__(self, input_dim, output_dim, num_layers=2, use_bn=True):
         super(ProjectionHead, self).__init__()
-        self.mode = mode
         self.layers = nn.ModuleList()
         dim = input_dim
         for j in range(num_layers):
@@ -197,26 +196,19 @@ class ProjectionHead(nn.Module):
     def forward(self, hiddens):
         for layer in self.layers:
             hiddens = layer(hiddens)
-            if isinstance(layer, nn.ReLU):
-                hiddens = F.relu(hiddens)
         
-        if self.mode == 'pretrain':
-            # Take the output of the last layer during pre-training.
-            return hiddens
-        else:
-            # For checkpoint compatibility, the whole projection head is built here.
-            # You can select part of the projection head during fine-tuning.
-            return hiddens
+        return hiddens
 
 
 class ContrastiveLearning(torch.nn.Module):
-    def _init__(self, channels, embed=256, contrast=124):
+    def _init__(self, channels, embed=256, contrast=124, mode='train'):
         super().__init__()
         from torchvision.models import resnet101, ResNet101_Weights
         self.res = resnet101(weights=ResNet101_Weights.DEFAULT)
         for param in self.res.parameters():
              param.requires_grad = False
         self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=(2, 2), padding=(3, 3), bias=False)
+        self.embed = nn.Linear(2048, embed)
         self.head = ProjectionHead(embed, contrast)
 
     def forward(self, data):
@@ -228,5 +220,9 @@ class ContrastiveLearning(torch.nn.Module):
         data = self.res.layer3(data)
         data = self.res.layer4(data)
         data = self.res.avgpool(data)
-        data = self.head(data)
-        return data
+        embed = self.embed(data)    #TODO: make this a projection head as well?
+        if self.mode == 'train':
+            out = self.head(embed)
+            return out
+        else:
+            return embed
