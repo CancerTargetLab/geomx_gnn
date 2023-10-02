@@ -109,17 +109,13 @@ class GeoMXDataset(Dataset):
         self.std = self.running_std/self.num_tiffs
     
     def cell_images(self, tiff_image_path, df):
-        img = io.imread(tiff_image_path, plugin='tifffile').astype("float32")
-        self.max_image_int = int(np.max(img)) if int(np.max(img)) > self.max_image_int else self.max_image_int
-        img = torch.from_numpy(img)
-        self.running_mean = self.running_mean + torch.mean(img, dim=(0,1))
-        self.running_std = self.running_std + torch.std(img, dim=(0,1))
+        img = torch.load(tiff_image_path.split('.')[0]+'.pt')
         self.num_tiffs += 1
 
         x = df["Centroid X px"].round().astype(int).values
         y = df["Centroid Y px"].round().astype(int).values
 
-        cell_file = tiff_image_path.split('.')[0]+'.pt'
+        cell_file = tiff_image_path.split('.')[0]+'_cells.pt'
         
         all_cells = torch.Tensor()
         for cell in list(range(x.shape[0])):
@@ -129,7 +125,7 @@ class GeoMXDataset(Dataset):
             delta_x2 = 10 if img.shape[1]-x[cell] >= 10 else img.shape[1]-x[cell]
             delta_y2 = 10 if img.shape[0]-y[cell] >= 10 else img.shape[0]-y[cell]
             cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
-            cell_img = T.CenterCrop(20)(torch.moveaxis(cell_img, 2, 0))
+            cell_img = T.Resize((20, 20))(torch.moveaxis(cell_img, 2, 0))
             all_cells = torch.cat((all_cells, torch.unsqueeze(cell_img, axis=0)), axis=0)
             
         torch.save(all_cells, cell_file)
@@ -238,6 +234,8 @@ class GeoMXDataset(Dataset):
     def get(self, idx):
         data = torch.load(os.path.join(self.processed_dir, self.processed_file_names[idx]))
         return data
+
+
 
 
 

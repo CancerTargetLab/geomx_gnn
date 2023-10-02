@@ -1,34 +1,31 @@
 import torch
-from models import AutoEncodeEmbedding
+from models import ContrastiveLearning
 from embed_data import EmbedDataset
 from torch.utils.data import DataLoader
+from loss import add_contrastive_loss
 
 # move to GPU (if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 dataset = EmbedDataset()
-model = AutoEncodeEmbedding()
+model = ContrastiveLearning()
 
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
-loss = torch.nn.L1Loss(reduction="mean")
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.01, weight_decay=5e-4)
+loss = add_contrastive_loss
 
-dataset.setMode(mode="train")
-train_loader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=1, drop_last=False)
-dataset.setMode(mode="val")
-val_loader = DataLoader(dataset, batch_size=512, shuffle=False, num_workers=1, drop_last=False)
-dataset.setMode(mode="test")
-test_loader = DataLoader(dataset, batch_size=512, shuffle=False, num_workers=1, drop_last=False)
+train_loader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=1, drop_last=True)
+val_loader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=1, drop_last=True)
 
 EPOCH = 500
 for epoch in list(range(EPOCH)):
     running_loss = 0
     model.train()
-    dataset.setMode("train")
 
     for idx, batch in enumerate(train_loader):
+        batch = torch.cat(batch[0], batch[1])
         optimizer.zero_grad()
         out = model(batch)
-        l = loss(out, batch)
+        l, _, _ = loss(out)
         l.backward()
         optimizer.step()
         running_loss += l.item()
@@ -42,8 +39,9 @@ for epoch in list(range(EPOCH)):
         dataset.setMode("val")
 
         for idx, batch in enumerate(val_loader):
+            batch = torch.cat(batch[0], batch[1])
             out = model(batch)
-            l = loss(out, batch)
+            l, _, _ = loss(out)
             running_loss += l.item()
 
         epoch_loss = running_loss / len(val_loader)
@@ -55,10 +53,11 @@ with torch.no_grad():
     model.eval()
     dataset.setMode("test")
 
-    for idx, batch in enumerate(test_loader):
+    for idx, batch in enumerate(val_loader):
+        batch = torch.cat(batch[0], batch[1])
         out = model(batch)
-        l = loss(out, batch)
+        l, _, _ = loss(out)
         running_loss += l.item()
 
-    epoch_loss = running_loss / len(test_loader)
+    epoch_loss = running_loss / len(val_loader)
     print(f"Test Loss: {epoch_loss}")

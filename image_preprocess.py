@@ -1,14 +1,14 @@
 import numpy as np
 import os
-import skimage.io as io
+from skimage import io
 import torch
 
 #Implemented through adapting NaroNets Image processing.
 #Original Implementation: https://github.com/djimenezsanchez/NaroNet/blob/main/src/NaroNet/Patch_Contrastive_Learning/preprocess_images.py#L145
 
 def load_img(path):
-    if path.endswith('.tiff', '.tif'):
-        img = io.imread(path, pluggin='tifffile')
+    if path.endswith(('.tiff', '.tif')):
+        img = io.imread(path, plugin='tifffile')
     else:
         file_end = path.split('/')[-1]
         print(f"Do not support opening of files of type {file_end}.")
@@ -42,9 +42,11 @@ def zscore(image_paths, mean, std):
         torch.save(torch.from_numpy(img), img_p.split('.')[0]+'.pt')
 
 def image_preprocess(path, max_img=2**16):
-    img_paths = [p for p in os.listdir(path) if p.endswith('.tiff', '.tif')]
-    preprocessed_paths = [p for p in os.listdir(path) if p.endswith('.pt')]
+    img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.tiff', '.tif'))]
+    preprocessed_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith('.pt')]
 
     if len(img_paths) != len(preprocessed_paths):
         mean, std = calc_mean_std(img_paths, max_img=max_img)
         zscore(img_paths, mean, std)
+
+image_preprocess('data/raw/')

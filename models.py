@@ -203,6 +203,7 @@ class ProjectionHead(nn.Module):
 class ContrastiveLearning(torch.nn.Module):
     def _init__(self, channels, embed=256, contrast=124, mode='train'):
         super().__init__()
+        self.mode = mode
         from torchvision.models import resnet101, ResNet101_Weights
         self.res = resnet101(weights=ResNet101_Weights.DEFAULT)
         for param in self.res.parameters():
