@@ -10,11 +10,15 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dataset = EmbedDataset()
 model = ContrastiveLearning(channels=3).to(device, dtype=float)
 
-
-optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.01, weight_decay=5e-4)
+#TODO: lr scheduling
+batch_size = 32
+lr = 0.5 * batch_size / 256
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=5e-4)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 10)
 loss = add_contrastive_loss
 
 train_loader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=1, drop_last=True)
+iters = len(train_loader)
 val_loader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=1, drop_last=True)
 
 train_acc_list = []
@@ -37,13 +41,13 @@ for epoch in list(range(EPOCH)):
             l, logits, labels = loss(out)
             l.backward()
             optimizer.step()
+            scheduler.step(epoch + idx / iters)
             running_loss += l.item()
 
             # Compute element-wise equality between the predicted labels and true labels
             contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
             # Convert the boolean tensor to float32 and compute the mean
             running_acc += torch.mean(contrast_acc.float()).item()
-            print(idx)
 
         train_acc = 100*running_acc / len(train_loader)
         train_acc_list.append(train_acc)
@@ -54,6 +58,7 @@ for epoch in list(range(EPOCH)):
             best_run = 0
             torch.save({
                 "model": model,
+                "opt": optimizer,
                 "train_acc": train_acc_list,
                 "train_list": train_loss_list,
                 "epoch": epoch

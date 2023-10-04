@@ -208,7 +208,7 @@ class ContrastiveLearning(torch.nn.Module):
         self.res = resnet101(weights=ResNet101_Weights.DEFAULT)
         for param in self.res.parameters():
              param.requires_grad = False
-        self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=(2, 2), padding=(3, 3), bias=False)
+        self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=1, padding='same', bias=False)
         self.embed = nn.Sequential(
             nn.BatchNorm1d(2048),
             nn.ReLU(),
