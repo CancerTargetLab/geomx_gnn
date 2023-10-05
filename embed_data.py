@@ -30,7 +30,8 @@ class EmbedDataset(Dataset):
         test_size = total_samples - train_size - val_size
 
         # Use random_split to split the data tensor
-        self.train_data, self.val_data, self.test_data = torch.utils.data.random_split(self.data, [train_size, val_size, test_size])
+        train_map, val_map, test_map = torch.utils.data.random_split(self.data, [train_size, val_size, test_size])
+        self.train_map, self.val_map, self.test_map = train_map.indices, val_map.indices, test_map.indices
 
         self.mode = 'TRAIN'
         self.train = 'TRAIN'
@@ -62,21 +63,21 @@ class EmbedDataset(Dataset):
 
     def __len__(self):
         if self.mode == self.train:
-            self.train_data.shape[0]
+            return len(self.train_map)
         elif self.mode == self.val:
-            self.val_data.shape[0]
+            return len(self.val_map)
         elif self.mode == self.test:
-            self.test_data.shape[0]
+            return len(self.test_map)
         else:
             return self.data.shape[0]
 
     def __getitem__(self, idx):
         if self.mode == self.train:
-            return self.transform(self.train_data[idx])
+            return self.transform(self.data[self.train_map][idx])
         elif self.mode == self.val:
-            return self.transform(self.val_data[idx])
+            return self.transform(self.data[self.val_map][idx])
         elif self.mode == self.test:
-            return self.transform(self.test_data[idx])
+            return self.transform(self.data[self.test_map][idx])
         else:
             return self.transform(self.data[idx])
     

@@ -4,18 +4,16 @@ from embed_data import EmbedDataset
 from torch.utils.data import DataLoader
 from loss import add_contrastive_loss
 
+batch_size = 32
+lr = 0.5
+warmup_epochs = 10
+EPOCH = 100
+
 # move to GPU (if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 dataset = EmbedDataset()
 model = ContrastiveLearning(channels=3).to(device, dtype=float)
-
-#TODO: lr scheduling
-batch_size = 32
-lr = 0.5 * batch_size / 256
-optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=5e-4)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 10)
-loss = add_contrastive_loss
 
 #TODO: https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets
 # -> more mem eff
@@ -27,6 +25,21 @@ val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_worke
 dataset.setMode(dataset.test)
 test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True)
 
+#TODO: lr scheduling
+sc_lr = lr * batch_size / 256
+dataset.setMode(dataset.train)
+warmup_steps = int(round(warmup_epochs*len(dataset)/batch_size))
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=sc_lr, weight_decay=1e-6)
+scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
+                                                max_lr=1/sc_lr, 
+                                                epochs=EPOCH, 
+                                                steps_per_epoch=len(train_loader), 
+                                                pct_start=warmup_steps/(EPOCH*int(len(dataset)/batch_size)),
+                                                div_factor=(1/sc_lr)/sc_lr,
+                                                final_div_factor=1e5)
+loss = add_contrastive_loss
+
+
 train_acc_list = []
 train_loss_list = []
 val_acc_list = []
@@ -34,7 +47,6 @@ val_loss_list = []
 best_acc = 0.0
 best_run = 0
 
-EPOCH = 200
 for epoch in list(range(EPOCH)):
     best_run += 1
     running_loss = 0
@@ -50,7 +62,7 @@ for epoch in list(range(EPOCH)):
             l, logits, labels = loss(out)
             l.backward()
             optimizer.step()
-            #scheduler.step(epoch + idx / iters)
+            scheduler.step()
             running_loss += l.item()
 
             # Compute element-wise equality between the predicted labels and true labels

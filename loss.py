@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 def add_contrastive_loss(hidden,
                          hidden_norm=True,
-                         temperature=1.0,
+                         temperature=0.5,
                          weights=1.0):
     """
     Compute contrastive loss for a model.

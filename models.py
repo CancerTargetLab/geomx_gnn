@@ -88,7 +88,8 @@ class GraphLearning(torch.nn.Module):
                                        conv_dropout=conv_dropout,
                                        embed_dropout=embed_dropout,
                                        fill_value=0.0)
-        
+        #TODO: skip connec as simple add as well?
+        # self.conv_skip = torch_geometric.nn.models.JumpingKnowledge(mode='max')
         self.conv_skip = torch.nn.Sequential(
             torch.nn.Linear((layers+1)*num_embed_features, num_out_features),
             torch.nn.LayerNorm(num_embed_features),
@@ -106,11 +107,13 @@ class GraphLearning(torch.nn.Module):
 
         h_i = self.node_embed(x)
         h = h_i.clone()
+        # h = [h_i]
 
         for conv in list(range(len(self.convs))):
             h_i = self.convs[conv](h_i, edge_index, edge_attr=edge_feature)
 
             h = torch.concat((h, h_i), dim=1)
+            #h.append(h_i)
         
         h = self.conv_skip(h)
 
@@ -210,7 +213,7 @@ class ContrastiveLearning(torch.nn.Module):
              param.requires_grad = False
         self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=1, padding='same', bias=False)
         self.embed = nn.Sequential(
-            nn.BatchNorm1d(2048),
+            nn.BatchNorm1d(2048, ),
             nn.ReLU(),
             nn.Linear(2048, embed)
             )
