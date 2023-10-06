@@ -75,9 +75,9 @@ class EmbedDataset(Dataset):
         if self.mode == self.train:
             return self.transform(self.data[self.train_map][idx])
         elif self.mode == self.val:
-            return self.data[self.val_map][idx]
+            return self.transform(self.data[self.val_map][idx])
         elif self.mode == self.test:
-            return self.data[self.test_map][idx]
+            return self.transform(self.data[self.test_map][idx])
         else:
             return self.transform(self.data[idx])
     
