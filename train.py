@@ -33,7 +33,7 @@ test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_work
 #sc_lr = lr * batch_size / 256
 dataset.setMode(dataset.train)
 #warmup_steps = int(round(warmup_epochs*len(dataset)/batch_size))
-optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=sc_lr, weight_decay=1e-6)
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-6)
 scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
                                                 max_lr=max_lr, 
                                                 epochs=EPOCH, 
