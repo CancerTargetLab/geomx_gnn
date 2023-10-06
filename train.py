@@ -6,9 +6,10 @@ from torch.utils.data import DataLoader
 from loss import add_contrastive_loss
 
 batch_size = 32
-lr = 0.5
+max_lr = 0.1
+lr = 0.004
 warmup_epochs = 10
-EPOCH = 300
+EPOCH = 100
 num_workers = 4
 early_stopping = 10
 
@@ -29,16 +30,16 @@ dataset.setMode(dataset.test)
 test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=True)
 
 #TODO: lr scheduling
-sc_lr = lr * batch_size / 256
+#sc_lr = lr * batch_size / 256
 dataset.setMode(dataset.train)
-warmup_steps = int(round(warmup_epochs*len(dataset)/batch_size))
+#warmup_steps = int(round(warmup_epochs*len(dataset)/batch_size))
 optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=sc_lr, weight_decay=1e-6)
 scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
-                                                max_lr=1/sc_lr, 
+                                                max_lr=max_lr, 
                                                 epochs=EPOCH, 
                                                 steps_per_epoch=len(train_loader), 
-                                                pct_start=warmup_steps/(EPOCH*int(len(dataset)/batch_size)),
-                                                div_factor=(1/sc_lr)/sc_lr,
+                                                pct_start=0.1,
+                                                div_factor=25,
                                                 final_div_factor=1e5)
 loss = add_contrastive_loss
 
@@ -73,7 +74,6 @@ for epoch in list(range(EPOCH)):
                 contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
                 # Convert the boolean tensor to float32 and compute the mean
                 running_acc += torch.mean(contrast_acc.float()).item()
-                print(len(train_loader))
 
             train_acc = running_acc / len(train_loader)
             train_acc_list.append(train_acc)
