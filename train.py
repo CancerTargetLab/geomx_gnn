@@ -8,9 +8,11 @@ batch_size = 32
 lr = 0.5
 warmup_epochs = 10
 EPOCH = 100
+num_workers = 4
 
 # move to GPU (if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(device)
 
 dataset = EmbedDataset()
 model = ContrastiveLearning(channels=3).to(device, dtype=float)
@@ -18,12 +20,12 @@ model = ContrastiveLearning(channels=3).to(device, dtype=float)
 #TODO: https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets
 # -> more mem eff
 dataset.setMode(dataset.train)
-train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True)
+train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, drop_last=True)
 iters = len(train_loader)
 dataset.setMode(dataset.val)
-val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True)
+val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=True)
 dataset.setMode(dataset.test)
-test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=1, drop_last=True)
+test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=True)
 
 #TODO: lr scheduling
 sc_lr = lr * batch_size / 256
@@ -56,6 +58,9 @@ for epoch in list(range(EPOCH)):
 
     if best_run < 5:
         for idx, batch in enumerate(train_loader):
+            print(type(batch))
+            print(type(batch[0]))
+            print(batch[0].shape)
             batch = torch.cat((batch[0], batch[1])).to(device)
             optimizer.zero_grad()
             out = model(batch)
@@ -69,6 +74,7 @@ for epoch in list(range(EPOCH)):
             contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
             # Convert the boolean tensor to float32 and compute the mean
             running_acc += torch.mean(contrast_acc.float()).item()
+            print(idx)
 
         train_acc = 100*running_acc / len(train_loader)
         train_acc_list.append(train_acc)
@@ -86,7 +92,6 @@ for epoch in list(range(EPOCH)):
                 batch = torch.cat((batch[0], batch[1])).to(device)
                 out = model(batch)
                 l, logits, labels = loss(out)
-                #scheduler.step(epoch + idx / iters)
                 running_loss += l.item()
 
                 # Compute element-wise equality between the predicted labels and true labels

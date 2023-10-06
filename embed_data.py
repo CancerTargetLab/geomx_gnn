@@ -54,7 +54,7 @@ class EmbedDataset(Dataset):
         
         compose = T.Compose([
             T.RandomCrop((random_y, random_x)),
-            T.Resize((data.shape[-1], data.shape[-2])),
+            T.Resize((data.shape[-1], data.shape[-2]), antialias=True),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip()
         ])
