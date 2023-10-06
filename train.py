@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import torch
 from models import ContrastiveLearning
 from embed_data import EmbedDataset
@@ -57,30 +58,32 @@ for epoch in list(range(EPOCH)):
     dataset.setMode(dataset.train)
 
     if best_run < 5:
-        for idx, batch in enumerate(train_loader):
-            print(type(batch))
-            print(type(batch[0]))
-            print(batch[0].shape)
-            batch = torch.cat((batch[0], batch[1])).to(device)
-            optimizer.zero_grad()
-            out = model(batch)
-            l, logits, labels = loss(out)
-            l.backward()
-            optimizer.step()
-            scheduler.step()
-            running_loss += l.item()
+        with tqdm(train_loader, total=len(train_loader), desc="Training") as train_loader:
+            for idx, batch in enumerate(train_loader):
+                print(type(batch))
+                print(type(batch[0]))
+                print(batch[0].shape)
+                batch = torch.cat((batch[0], batch[1])).to(device)
+                optimizer.zero_grad()
+                out = model(batch)
+                l, logits, labels = loss(out)
+                l.backward()
+                optimizer.step()
+                scheduler.step()
+                running_loss += l.item()
 
-            # Compute element-wise equality between the predicted labels and true labels
-            contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
-            # Convert the boolean tensor to float32 and compute the mean
-            running_acc += torch.mean(contrast_acc.float()).item()
-            print(idx)
+                # Compute element-wise equality between the predicted labels and true labels
+                contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
+                # Convert the boolean tensor to float32 and compute the mean
+                running_acc += torch.mean(contrast_acc.float()).item()
+                print(idx)
 
-        train_acc = 100*running_acc / len(train_loader)
-        train_acc_list.append(train_acc)
-        epoch_loss = running_loss / len(train_loader)
-        train_loss_list.append(epoch_loss)
-        print(f"{epoch}: Train Loss: {epoch_loss}, Train Accuracy: {train_acc}")
+            train_acc = 100*running_acc / len(train_loader)
+            train_acc_list.append(train_acc)
+            epoch_loss = running_loss / len(train_loader)
+            train_loss_list.append(epoch_loss)
+            train_loader.set_postfix(f"{epoch}: Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}")
+            print(f"{epoch}: Train Loss: {epoch_loss}, Train Accuracy: {train_acc}")
 
         with torch.no_grad():
             running_loss = 0
@@ -88,34 +91,39 @@ for epoch in list(range(EPOCH)):
             model.eval()
             dataset.setMode("val")
 
-            for idx, batch in enumerate(val_loader):
-                batch = torch.cat((batch[0], batch[1])).to(device)
-                out = model(batch)
-                l, logits, labels = loss(out)
-                running_loss += l.item()
+            with tqdm(val_loader, total=len(val_loader), desc="Validation") as val_loader:
+                for idx, batch in enumerate(val_loader):
+                    print(type(batch))
+                    print(type(batch[0]))
+                    print(batch[0].shape)
+                    batch = torch.cat((batch[0], batch[1])).to(device)
+                    out = model(batch)
+                    l, logits, labels = loss(out)
+                    running_loss += l.item()
 
-                # Compute element-wise equality between the predicted labels and true labels
-                contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
-                # Convert the boolean tensor to float32 and compute the mean
-                running_acc += torch.mean(contrast_acc.float()).item()
+                    # Compute element-wise equality between the predicted labels and true labels
+                    contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
+                    # Convert the boolean tensor to float32 and compute the mean
+                    running_acc += torch.mean(contrast_acc.float()).item()
 
-            val_acc = 100*running_acc / len(train_loader)
-            val_acc_list.append(val_acc)
-            epoch_loss = running_loss / len(train_loader)
-            val_loss_list.append(epoch_loss)
-            if train_acc > best_acc:
-                best_acc = val_acc
-                best_run = 0
-                torch.save({
-                    "model": model.state_dict(),
-                    "opt": optimizer.state_dict(),
-                    "train_acc": train_acc_list,
-                    "train_list": train_loss_list,
-                    "val_acc": val_acc_list,
-                    "val_list": val_loss_list,
-                    "epoch": epoch
-                }, 'ImageContrastModel.pt')
-            print(f"{epoch}: Val Loss: {epoch_loss}, Val Accuracy: {train_acc}")
+                val_acc = 100*running_acc / len(train_loader)
+                val_acc_list.append(val_acc)
+                epoch_loss = running_loss / len(train_loader)
+                val_loss_list.append(epoch_loss)
+                if val_acc > best_acc:
+                    best_acc = val_acc
+                    best_run = 0
+                    torch.save({
+                        "model": model.state_dict(),
+                        "opt": optimizer.state_dict(),
+                        "train_acc": train_acc_list,
+                        "train_list": train_loss_list,
+                        "val_acc": val_acc_list,
+                        "val_list": val_loss_list,
+                        "epoch": epoch
+                    }, 'ImageContrastModel.pt')
+                val_loader.set_postfix(f"{epoch}: Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
+                print(f"{epoch}: Val Loss: {epoch_loss}, Val Accuracy: {val_acc}")
 
 
 with torch.no_grad():
@@ -125,17 +133,19 @@ with torch.no_grad():
     model.eval()
     dataset.setMode(dataset.test)
 
-    for idx, batch in enumerate(test_loader):
-        batch = torch.cat(batch[0], batch[1]).to(device)
-        out = model(batch)
-        l, logits, labels = loss(out)
-        running_loss += l.item()
+    with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
+        for idx, batch in enumerate(test_loader):
+            batch = torch.cat(batch[0], batch[1]).to(device)
+            out = model(batch)
+            l, logits, labels = loss(out)
+            running_loss += l.item()
 
-        # Compute element-wise equality between the predicted labels and true labels
-        contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
-        # Convert the boolean tensor to float32 and compute the mean
-        running_acc += torch.mean(contrast_acc.float()).item()
+            # Compute element-wise equality between the predicted labels and true labels
+            contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
+            # Convert the boolean tensor to float32 and compute the mean
+            running_acc += torch.mean(contrast_acc.float()).item()
 
-    test_acc = running_acc / len(val_loader)
-    epoch_loss = running_loss / len(val_loader)
-    print(f"Test Loss: {epoch_loss}, Test Accuracy: {test_acc}")
+        test_acc = running_acc / len(val_loader)
+        epoch_loss = running_loss / len(val_loader)
+        test_loader.set_postfix(f"{epoch}: Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}")
+        print(f"Test Loss: {epoch_loss}, Test Accuracy: {test_acc}")
