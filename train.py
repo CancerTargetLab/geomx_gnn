@@ -8,12 +8,12 @@ from loss import add_contrastive_loss
 batch_size = 32
 lr = 0.5
 warmup_epochs = 10
-EPOCH = 100
+EPOCH = 300
 num_workers = 4
+early_stopping = 10
 
 # move to GPU (if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(device)
 
 dataset = EmbedDataset()
 model = ContrastiveLearning(channels=3).to(device, dtype=float)
@@ -57,10 +57,7 @@ for epoch in list(range(EPOCH)):
     model.train()
     dataset.setMode(dataset.train)
 
-    print(f"best_run: {best_run}")
-    print(f"best_acc: {best_acc:.4f}")
-
-    if best_run < 5:
+    if best_run < early_stopping:
         with tqdm(train_loader, total=len(train_loader), desc=f"Training epoch {epoch}") as train_loader:
             for idx, batch in enumerate(train_loader):
                 batch = torch.cat((batch[0], batch[1])).to(device)
@@ -79,7 +76,6 @@ for epoch in list(range(EPOCH)):
                 print(len(train_loader))
 
             train_acc = running_acc / len(train_loader)
-            print(train_acc, running_acc, len(train_loader))
             train_acc_list.append(train_acc)
             epoch_loss = running_loss / len(train_loader)
             train_loss_list.append(epoch_loss)
@@ -104,7 +100,6 @@ for epoch in list(range(EPOCH)):
                     running_acc += torch.mean(contrast_acc.float()).item()
 
                 val_acc = running_acc / len(val_loader)
-                print(val_acc, running_acc, len(val_loader))
                 val_acc_list.append(val_acc)
                 epoch_loss = running_loss / len(val_loader)
                 val_loss_list.append(epoch_loss)
