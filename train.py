@@ -76,9 +76,10 @@ for epoch in list(range(EPOCH)):
                 contrast_acc = torch.eq(torch.argmax(labels, dim=1), torch.argmax(logits, dim=1))
                 # Convert the boolean tensor to float32 and compute the mean
                 running_acc += torch.mean(contrast_acc.float()).item()
-                print(idx)
+                print(len(train_loader))
 
-            train_acc = 100*running_acc / len(train_loader)
+            train_acc = running_acc / len(train_loader)
+            print(train_acc, running_acc, len(train_loader))
             train_acc_list.append(train_acc)
             epoch_loss = running_loss / len(train_loader)
             train_loss_list.append(epoch_loss)
@@ -92,9 +93,6 @@ for epoch in list(range(EPOCH)):
 
             with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
                 for idx, batch in enumerate(val_loader):
-                    print(type(batch))
-                    print(type(batch[0]))
-                    print(batch[0].shape)
                     batch = torch.cat((batch[0], batch[1])).to(device)
                     out = model(batch)
                     l, logits, labels = loss(out)
@@ -105,7 +103,8 @@ for epoch in list(range(EPOCH)):
                     # Convert the boolean tensor to float32 and compute the mean
                     running_acc += torch.mean(contrast_acc.float()).item()
 
-                val_acc = 100*running_acc / len(val_loader)
+                val_acc = running_acc / len(val_loader)
+                print(val_acc, running_acc, len(val_loader))
                 val_acc_list.append(val_acc)
                 epoch_loss = running_loss / len(val_loader)
                 val_loss_list.append(epoch_loss)
