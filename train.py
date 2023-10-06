@@ -57,12 +57,12 @@ for epoch in list(range(EPOCH)):
     model.train()
     dataset.setMode(dataset.train)
 
+    print(f"best_run: {best_run}")
+    print(f"best_acc: {best_acc:.4f}")
+
     if best_run < 5:
-        with tqdm(train_loader, total=len(train_loader), desc="Training") as train_loader:
+        with tqdm(train_loader, total=len(train_loader), desc=f"Training epoch {epoch}") as train_loader:
             for idx, batch in enumerate(train_loader):
-                print(type(batch))
-                print(type(batch[0]))
-                print(batch[0].shape)
                 batch = torch.cat((batch[0], batch[1])).to(device)
                 optimizer.zero_grad()
                 out = model(batch)
@@ -82,8 +82,7 @@ for epoch in list(range(EPOCH)):
             train_acc_list.append(train_acc)
             epoch_loss = running_loss / len(train_loader)
             train_loss_list.append(epoch_loss)
-            train_loader.set_postfix(f"{epoch}: Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}")
-            print(f"{epoch}: Train Loss: {epoch_loss}, Train Accuracy: {train_acc}")
+            print(f"Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}")
 
         with torch.no_grad():
             running_loss = 0
@@ -91,7 +90,7 @@ for epoch in list(range(EPOCH)):
             model.eval()
             dataset.setMode("val")
 
-            with tqdm(val_loader, total=len(val_loader), desc="Validation") as val_loader:
+            with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
                 for idx, batch in enumerate(val_loader):
                     print(type(batch))
                     print(type(batch[0]))
@@ -106,9 +105,9 @@ for epoch in list(range(EPOCH)):
                     # Convert the boolean tensor to float32 and compute the mean
                     running_acc += torch.mean(contrast_acc.float()).item()
 
-                val_acc = 100*running_acc / len(train_loader)
+                val_acc = 100*running_acc / len(val_loader)
                 val_acc_list.append(val_acc)
-                epoch_loss = running_loss / len(train_loader)
+                epoch_loss = running_loss / len(val_loader)
                 val_loss_list.append(epoch_loss)
                 if val_acc > best_acc:
                     best_acc = val_acc
@@ -122,8 +121,7 @@ for epoch in list(range(EPOCH)):
                         "val_list": val_loss_list,
                         "epoch": epoch
                     }, 'ImageContrastModel.pt')
-                val_loader.set_postfix(f"{epoch}: Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
-                print(f"{epoch}: Val Loss: {epoch_loss}, Val Accuracy: {val_acc}")
+                print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
 
 
 with torch.no_grad():
@@ -135,7 +133,7 @@ with torch.no_grad():
 
     with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
         for idx, batch in enumerate(test_loader):
-            batch = torch.cat(batch[0], batch[1]).to(device)
+            batch = torch.cat((batch[0], batch[1])).to(device)
             out = model(batch)
             l, logits, labels = loss(out)
             running_loss += l.item()
@@ -145,7 +143,6 @@ with torch.no_grad():
             # Convert the boolean tensor to float32 and compute the mean
             running_acc += torch.mean(contrast_acc.float()).item()
 
-        test_acc = running_acc / len(val_loader)
-        epoch_loss = running_loss / len(val_loader)
-        test_loader.set_postfix(f"{epoch}: Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}")
-        print(f"Test Loss: {epoch_loss}, Test Accuracy: {test_acc}")
+        test_acc = running_acc / len(test_loader)
+        epoch_loss = running_loss / len(test_loader)
+        print(f"Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}")
