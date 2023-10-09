@@ -4,6 +4,7 @@ from models import ContrastiveLearning
 from embed_data import EmbedDataset
 from torch.utils.data import DataLoader
 from loss import add_contrastive_loss
+from larc import LARC
 
 batch_size = 32
 max_lr = 0.1
@@ -41,6 +42,7 @@ scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer,
                                                 pct_start=0.1,
                                                 div_factor=25,
                                                 final_div_factor=1e5)
+optimizer = LARC(optimizer, clip=False)
 loss = add_contrastive_loss
 
 
