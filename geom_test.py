@@ -1,4 +1,4 @@
-from models import GraphLearning
+from src.gnn.models import GraphLearning
 import torch
 import torch_geometric
 from torch_geometric.datasets import FakeDataset

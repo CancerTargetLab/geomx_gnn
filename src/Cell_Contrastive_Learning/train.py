@@ -1,7 +1,7 @@
 from tqdm import tqdm
 import torch
-from models import ContrastiveLearning
-from embed_data import EmbedDataset
+from src.Cell_Contrastive_Learning.CellContrastiveModel import ContrastiveLearning
+from src.Cell_Contrastive_Learning.embed_data import EmbedDataset
 from torch.utils.data import DataLoader
 from loss import add_contrastive_loss
 from larc import LARC
