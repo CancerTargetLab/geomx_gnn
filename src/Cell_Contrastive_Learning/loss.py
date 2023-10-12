@@ -30,7 +30,7 @@ def add_contrastive_loss(hidden,
     hidden1, hidden2 = torch.split(hidden, split_size_or_sections=hidden.size(0) // 2, dim=0)
     batch_size = hidden1.size(0)
     # Create labels ad mask for contrastive prediction task.
-    labels = F.one_hot(torch.arange(batch_size*2)%32, batch_size).float().to(hidden.device)
+    labels = F.one_hot(torch.arange(batch_size*2)%batch_size, batch_size).float().to(hidden.device)
     masks = F.one_hot(torch.arange(batch_size), batch_size).to(hidden.device)
 
     # Compute cosine similarities (dot products) between hidden vectors.
