@@ -9,19 +9,22 @@ class EmbedDataset(Dataset):
     """Face Landmarks dataset."""
 
     def __init__(self, root_dir="data/raw", crop_factor=0.5, train_ratio = 0.6,
-                 val_ratio = 0.2, test_ratio = 0.2):
+                 val_ratio = 0.2, device='cpu'):
         """
         Arguments:
         """
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.crop_factor = crop_factor
+        self.device = device
 
-        cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.pt')]
+        self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.pt')]
 
         self.data = torch.Tensor()
+        self.data_index_list = [0]
 
-        for cells in cells_path:
+        for cells in self.cells_path:
             data = torch.load(cells)
+            self.data_index_list.append(data.shape[0])
             self.data = torch.cat((self.data, data))
         
         total_samples = self.data.shape[0]
@@ -37,12 +40,13 @@ class EmbedDataset(Dataset):
         self.train = 'TRAIN'
         self.val = 'VAL'
         self.test = 'TEST'
+        self.embed = 'EMBED'
     
     def setMode(self, mode):
-        if mode.upper() in [self.train, self.val, self.test]:
+        if mode.upper() in [self.train, self.val, self.test, self.embed]:
             self.mode = mode.upper()
         else:
-            print(f'Mode {mode} not suported, has to be one of .train, .val or .test')
+            print(f'Mode {mode} not suported, has to be one of .train, .val .test or .embed')
 
 
     def transform(self, data):
@@ -73,11 +77,20 @@ class EmbedDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.mode == self.train:
-            return self.transform(self.data[self.train_map][idx])
+            return self.transform(self.data[self.train_map][idx]).to(self.device)
         elif self.mode == self.val:
-            return self.transform(self.data[self.val_map][idx])
+            return self.transform(self.data[self.val_map][idx]).to(self.device)
         elif self.mode == self.test:
-            return self.transform(self.data[self.test_map][idx])
+            return self.transform(self.data[self.test_map][idx]).to(self.device)
+        elif self.mode == self.embed:
+            return self.data[idx].to(self.device)
         else:
             return self.transform(self.data[idx])
+    
+    def embed_data(self, data):
+        if data.shape[0] == data.shape[0]:
+            for i, path in enumerate(self.cells_path):
+                torch.save(data[self.data_index_list[i]:self.data_index_list[i+1]], path.split('.')[0]+'_embed.pt')
+        else:
+            print('Warning: Data to save not equal number of examples as data loaded.')
     
