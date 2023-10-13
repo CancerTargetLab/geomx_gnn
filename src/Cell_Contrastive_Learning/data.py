@@ -18,6 +18,7 @@ class EmbedDataset(Dataset):
         self.device = device
 
         self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.pt')]
+        self.cells_path.sort()
 
         self.data = torch.Tensor()
         self.data_index_list = [0]
@@ -87,8 +88,8 @@ class EmbedDataset(Dataset):
         else:
             return self.transform(self.data[idx])
     
-    def embed_data(self, data):
-        if data.shape[0] == data.shape[0]:
+    def save_embed_data(self, data):
+        if data.shape[0] == self.data.shape[0]:
             for i, path in enumerate(self.cells_path):
                 torch.save(data[self.data_index_list[i]:self.data_index_list[i+1]], path.split('.')[0]+'_embed.pt')
         else:
