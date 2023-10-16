@@ -41,11 +41,21 @@ class ProjectionHead(nn.Module):
 
 
 class ContrastiveLearning(torch.nn.Module):
-    def __init__(self, channels, embed=256, contrast=124, mode='train'):
+    def __init__(self, channels, embed=256, contrast=124, mode='train', resnet='101'):
         super().__init__()
         self.mode = mode
-        from torchvision.models import resnet101, ResNet101_Weights
-        self.res = resnet101(weights=ResNet101_Weights.DEFAULT)
+        if resnet == '101':
+            from torchvision.models import resnet101, ResNet101_Weights
+            self.res = resnet101(weights=ResNet101_Weights.DEFAULT)
+        elif resnet == '50':
+            from torchvision.models import resnet50, ResNet50_Weights
+            self.res = resnet50(weights=ResNet50_Weights.DEFAULT)
+        elif resnet == '34':
+            from torchvision.models import resnet34, ResNet34_Weights
+            self.res = resnet34(weights=ResNet34_Weights.DEFAULT)
+        elif resnet == '18':
+            from torchvision.models import resnet18, ResNet18_Weights
+            self.res = resnet18(weights=ResNet18_Weights.DEFAULT)
         for param in self.res.parameters():
              param.requires_grad = False
         self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=1, padding='same', bias=False)

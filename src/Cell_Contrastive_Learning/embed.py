@@ -22,11 +22,12 @@ embed_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_wor
 model = ContrastiveLearning(channels=3).to(device, dtype=float)
 model.load_state_dict(load('ImageContrastModel.pt', save_keys='model', device=device))
 model.eval()
+model.mode = 'embed'
 
 with torch.no_grad():
     with tqdm(embed_loader, total=len(embed_loader), desc='Embeding Cell Images') as embed_loader:
         embed = torch.Tensor()
         for idx, batch in enumerate(embed_loader):
             out = model(batch)
-            embed = torch.cat((embed, out), dim=0)
+            embed = torch.cat((embed, out.to('cpu')), dim=0)
         dataset.save_embed_data(embed)
