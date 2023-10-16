@@ -77,6 +77,3 @@ def image_preprocess(path, max_img=2**16):
         mean, std = calc_mean_std(img_paths, max_img=max_img)
         zscore(img_paths, mean, std)
         cell_seg(df_path, img_paths)
-    
-
-image_preprocess('data/raw/TMA1_preprocessed')
