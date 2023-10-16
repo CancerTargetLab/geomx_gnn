@@ -1,11 +1,10 @@
 from tqdm import tqdm
 import torch
-import torch.multiprocessing as mp
 from torch.utils.data import DataLoader
 from src.Cell_Contrastive_Learning.CellContrastiveModel import ContrastiveLearning
 from src.Cell_Contrastive_Learning.data import EmbedDataset
-from loss import add_contrastive_loss
-from larc import LARC
+from src.Cell_Contrastive_Learning.loss import add_contrastive_loss
+from src.Cell_Contrastive_Learning.larc import LARC
 
 batch_size = 32
 max_lr = 0.1
@@ -17,11 +16,9 @@ early_stopping = 10
 
 # move to GPU (if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# moving stuff to device with workers
-mp.set_start_method('spawn')
 
-dataset = EmbedDataset(device=device)
-model = ContrastiveLearning(channels=3).to(device, dtype=float)
+dataset = EmbedDataset(root_dir='data/raw/TMA1_preprocessed')
+model = ContrastiveLearning(channels=3, resnet='18').to(device, dtype=float)
 
 #TODO: https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets
 # -> more mem eff
