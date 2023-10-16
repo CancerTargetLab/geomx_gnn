@@ -94,7 +94,7 @@ class EmbedDataset(Dataset):
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 c_sum = 0
                 for i, path in enumerate(cells_path):
-                    torch.save(data[self.data_index_list[c_sum]:c_sum + self.data_index_list[i+1]].to('cpu'), path.split('.')[0]+'_embed.pt')
+                    torch.save(data[c_sum:c_sum + self.data_index_list[i+1]].to('cpu'), path.split('.')[0]+'_embed.pt')
                     c_sum += self.data_index_list[i+1]
         else:
             print('Warning: Data to save not equal number of examples as data loaded.')
