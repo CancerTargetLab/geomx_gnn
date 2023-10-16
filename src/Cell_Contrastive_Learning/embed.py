@@ -12,7 +12,7 @@ num_workers = 8
 # move to GPU (if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-dataset = EmbedDataset()
+dataset = EmbedDataset(device=device)
 dataset.setMode(dataset.embed)
 embed_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=False)
 
