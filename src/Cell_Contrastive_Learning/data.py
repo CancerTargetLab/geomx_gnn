@@ -63,7 +63,7 @@ class EmbedDataset(Dataset):
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip()
         ])
-        x1, x2 = compose(data).to(self.device), compose(data).to(self.device)
+        x1, x2 = compose(data), compose(data)
         return x1, x2
 
     def __len__(self):
