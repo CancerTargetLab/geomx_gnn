@@ -91,7 +91,7 @@ class EmbedDataset(Dataset):
     def save_embed_data(self, data):
         if data.shape[0] == self.data.shape[0]:
             for i, path in enumerate(self.cells_path):
-                torch.save(data[self.data_index_list[i]:self.data_index_list[i+1]], path.split('.')[0]+'_embed.pt')
+                torch.save(data[self.data_index_list[i]:self.data_index_list[i+1]].to('cpu'), path.split('.')[0]+'_embed.pt')
         else:
             print('Warning: Data to save not equal number of examples as data loaded.')
     
