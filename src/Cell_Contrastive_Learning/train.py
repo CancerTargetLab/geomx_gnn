@@ -3,7 +3,7 @@ import torch
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader
 from src.Cell_Contrastive_Learning.CellContrastiveModel import ContrastiveLearning
-from Cell_Contrastive_Learning.data import EmbedDataset
+from src.Cell_Contrastive_Learning.data import EmbedDataset
 from loss import add_contrastive_loss
 from larc import LARC
 
