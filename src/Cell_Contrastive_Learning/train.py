@@ -6,12 +6,12 @@ from src.Cell_Contrastive_Learning.data import EmbedDataset
 from src.Cell_Contrastive_Learning.loss import add_contrastive_loss
 from src.Cell_Contrastive_Learning.larc import LARC
 
-batch_size = 32
+batch_size = 256
 max_lr = 0.1
 lr = 0.004
 warmup_epochs = 10
 EPOCH = 100
-num_workers = 4
+num_workers = 8
 early_stopping = 10
 
 # move to GPU (if available)
@@ -63,6 +63,7 @@ for epoch in list(range(EPOCH)):
     if best_run < early_stopping:
         with tqdm(train_loader, total=len(train_loader), desc=f"Training epoch {epoch}") as train_loader:
             for idx, batch in enumerate(train_loader):
+                batch = dataset.transform(batch)
                 batch = torch.cat((batch[0], batch[1])).to(device)
                 optimizer.zero_grad()
                 out = model(batch)
@@ -91,6 +92,7 @@ for epoch in list(range(EPOCH)):
 
             with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
                 for idx, batch in enumerate(val_loader):
+                    batch = dataset.transform(batch)
                     batch = torch.cat((batch[0], batch[1])).to(device)
                     out = model(batch)
                     l, logits, labels = loss(out)
@@ -129,6 +131,7 @@ with torch.no_grad():
 
     with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
         for idx, batch in enumerate(test_loader):
+            batch = dataset.transform(batch)
             batch = torch.cat((batch[0], batch[1])).to(device)
             out = model(batch)
             l, logits, labels = loss(out)

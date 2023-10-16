@@ -77,15 +77,15 @@ class EmbedDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.mode == self.train:
-            return self.transform(self.data[self.train_map][idx])
+            return self.data[self.train_map][idx]
         elif self.mode == self.val:
-            return self.transform(self.data[self.val_map][idx])
+            return self.data[self.val_map][idx]
         elif self.mode == self.test:
-            return self.transform(self.data[self.test_map][idx])
+            return self.data[self.test_map][idx]
         elif self.mode == self.embed:
             return self.data[idx]
         else:
-            return self.transform(self.data[idx])
+            return self.data[idx]
     
     def save_embed_data(self, data):
         if data.shape[0] == self.data.shape[0]:
