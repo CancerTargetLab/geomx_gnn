@@ -60,9 +60,9 @@ class ContrastiveLearning(torch.nn.Module):
              param.requires_grad = False
         self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=1, padding='same', bias=False)
         self.embed = nn.Sequential(
-            nn.BatchNorm1d(self.res.fc.in_features, ),
+            nn.BatchNorm1d(2048, ),
             nn.ReLU(),
-            nn.Linear(self.res.fc.in_features, embed)
+            nn.Linear(2048, embed)
             )
         self.head = ProjectionHead(embed, contrast)
 

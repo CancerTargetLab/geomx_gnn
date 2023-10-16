@@ -5,6 +5,7 @@ from src.Cell_Contrastive_Learning.CellContrastiveModel import ContrastiveLearni
 from src.Cell_Contrastive_Learning.data import EmbedDataset
 from src.Cell_Contrastive_Learning.loss import add_contrastive_loss
 from src.Cell_Contrastive_Learning.larc import LARC
+from src.utils.setSeed import set_seed
 
 batch_size = 256
 max_lr = 0.1
@@ -13,11 +14,13 @@ warmup_epochs = 10
 EPOCH = 100
 num_workers = 8
 early_stopping = 10
+seed = 42
 
 # move to GPU (if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+set_seed(42)
 
-dataset = EmbedDataset(root_dir='data/raw/TMA1_preprocessed')
+dataset = EmbedDataset(root_dir='data/raw/TMA1_preprocessed', device=device)
 model = ContrastiveLearning(channels=3, resnet='18').to(device, dtype=float)
 
 #TODO: https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets
@@ -63,7 +66,6 @@ for epoch in list(range(EPOCH)):
     if best_run < early_stopping:
         with tqdm(train_loader, total=len(train_loader), desc=f"Training epoch {epoch}") as train_loader:
             for idx, batch in enumerate(train_loader):
-                batch = dataset.transform(batch)
                 batch = torch.cat((batch[0], batch[1])).to(device)
                 optimizer.zero_grad()
                 out = model(batch)
@@ -92,7 +94,6 @@ for epoch in list(range(EPOCH)):
 
             with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
                 for idx, batch in enumerate(val_loader):
-                    batch = dataset.transform(batch)
                     batch = torch.cat((batch[0], batch[1])).to(device)
                     out = model(batch)
                     l, logits, labels = loss(out)
@@ -131,7 +132,6 @@ with torch.no_grad():
 
     with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
         for idx, batch in enumerate(test_loader):
-            batch = dataset.transform(batch)
             batch = torch.cat((batch[0], batch[1])).to(device)
             out = model(batch)
             l, logits, labels = loss(out)

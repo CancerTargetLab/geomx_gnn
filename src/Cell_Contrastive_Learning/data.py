@@ -9,12 +9,13 @@ class EmbedDataset(Dataset):
     """Face Landmarks dataset."""
 
     def __init__(self, root_dir="data/raw", crop_factor=0.5, train_ratio = 0.6,
-                 val_ratio = 0.2):
+                 val_ratio = 0.2, device='cpu'):
         """
         Arguments:
         """
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.crop_factor = crop_factor
+        self.device = device
 
         self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.pt')]
         self.cells_path.sort()
@@ -62,7 +63,7 @@ class EmbedDataset(Dataset):
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip()
         ])
-        x1, x2 = compose(data), compose(data)
+        x1, x2 = compose(data).to(self.device), compose(data).to(self.device)
         return x1, x2
 
     def __len__(self):
@@ -77,20 +78,20 @@ class EmbedDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.mode == self.train:
-            return self.data[self.train_map][idx]
+            return self.transform(self.data[self.train_map][idx])
         elif self.mode == self.val:
-            return self.data[self.val_map][idx]
+            return self.transform(self.data[self.val_map][idx])
         elif self.mode == self.test:
-            return self.data[self.test_map][idx]
+            return self.transform(self.data[self.test_map][idx])
         elif self.mode == self.embed:
             return self.data[idx]
         else:
-            return self.data[idx]
+            return self.transform(self.data[idx])
     
     def save_embed_data(self, data):
         if data.shape[0] == self.data.shape[0]:
             for i, path in enumerate(self.cells_path):
-                torch.save(data[self.data_index_list[i]:self.data_index_list[i+1]], path.split('.')[0]+'_embed.pt')
+                torch.save(data[self.data_index_list[i]:self.data_index_list[i+1]].to('cpu'), path.split('.')[0]+'_embed.pt')
         else:
             print('Warning: Data to save not equal number of examples as data loaded.')
     
