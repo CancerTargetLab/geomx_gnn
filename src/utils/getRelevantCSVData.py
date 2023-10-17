@@ -6,6 +6,6 @@ def getExpressionData(path, sep=','):
     index_df = df[['ROI', 'Segment_type']]
     expression_df = df.iloc[:,-49:]
     df = pd.concat([index_df, expression_df], axis=1)
-    df.to_csv(path.split('.')[0]+'.csv', sep=',', header=0, index=False)
+    df.to_csv(path.split('.')[0]+'.csv', sep=',', header=True, index=False, )
 
 getExpressionData('data/raw/OC1_all.txt', sep='\t')

@@ -1,7 +1,8 @@
 
 
 def main():
-    import src.Cell_Contrastive_Learning.train
+    from src.gnn.data import GeoMXDataset
+    GeoMXDataset()
 
 if __name__ == '__main__':
     main()

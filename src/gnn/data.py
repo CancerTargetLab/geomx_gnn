@@ -6,13 +6,12 @@ import squidpy as sq
 import pandas as pd
 import numpy as np
 from anndata import AnnData
-from skimage import io
-import torchvision.transforms as T
+from tqdm import tqdm
 
 class GeoMXDataset(Dataset):
     def __init__(self, root_dir='data/', pre_transform=None, pre_filter=None):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
-        self.raw_path = os.path.join(self.root_dir, 'raw/TMA1_prepocessed')
+        self.raw_path = os.path.join(self.root_dir, 'raw/TMA1_preprocessed')
         self.processed_path = os.path.join(self.root_dir, 'processed')
 
 
@@ -45,23 +44,26 @@ class GeoMXDataset(Dataset):
         pass
 
     def process(self):
-        label = pd.read_csv(self.raw_dir, header=0, sep=',')
+        label = pd.read_csv(os.path.join(self.raw_dir, 'OC1_all.csv'), header=0, sep=',')
         df = pd.read_csv(self.cell_pos, header=0, sep=",")
-        df['Centroid X px'] = df['Centroid X px'].round().astype(int)
-        df['Centroid Y px'] = df['Centroid Y px'].round().astype(int)
-        for file in self.raw_paths:
-            self._process_one_step(file, df, label)
+        df['Centroid X px'] = df['Centroid X px'].round().astype(float)
+        df['Centroid Y px'] = df['Centroid Y px'].round().astype(float)
+        with tqdm(self.raw_paths, total=len(self.raw_paths), desc='Preprocessing Graphs') as raw_paths:
+            for file in raw_paths:
+                self._process_one_step(file, df, label)
 
     def _process_one_step(self, file, df, label):
         file_prefix = file.split('/')[-1].split('_')[0]
         df = df[df['Image']==file_prefix+'.tiff']
-        df = df.drop("Image", axis=1)
+        # Deduplicate identical cell position: ~ is not op, first selects duplicates, second selects non first duplicates, | is or op
+        mask = ~df.duplicated(subset=['Centroid X px', 'Centroid Y px'], keep=False) | ~df.duplicated(subset=['Centroid X px', 'Centroid Y px'], keep='first')
+        df = df[mask]
 
-        counts = np.zeros(size=(df.shape[0], 1))
+        counts = np.zeros((df.shape[0], 1))
         coordinates = np.column_stack((df["Centroid X px"].to_numpy(), df["Centroid Y px"].to_numpy()))
         adata = AnnData(counts, obsm={"spatial": coordinates})
         sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
-        edge_matrix = adata.obsp["spatial_connectivities"] * (adata.obsp["spatial_connectivities"] <= 50)
+        edge_matrix = adata.obsp["spatial_distances"].multiply(adata.obsp["spatial_distances"] > 60)   # .multiply needed for correct behaviour of scipy sparse matrix
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
         # label = df["Class"].values
@@ -79,9 +81,9 @@ class GeoMXDataset(Dataset):
         #     label = torch.tensor(np.vectorize(self.string_labels_map.get)(label))
         
 
-        node_features =torch.load(file)
+        node_features =torch.load(file)[torch.from_numpy(mask.values)]
 
-        label = label[label['ROI']==file_prefix.lstrip('0')]
+        label = label[label['ROI']==int(file_prefix.lstrip('0'))]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy())
         
         data = Data(x=node_features,
