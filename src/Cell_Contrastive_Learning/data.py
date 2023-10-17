@@ -1,5 +1,4 @@
 from torch.utils.data import Dataset
-from sklearn.model_selection import train_test_split
 import torch
 import os
 import torchvision.transforms as T

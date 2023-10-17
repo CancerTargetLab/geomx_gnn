@@ -9,7 +9,8 @@ from anndata import AnnData
 from tqdm import tqdm
 
 class GeoMXDataset(Dataset):
-    def __init__(self, root_dir='data/', pre_transform=None, pre_filter=None):
+    def __init__(self, root_dir='data/', pre_transform=None, pre_filter=None,
+                 train_ratio = 0.6, val_ratio = 0.2,):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.raw_path = os.path.join(self.root_dir, 'raw/TMA1_preprocessed')
         self.processed_path = os.path.join(self.root_dir, 'processed')
@@ -24,6 +25,20 @@ class GeoMXDataset(Dataset):
 
         super().__init__(self.root_dir, self.transform, pre_transform, pre_filter)
 
+        # total_samples = len(self.processed_file_names)
+        # train_size = int(train_ratio * total_samples)
+        # val_size = int(val_ratio * total_samples)
+        # test_size = total_samples - train_size - val_size
+
+        # # Use random_split to split the data tensor
+        # train_map, val_map, test_map = torch.utils.data.random_split(torch.arrange(total_samples), [train_size, val_size, test_size])
+        # self.train_map, self.val_map, self.test_map = train_map.indices, val_map.indices, test_map.indices
+
+        # self.mode = 'TRAIN'
+        # self.train = 'TRAIN'
+        # self.val = 'VAL'
+        # self.test = 'TEST'
+
     @property
     def raw_file_names(self):
         return self.raw_files
@@ -33,6 +48,7 @@ class GeoMXDataset(Dataset):
         """ return list of files should be in processed dir, if found - skip processing."""
         processed_filename = []
         for i, _ in enumerate(self.raw_files):
+            i += 1
             processed_filename.append(f"graph_{i:03}.pt")
         processed_filename.sort()
         return processed_filename
