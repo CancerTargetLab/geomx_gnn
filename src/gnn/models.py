@@ -57,21 +57,57 @@ def create_GATv2_conv(num_layers=1,
             return layers
 
 
+class ProjectionHead(torch.nn.Module):
+    """
+    Implemented in torch following the example of 
+    https://github.com/google-research/simclr/blob/master/model_util.py#L141
+    """
+    def __init__(self, input_dim, output_dim, num_layers=2, use_bn=True, use_relu=True):
+        super(ProjectionHead, self).__init__()
+        self.layers = torch.nn.ModuleList()
+        dim = input_dim
+        for j in range(num_layers):
+            if j != num_layers - 1:
+                # For the middle layers, use bias and ReLU activation.
+                bias_relu = True
+                next_dim = input_dim
+            else:
+                # For the final layer, neither bias nor ReLU is used.
+                bias_relu = False
+                next_dim = output_dim
+
+            linear_layer = torch.nn.Linear(dim, next_dim, bias=bias_relu)
+            self.layers.append(linear_layer)
+            if use_bn and bias_relu:
+                bn_layer = torch_geometric.nn.norm.BatchNorm(next_dim)
+                self.layers.append(bn_layer)
+            
+            if bias_relu and use_relu:
+                relu_layer = torch.nn.ReLU()
+                self.layers.append(relu_layer)
+
+            dim = next_dim
+
+    def forward(self, hiddens):
+        for layer in self.layers:
+            hiddens = layer(hiddens)
+        
+        return hiddens
+
+
 class GraphLearning(torch.nn.Module):
     def __init__(self,
                  layers=1,
                  num_node_features=100, 
                  num_edge_features=1,
                  num_embed_features=10,
-                 num_out_features=10,
                  heads=1,
                  embed_dropout=0.1,
-                 conv_dropout=0.1,
-                 skip_dropout=0.1):
+                 conv_dropout=0.1,):
         super().__init__()
 
         self.heads = heads
-
+        # TODO: GraphNorm ?
         self.node_embed = torch.nn.Sequential(
             torch.nn.Linear(num_node_features, num_embed_features),
             torch.nn.LayerNorm(num_embed_features),
@@ -87,13 +123,7 @@ class GraphLearning(torch.nn.Module):
                                        embed_dropout=embed_dropout,
                                        fill_value=0.0)
         #TODO: skip connec as simple add as well?
-        # self.conv_skip = torch_geometric.nn.models.JumpingKnowledge(mode='max')
-        self.conv_skip = torch.nn.Sequential(
-            torch.nn.Linear((layers+1)*num_embed_features, num_out_features),
-            torch.nn.LayerNorm(num_embed_features),
-            torch.nn.Dropout(p=skip_dropout, inplace=True),
-            torch.nn.LeakyReLU(inplace=True)
-            )
+        self.conv_skip = torch_geometric.nn.models.JumpingKnowledge(mode='max')
         
         self.node_embed.apply(init_weights)
         self.convs.apply(init_weights)
@@ -104,62 +134,53 @@ class GraphLearning(torch.nn.Module):
         x, edge_index, edge_feature = data.x, data.edge_index, data.edge_weight
 
         h_i = self.node_embed(x)
-        h = h_i.clone()
-        # h = [h_i]
+        # h = h_i.clone()
+        h = [h_i]
 
         for conv in list(range(len(self.convs))):
             h_i = self.convs[conv](h_i, edge_index, edge_attr=edge_feature)
 
-            h = torch.concat((h, h_i), dim=1)
-            #h.append(h_i)
+            # h = torch.concat((h, h_i), dim=1)
+            h.append(h_i)
         
         h = self.conv_skip(h)
 
         return h
 
 
-class AutoEncodeEmbedding(torch.nn.Module):
-    def __init__(self, embed_size=100):
+class ROIExpression(torch.nn.Module):
+    def __init__(self,
+                 layers=1,
+                 num_node_features=256, 
+                 num_edge_features=1,
+                 num_embed_features=128,
+                 num_out_features=128,
+                 heads=1,
+                 embed_dropout=0.1,
+                 conv_dropout=0.1,):
         super().__init__()
 
-        self.encode = torch.nn.Sequential(
-             torch.nn.Linear(2048, 1024),
-             torch.nn.BatchNorm1d(1024),
-             torch.nn.ReLU(),
-             torch.nn.Linear(1024, 512),
-             torch.nn.BatchNorm1d(512),
-             torch.nn.ReLU(),
-            #  torch.nn.Linear(512, 256),
-            #  torch.nn.BatchNorm1d(256),
-            #  torch.nn.ReLU(),
-            #  torch.nn.Linear(256, embed_size),
-            #  torch.nn.BatchNorm1d(embed_size),
-            #  torch.nn.ReLU(),
-        )
+        self.gnn = GraphLearning(layers=layers,
+                                num_node_features=num_node_features, 
+                                num_edge_features=num_edge_features,
+                                num_embed_features=num_embed_features,
+                                heads=heads,
+                                embed_dropout=embed_dropout,
+                                conv_dropout=conv_dropout,)
+        
+        self.pool = torch_geometric.nn.pool.global_add_pool
 
-        self.decode = torch.nn.Sequential(
-            #  torch.nn.Linear(embed_size, 256),
-            #  torch.nn.BatchNorm1d(256),
-            #  torch.nn.ReLU(),
-            #  torch.nn.Linear(256, 512),
-            #  torch.nn.BatchNorm1d(512),
-            #  torch.nn.ReLU(),
-             torch.nn.Linear(512, 1024),
-             torch.nn.BatchNorm1d(1024),
-             torch.nn.ReLU(),
-             torch.nn.Linear(1024, 2048),
-             torch.nn.BatchNorm1d(2048),
-             torch.nn.ReLU(),
-        )
+        self.project = ProjectionHead(input_dim=num_embed_features, 
+                                      output_dim=num_out_features,
+                                      num_layers=2)
 
-    def forward(self, data, return_encoding=False):
-         enc = self.encode(data)
-         dec = self.decode(enc)
 
-         if return_encoding:
-              return dec, enc
-         else:
-              return dec
+    def forward(self, data):
+        x = self.gnn(data)
+        x = self.project(x)
+        x = self.pool(x, batch=data.batch)
+        return torch.abs(x)
+        
 
 
 

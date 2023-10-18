@@ -27,7 +27,6 @@ model = ContrastiveLearning(channels=3, resnet='18').to(device, dtype=float)
 # -> more mem eff
 dataset.setMode(dataset.train)
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, drop_last=True, pin_memory=True)
-iters = len(train_loader)
 dataset.setMode(dataset.val)
 val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=True, pin_memory=True)
 dataset.setMode(dataset.test)

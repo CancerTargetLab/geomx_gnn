@@ -113,7 +113,7 @@ class GeoMXDataset(Dataset):
         torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
 
     def setMode(self, mode):
-        if mode.upper() in [self.train, self.val, self.test, self.embed]:
+        if mode.upper() in [self.train, self.val, self.test]:
             self.mode = mode.upper()
         else:
             print(f'Mode {mode} not suported, has to be one of .train, .val .test or .embed')
