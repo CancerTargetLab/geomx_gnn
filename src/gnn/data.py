@@ -25,19 +25,22 @@ class GeoMXDataset(Dataset):
 
         super().__init__(self.root_dir, self.transform, pre_transform, pre_filter)
 
-        # total_samples = len(self.processed_file_names)
-        # train_size = int(train_ratio * total_samples)
-        # val_size = int(val_ratio * total_samples)
-        # test_size = total_samples - train_size - val_size
+        self.data = np.array(self.processed_file_names)
 
-        # # Use random_split to split the data tensor
-        # train_map, val_map, test_map = torch.utils.data.random_split(torch.arrange(total_samples), [train_size, val_size, test_size])
-        # self.train_map, self.val_map, self.test_map = train_map.indices, val_map.indices, test_map.indices
+        total_samples = self.data.shape[0]
+        train_size = int(train_ratio * total_samples)
+        val_size = int(val_ratio * total_samples)
+        test_size = total_samples - train_size - val_size
 
-        # self.mode = 'TRAIN'
-        # self.train = 'TRAIN'
-        # self.val = 'VAL'
-        # self.test = 'TEST'
+        # Use random_split to split the data tensor
+        train_map, val_map, test_map = torch.utils.data.random_split(torch.arange(total_samples), [train_size, val_size, test_size])
+        self.train_map, self.val_map, self.test_map = train_map.indices, val_map.indices, test_map.indices
+
+
+        self.mode = 'TRAIN'
+        self.train = 'TRAIN'
+        self.val = 'VAL'
+        self.test = 'TEST'
 
     @property
     def raw_file_names(self):
@@ -109,11 +112,29 @@ class GeoMXDataset(Dataset):
                     )
         torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
 
+    def setMode(self, mode):
+        if mode.upper() in [self.train, self.val, self.test, self.embed]:
+            self.mode = mode.upper()
+        else:
+            print(f'Mode {mode} not suported, has to be one of .train, .val .test or .embed')
 
     def len(self):
-        return len(self.processed_file_names)
+        if self.mode == self.train:
+            return len(self.train_map)
+        elif self.mode == self.val:
+            return len(self.val_map)
+        elif self.mode == self.test:
+            return len(self.test_map)
+        else:
+            return self.data.shape[0]
 
     def get(self, idx):
-        data = torch.load(os.path.join(self.processed_dir, self.processed_file_names[idx]))
-        return data
+        if self.mode == self.train:
+            return torch.load(os.path.join(self.processed_dir, self.data[self.train_map][idx]))
+        elif self.mode == self.val:
+            return torch.load(os.path.join(self.processed_dir, self.data[self.val_map][idx]))
+        elif self.mode == self.test:
+            return torch.load(os.path.join(self.processed_dir, self.data[self.test_map][idx]))
+        else:
+            return torch.load(os.path.join(self.processed_dir, self.data[idx]))
 
