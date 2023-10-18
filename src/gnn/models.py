@@ -178,8 +178,8 @@ class ROIExpression(torch.nn.Module):
     def forward(self, data):
         x = self.gnn(data)
         x = self.project(x)
-        x = self.pool(x, batch=data.batch)
-        return torch.abs(x)
+        x = self.pool(torch.abs(x), batch=data.batch)
+        return x
         
 
 
