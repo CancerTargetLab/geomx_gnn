@@ -1,7 +1,7 @@
 from torch.utils.data import Dataset
 import torch
 import os
-import torchvision.transforms as T
+import torchvision.transforms.v2 as T
 import random
 from tqdm import tqdm
 

@@ -9,7 +9,7 @@ from tqdm import tqdm
 EPOCH = 100
 SEED = 42
 batch_size = 2
-lr = 0.005
+lr = 0.0005
 num_workers = 0
 early_stopping = 10
 
@@ -28,13 +28,13 @@ test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_work
 model = ROIExpression(num_out_features=dataset.get(0).y.shape[0], layers=3, heads=1).to(device, dtype=float)
 optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
 dataset.setMode(dataset.train)
-scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
-                                                max_lr=lr, 
-                                                epochs=EPOCH, 
-                                                steps_per_epoch=len(train_loader), 
-                                                pct_start=0.1,
-                                                div_factor=25,
-                                                final_div_factor=1e6)
+# scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
+#                                                 max_lr=lr, 
+#                                                 epochs=EPOCH, 
+#                                                 steps_per_epoch=len(train_loader), 
+#                                                 pct_start=0.1,
+#                                                 div_factor=25,
+#                                                 final_div_factor=1e6)
 
 loss = torch.nn.MSELoss()
 similarity = torch.nn.CosineSimilarity()
@@ -63,7 +63,7 @@ for epoch in list(range(EPOCH)):
                 l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                 l.backward()
                 optimizer.step()
-                scheduler.step()
+                # scheduler.step()
                 running_loss += l.item() * out.shape[0]
                 running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
                 num_graphs += out.shape[0]
