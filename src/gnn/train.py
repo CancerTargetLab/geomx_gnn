@@ -6,18 +6,18 @@ from torch_geometric.loader import DataLoader
 import torch
 from tqdm import tqdm
 
-EPOCH = 200
+EPOCH = 100
 SEED = 42
 batch_size = 2
-lr = 0.001
-num_workers = 1
+lr = 0.005
+num_workers = 0
 early_stopping = 10
 
 # move to GPU (if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 set_seed(SEED)
 
-dataset = GeoMXDataset()
+dataset = GeoMXDataset(node_dropout=0.3, edge_dropout=0.4)
 dataset.setMode(dataset.train)
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 dataset.setMode(dataset.val)
@@ -25,16 +25,16 @@ val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_worke
 dataset.setMode(dataset.test)
 test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-model = ROIExpression(num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=float)
+model = ROIExpression(num_out_features=dataset.get(0).y.shape[0], layers=3, heads=1).to(device, dtype=float)
 optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
 dataset.setMode(dataset.train)
-# scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
-#                                                 max_lr=max_lr, 
-#                                                 epochs=EPOCH, 
-#                                                 steps_per_epoch=len(train_loader), 
-#                                                 pct_start=0.1,
-#                                                 div_factor=25,
-#                                                 final_div_factor=1e5)
+scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
+                                                max_lr=lr, 
+                                                epochs=EPOCH, 
+                                                steps_per_epoch=len(train_loader), 
+                                                pct_start=0.1,
+                                                div_factor=25,
+                                                final_div_factor=1e6)
 
 loss = torch.nn.MSELoss()
 similarity = torch.nn.CosineSimilarity()
@@ -63,7 +63,7 @@ for epoch in list(range(EPOCH)):
                 l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                 l.backward()
                 optimizer.step()
-                # scheduler.step()
+                scheduler.step()
                 running_loss += l.item() * out.shape[0]
                 running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
                 num_graphs += out.shape[0]

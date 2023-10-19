@@ -1,4 +1,5 @@
 from torch_geometric.data import Dataset, Data
+from src.utils.transforms import AddRemainingSelfLoops
 import torch
 import torch_geometric
 import os
@@ -10,11 +11,14 @@ from tqdm import tqdm
 
 class GeoMXDataset(Dataset):
     def __init__(self, root_dir='data/', pre_transform=None, pre_filter=None,
-                 train_ratio = 0.6, val_ratio = 0.2,):
+                 train_ratio = 0.6, val_ratio = 0.2, node_dropout=0.2,
+                 edge_dropout=0.3):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.raw_path = os.path.join(self.root_dir, 'raw/TMA1_preprocessed')
         self.processed_path = os.path.join(self.root_dir, 'processed')
 
+        self.node_dropout = node_dropout
+        self.edge_dropout = edge_dropout
 
         if os.path.exists(self.raw_path) and os.path.isdir(self.raw_path):
             self.raw_files = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('_embed.pt')]
@@ -57,6 +61,11 @@ class GeoMXDataset(Dataset):
         return processed_filename
     
     def transform(self, data):
+        node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
+        data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
+        edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
+        data.edge_index, data.edge_attr = data.edge_index[:,edge_map], data.edge_attr[edge_map]
+        data = torch_geometric.transforms.RemoveIsolatedNodes()(data)
         return data   
     
     def download(self):
@@ -82,7 +91,8 @@ class GeoMXDataset(Dataset):
         coordinates = np.column_stack((df["Centroid X px"].to_numpy(), df["Centroid Y px"].to_numpy()))
         adata = AnnData(counts, obsm={"spatial": coordinates})
         sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
-        edge_matrix = adata.obsp["spatial_distances"].multiply(adata.obsp["spatial_distances"] > 60)   # .multiply needed for correct behaviour of scipy sparse matrix
+        edge_matrix = adata.obsp["spatial_distances"]
+        edge_matrix[edge_matrix > 60] = 0.
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
         # label = df["Class"].values
@@ -110,6 +120,7 @@ class GeoMXDataset(Dataset):
                     edge_attr=edge_attr,
                     y=label
                     )
+        data = AddRemainingSelfLoops(attr='edge_attr', fill_value=0.1)(data)
         torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
 
     def setMode(self, mode):
