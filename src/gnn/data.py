@@ -1,5 +1,4 @@
 from torch_geometric.data import Dataset, Data
-from src.utils.transforms import AddRemainingSelfLoops
 import torch
 import torch_geometric
 import os
@@ -120,7 +119,7 @@ class GeoMXDataset(Dataset):
                     edge_attr=edge_attr,
                     y=label
                     )
-        data = AddRemainingSelfLoops(attr='edge_attr', fill_value=0.1)(data)
+        data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.1)(data)
         torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
 
     def setMode(self, mode):
