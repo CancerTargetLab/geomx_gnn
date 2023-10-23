@@ -9,11 +9,11 @@ from anndata import AnnData
 from tqdm import tqdm
 
 class GeoMXDataset(Dataset):
-    def __init__(self, root_dir='data/', pre_transform=None, pre_filter=None,
+    def __init__(self, root_dir='data/', raw_subset_dir='',
                  train_ratio = 0.6, val_ratio = 0.2, node_dropout=0.2,
                  edge_dropout=0.3):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
-        self.raw_path = os.path.join(self.root_dir, 'raw/TMA1_preprocessed')
+        self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
         self.processed_path = os.path.join(self.root_dir, 'processed')
 
         self.node_dropout = node_dropout
@@ -26,7 +26,7 @@ class GeoMXDataset(Dataset):
         
         self.string_labels_map = {}
 
-        super().__init__(self.root_dir, self.transform, pre_transform, pre_filter)
+        super().__init__(self.root_dir, self.transform, None, None)
 
         self.data = np.array(self.processed_file_names)
 

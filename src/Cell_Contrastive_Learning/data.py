@@ -9,13 +9,12 @@ class EmbedDataset(Dataset):
     """Face Landmarks dataset."""
 
     def __init__(self, root_dir="data/raw", crop_factor=0.5, train_ratio = 0.6,
-                 val_ratio = 0.2, device='cpu'):
+                 val_ratio = 0.2):
         """
         Arguments:
         """
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.crop_factor = crop_factor
-        self.device = device
 
         self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.pt')]
         self.cells_path.sort()
