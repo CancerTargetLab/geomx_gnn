@@ -11,7 +11,7 @@ def train(args):
     SEED = args['seed']
     batch_size = args['batch_size_graph']
     lr = args['lr_graph']
-    num_workers = args['num_workers_grapg']
+    num_workers = args['num_workers_graph']
     early_stopping = args['early_stopping_graph']
 
     # move to GPU (if available)

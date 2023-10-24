@@ -16,3 +16,7 @@ Install mesa-utils and libgl1-mesa-dri
 link driver: sudo ln -s /usr/lib/x86_64-linux-gnu/dri/swrast_dri.so /usr/lib/dri/
 
 https://stackoverflow.com/questions/58424974/anaconda-importerror-usr-lib64-libstdc-so-6-version-glibcxx-3-4-21-not-fo
+
+
+https://stackoverflow.com/questions/69952475/how-to-solve-the-pytorch-geometric-install-error-undefined-symbol-zn5torch3ji/73876857#73876857
+https://github.com/pyg-team/pytorch_geometric/issues/999

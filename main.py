@@ -26,7 +26,7 @@ def parse_args():
 
     # Copy and rename arguments for the GNN model
     parser.add_argument("--graph_dir", type=str, default="data/")
-    parser.add_argument("--graph_raw_subset_dir", type=str, default="")
+    parser.add_argument("--graph_raw_subset_dir", type=str, default="TMA1_preprocessed")
     parser.add_argument("--batch_size_graph", type=int, default=32)
     parser.add_argument("--epochs_graph", type=int, default=100)
     parser.add_argument("--warmup_epochs_graph", type=int, default=10)
@@ -45,7 +45,7 @@ def parse_args():
     parser.add_argument("--embed_dropout_graph", type=float, default=0.1)
     parser.add_argument("--conv_dropout_graph", type=float, default=0.1)
     parser.add_argument("--output_name_graph", type=str, default="out/ROI.pt")
-    parser.add_argument("--train_gnn", action="store_true", default=False)
+    parser.add_argument("--train_gnn", action="store_true", default=True)
 
     parser.add_argument("--seed", type=int, default=42)
 
@@ -62,5 +62,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = parse_args()
+    args = vars(parse_args())
     main(args)
