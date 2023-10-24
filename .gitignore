@@ -4,6 +4,8 @@
 *.tsv
 *.txt
 *.pt
-data/
+*.pth
+*.zip
+#data/
 __pycache__*
 figures*

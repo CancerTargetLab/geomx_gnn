@@ -1,5 +1,5 @@
-from src.gnn.data import GeoMXDataset
-from src.gnn.models import ROIExpression
+from src.data.GeoMXData import GeoMXDataset
+from src.models.GraphModel import ROIExpression
 from src.utils.setSeed import set_seed
 from torch_geometric.loader import DataLoader
 import torch

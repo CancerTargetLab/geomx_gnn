@@ -1,7 +1,7 @@
 import argparse
-from src.Cell_Contrastive_Learning.train import train as ImageTrain
-from src.Cell_Contrastive_Learning.embed import embed
-from src.gnn.train import train as GraphTrain
+from src.run.CellContrastTrain import train as ImageTrain
+from src.run.CellContrastEmbed import embed
+from src.run.GraphTrain import train as GraphTrain
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments for image and GNN models")

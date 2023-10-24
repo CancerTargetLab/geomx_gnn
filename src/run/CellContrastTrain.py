@@ -1,10 +1,10 @@
 from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
-from src.Cell_Contrastive_Learning.model import ContrastiveLearning
-from src.Cell_Contrastive_Learning.data import EmbedDataset
-from src.Cell_Contrastive_Learning.loss import add_contrastive_loss
-from src.Cell_Contrastive_Learning.larc import LARC
+from src.models.CellContrastModel import ContrastiveLearning
+from src.data.CellContrastData import EmbedDataset
+from src.loss.ContrastiveLoss import add_contrastive_loss
+from src.optimizer.LARC import LARC
 from src.utils.setSeed import set_seed
 
 def train(args):

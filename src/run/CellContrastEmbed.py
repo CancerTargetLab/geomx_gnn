@@ -1,8 +1,8 @@
 from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
-from src.Cell_Contrastive_Learning.data import EmbedDataset
-from src.Cell_Contrastive_Learning.model import ContrastiveLearning
+from src.data.CellContrastData import EmbedDataset
+from src.models.CellContrastModel import ContrastiveLearning
 from src.utils.load import load
 from src.utils.setSeed import set_seed
 
