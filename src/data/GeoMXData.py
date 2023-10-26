@@ -30,14 +30,26 @@ class GeoMXDataset(Dataset):
 
         self.data = np.array(self.processed_file_names)
 
-        total_samples = self.data.shape[0]
+        df = pd.read_csv(os.path.join(self.raw_dir, 'OC1_all.csv'), header=0, sep=',')
+        IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
+        un_IDs = np.unique(IDs)
+
+        total_samples = un_IDs.shape[0]
         train_size = int(train_ratio * total_samples)
         val_size = int(val_ratio * total_samples)
         test_size = total_samples - train_size - val_size
 
-        # Use random_split to split the data tensor
         train_map, val_map, test_map = torch.utils.data.random_split(torch.arange(total_samples), [train_size, val_size, test_size])
-        self.train_map, self.val_map, self.test_map = train_map.indices, val_map.indices, test_map.indices
+        self.train_map, self.val_map, self.test_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
+
+        # total_samples = self.data.shape[0]
+        # train_size = int(train_ratio * total_samples)
+        # val_size = int(val_ratio * total_samples)
+        # test_size = total_samples - train_size - val_size
+
+        # # Use random_split to split the data tensor
+        # train_map, val_map, test_map = torch.utils.data.random_split(torch.arange(total_samples), [train_size, val_size, test_size])
+        # self.train_map, self.val_map, self.test_map = train_map.indices, val_map.indices, test_map.indices
 
 
         self.mode = 'TRAIN'

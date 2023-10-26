@@ -27,10 +27,10 @@ def parse_args():
     # Copy and rename arguments for the GNN model
     parser.add_argument("--graph_dir", type=str, default="data/")
     parser.add_argument("--graph_raw_subset_dir", type=str, default="TMA1_preprocessed")
-    parser.add_argument("--batch_size_graph", type=int, default=32)
+    parser.add_argument("--batch_size_graph", type=int, default=2)
     parser.add_argument("--epochs_graph", type=int, default=100)
     parser.add_argument("--warmup_epochs_graph", type=int, default=10)
-    parser.add_argument("--num_workers_graph", type=int, default=8)
+    parser.add_argument("--num_workers_graph", type=int, default=1)
     parser.add_argument("--lr_graph", type=float, default=0.0005)
     parser.add_argument("--early_stopping_graph", type=int, default=10)
     parser.add_argument("--train_ratio_graph", type=float, default=0.6)
