@@ -11,7 +11,7 @@ from tqdm import tqdm
 class GeoMXDataset(Dataset):
     def __init__(self, root_dir='data/', raw_subset_dir='',
                  train_ratio = 0.6, val_ratio = 0.2, node_dropout=0.2,
-                 edge_dropout=0.3):
+                 edge_dropout=0.3, transform=None):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
         self.processed_path = os.path.join(self.root_dir, 'processed')
@@ -26,7 +26,7 @@ class GeoMXDataset(Dataset):
         
         self.string_labels_map = {}
 
-        super().__init__(self.root_dir, self.transform, None, None)
+        super().__init__(self.root_dir, self.transform if transform is None else transform, None, None)
 
         self.data = np.array(self.processed_file_names)
 
