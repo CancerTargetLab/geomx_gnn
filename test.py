@@ -4,6 +4,8 @@ import pandas as pd
 import squidpy as sq
 import scanpy as sc
 from anndata import AnnData
+from src.models.GraphModel import ROIExpression
+from src.data.GeoMXData import GeoMXDataset
 import matplotlib.pyplot as plt
 import torchvision
 import torch
@@ -12,12 +14,14 @@ df = pd.read_csv("data/raw/obj_class_TMA1.csv", header=0, sep=",")
 df = df[["Image", "Class", "Centroid X px", "Centroid Y px"]]
 df = df[df["Image"] == "001.tiff"]
 df = df.drop("Image", axis=1)
+mask = ~df.duplicated(subset=['Centroid X px', 'Centroid Y px'], keep=False) | ~df.duplicated(subset=['Centroid X px', 'Centroid Y px'], keep='first')
+df = df[mask]
 # Replace commas with dots and convert to float
 df["Centroid X px"] = df["Centroid X px"].str.replace(',', '.').astype(float)
 df["Centroid Y px"] = df["Centroid Y px"].str.replace(',', '.').astype(float)
 
 
-img = io.imread('data/raw/001.tiff', plugin='tifffile')
+img = io.imread('data/raw/TMA1_preprocessed/1_001.tiff', plugin='tifffile')
 
 image = np.expand_dims(img, axis=3)
 test=sq.im.ImageContainer(image, dims=("y", "x", "z", "channels"))
@@ -56,7 +60,15 @@ y = df["Centroid Y px"].round().astype(int).values
 
 # seg.show("img1")
 
-counts = np.random.default_rng(42).integers(0, 15, size=(df.shape[0], 100))
+model = ROIExpression(layers=3, num_node_features=256, num_embed_features=128, num_out_features=49).to(torch.device('cpu'), dtype=float)
+model.load_state_dict(torch.load('out/ROI.pt')['model'])
+model.eval()
+dataset = GeoMXDataset(raw_subset_dir='TMA1_preprocessed')
+dataset.mode = 'embed'
+g1 = dataset.get(0)
+counts = torch.abs(model.project(model.gnn(g1))).detach().numpy()
+
+#counts = np.random.default_rng(42).integers(0, 15, size=(df.shape[0], 100))
 
 coordinates = np.column_stack((df["Centroid X px"].to_numpy(), df["Centroid Y px"].to_numpy()))
 
@@ -86,12 +98,29 @@ adata.uns[spatial_key][library_id]["scalefactors"] = {
     "spot_diameter_fullres": 0.5,
 }
 
+print("normalize total")
+sc.pp.normalize_total(adata)
+print("log transform")
+sc.pp.log1p(adata)
+print("scale")
+sc.pp.scale(adata, max_value=10)
+
+resolution = 0.5
+print("PCA")
+sc.tl.pca(adata, svd_solver="arpack")
+print("neighbors")
+sc.pp.neighbors(adata, n_neighbors=10, n_pcs=48)
+print("UMAP")
+sc.tl.umap(adata)
+print("Leiden")
+sc.tl.leiden(adata, resolution=resolution)
+
 sq.pl.spatial_scatter(adata, 
-                      color="CellType",
-                      connectivity_key="spatial_connectivities",
-                      edges_color="grey",
-                      edges_width=1,
-                      size=15,
+                      color="leiden",
+                      #connectivity_key="spatial_connectivities",
+                      #edges_color="grey",
+                      #edges_width=1,
+                      size=25,
                       img_channel=0
                     )
 
