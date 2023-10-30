@@ -46,13 +46,13 @@ def zscore(image_paths, mean, std):
 
 def cell_seg(df_path, image_paths):
     df = pd.read_csv(df_path, header=0, sep=',')
-    df['Centroid X px'] = df['Centroid X px'].round().astype(int)
-    df['Centroid Y px'] = df['Centroid Y px'].round().astype(int)
+    df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
+    df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
     for image in tqdm(image_paths, desc='Segmenting Cells'):
         img = torch.load(image.split('.')[0]+'.pt')
         df_img = df[df['Image']==image.split('/')[-1]]
-        x = df_img['Centroid X px'].values
-        y = df_img['Centroid Y px'].values
+        x = df_img['Centroid.X.px'].values
+        y = df_img['Centroid.Y.px'].values
         all_cells = torch.Tensor()
         try:
             for cell in list(range(x.shape[0])):
