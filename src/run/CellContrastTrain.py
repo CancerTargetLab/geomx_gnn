@@ -23,9 +23,9 @@ def train(args):
 
     dataset = EmbedDataset(root_dir=args['image_dir'], 
                            crop_factor=args['crop_factor'],
-                           train_ration=args['train_ratio_image'],
+                           train_ratio=args['train_ratio_image'],
                            val_ratio=args['val_ratio_image'])
-    model = ContrastiveLearning(channels=dataset.__get__(0)[0].shape[1],
+    model = ContrastiveLearning(channels=dataset.__getitem__(0)[0].shape[0],
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
                                 resnet=args['resnet_model']).to(device, dtype=float)
