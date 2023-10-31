@@ -20,3 +20,10 @@ https://stackoverflow.com/questions/58424974/anaconda-importerror-usr-lib64-libs
 
 https://stackoverflow.com/questions/69952475/how-to-solve-the-pytorch-geometric-install-error-undefined-symbol-zn5torch3ji/73876857#73876857
 https://github.com/pyg-team/pytorch_geometric/issues/999
+
+install:
+conda install -c anaconda python=3.11.5  
+pip install torch -f https://data.pyg.org/whl/torch-2.1.0+cu121.html  
+pip install torch-geometric -f https://data.pyg.org/whl/torch-2.1.0+cu121.html  
+pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html  
+pip install torchvision -f https://data.pyg.org/whl/torch-2.1.0+cu121.html  

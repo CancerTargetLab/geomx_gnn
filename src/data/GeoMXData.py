@@ -30,7 +30,7 @@ class GeoMXDataset(Dataset):
 
         self.data = np.array(self.processed_file_names)
 
-        df = pd.read_csv(os.path.join(self.raw_dir, 'OC1_all.csv'), header=0, sep=',')
+        df = pd.read_csv(os.path.join(self.raw_dir, 'label_data.csv'), header=0, sep=',')
         IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
         un_IDs = np.unique(IDs)
 
@@ -65,9 +65,10 @@ class GeoMXDataset(Dataset):
     def processed_file_names(self):
         """ return list of files should be in processed dir, if found - skip processing."""
         processed_filename = []
-        for i, _ in enumerate(self.raw_files):
+        for i, path in enumerate(self.raw_files):
             i += 1
-            processed_filename.append(f"graph_{i:03}.pt")
+            appendix = path.split('/')[-1].split('_')[0]
+            processed_filename.append(f"graph_{appendix}.pt")
         processed_filename.sort()
         return processed_filename
     

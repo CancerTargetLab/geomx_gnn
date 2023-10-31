@@ -48,6 +48,7 @@ def train(args):
     #                                                 pct_start=0.1,
     #                                                 div_factor=25,
     #                                                 final_div_factor=1e6)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
     loss = torch.nn.MSELoss()
     similarity = torch.nn.CosineSimilarity()
@@ -106,6 +107,7 @@ def train(args):
                     val_acc = running_acc / num_graphs
                     val_acc_list.append(val_acc)
                     epoch_loss = running_loss / num_graphs
+                    # scheduler.step(epoch_loss)
                     val_loss_list.append(epoch_loss)
                     if val_acc > best_acc:
                         best_acc = val_acc
