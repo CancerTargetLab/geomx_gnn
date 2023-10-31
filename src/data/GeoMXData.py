@@ -83,10 +83,10 @@ class GeoMXDataset(Dataset):
         pass
 
     def process(self):
-        label = pd.read_csv(os.path.join(self.raw_dir, 'OC1_all.csv'), header=0, sep=',')
+        label = pd.read_csv(os.path.join(self.raw_dir, 'label_data.csv'), header=0, sep=',')
         df = pd.read_csv(self.cell_pos, header=0, sep=",")
-        df['Centroid X px'] = df['Centroid X px'].round().astype(float)
-        df['Centroid Y px'] = df['Centroid Y px'].round().astype(float)
+        df['Centroid.X.x'] = df['Centroid.X.px'].round().astype(float)
+        df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(float)
         with tqdm(self.raw_paths, total=len(self.raw_paths), desc='Preprocessing Graphs') as raw_paths:
             for file in raw_paths:
                 self._process_one_step(file, df, label)
@@ -95,35 +95,20 @@ class GeoMXDataset(Dataset):
         file_prefix = file.split('/')[-1].split('_')[0]
         df = df[df['Image']==file_prefix+'.tiff']
         # Deduplicate identical cell position: ~ is not op, first selects duplicates, second selects non first duplicates, | is or op
-        mask = ~df.duplicated(subset=['Centroid X px', 'Centroid Y px'], keep=False) | ~df.duplicated(subset=['Centroid X px', 'Centroid Y px'], keep='first')
+        mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
         df = df[mask]
 
         counts = np.zeros((df.shape[0], 1))
-        coordinates = np.column_stack((df["Centroid X px"].to_numpy(), df["Centroid Y px"].to_numpy()))
+        coordinates = np.column_stack((df["Centroid.X.px"].to_numpy(), df["Centroid.Y.px"].to_numpy()))
         adata = AnnData(counts, obsm={"spatial": coordinates})
         sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
         edge_matrix = adata.obsp["spatial_distances"]
         edge_matrix[edge_matrix > 60] = 0.
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
-        # label = df["Class"].values
-        # string_labels = list(df["Class"].unique())
-        # if len(self.string_labels_map.keys()) == 0:
-        #     int_labels = list(range(len(string_labels)))
-        #     self.string_labels_map = dict(zip(string_labels, int_labels))
-        #     label = torch.tensor(np.vectorize(self.string_labels_map.get)(label))
-        # else:
-        #     keys = list(self.string_labels_map.keys())
-        #     for l in string_labels:
-        #         if l not in keys:
-        #             self.string_labels_map[l] = len(keys)
-        #             keys.append(l)
-        #     label = torch.tensor(np.vectorize(self.string_labels_map.get)(label))
-        
-
         node_features =torch.load(file)[torch.from_numpy(mask.values)]
 
-        label = label[label['ROI']==int(file_prefix.lstrip('0'))]
+        label = label[label['ROI']==file_prefix]   #label[label['ROI']==int(file_prefix.lstrip('0'))]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy())
         
         data = Data(x=node_features,

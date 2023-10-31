@@ -24,5 +24,5 @@ def getAllPositionData(path, sep=','):
         df1 = pd.concat([df1, df2])
     df1.to_csv('measurements.csv', sep=',', header=True, index=False, )
 
-#getExpressionData('data/raw/OC1_all.txt', sep='\t')
-getAllPositionData(['data/measurements_CD8_roi.tsv', 'data/measurements_CD45_roi.tsv'], sep='\t')
+getExpressionData('data/dataset.csv', sep=',')
+#getAllPositionData(['data/measurements_CD8_roi.tsv', 'data/measurements_CD45_roi.tsv'], sep='\t')
