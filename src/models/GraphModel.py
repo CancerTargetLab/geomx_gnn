@@ -130,15 +130,15 @@ class GraphLearning(torch.nn.Module):
         self.conv_skip.apply(init_weights)
 
 
-    def forward(self, data):
-        x, edge_index, edge_feature = data.x, data.edge_index, data.edge_weight
+    def forward(self, x, edge_index, edge_attr):
+        #x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         h_i = self.node_embed(x)
         # h = h_i.clone()
         h = [h_i]
 
         for conv in list(range(len(self.convs))):
-            h_i = self.convs[conv](h_i, edge_index, edge_attr=edge_feature)
+            h_i = self.convs[conv](h_i, edge_index, edge_attr=edge_attr)
 
             # h = torch.concat((h, h_i), dim=1)
             h.append(h_i)
@@ -175,10 +175,10 @@ class ROIExpression(torch.nn.Module):
                                       num_layers=2)
 
 
-    def forward(self, data):
-        x = self.gnn(data)
+    def forward(self, x, edge_index, edge_attr, batch):
+        x = self.gnn(x, edge_index, edge_attr)
         x = self.project(x)
-        x = self.pool(torch.abs(x), batch=data.batch)
+        x = self.pool(torch.abs(x), batch=batch)
         return x
         
 
