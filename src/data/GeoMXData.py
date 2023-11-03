@@ -148,11 +148,12 @@ class GeoMXDataset(Dataset):
             return torch.load(os.path.join(self.processed_dir, self.data[idx]))
     
     def embed(self, model, path, device='cpu'):
-        with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
-            for graph_path in data:
-                graph = torch.load(os.path.join(self.processed_dir, graph_path))
-                roi_pred = model(graph.to(device))
-                cell_pred = model(graph.to(device), return_cells=True)
-                torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path))
-                torch.save(cell_pred, os.path.join(path, 'cell_pred_'+graph_path))
+        with torch.no_grad():
+            with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
+                for graph_path in data:
+                    graph = torch.load(os.path.join(self.processed_dir, graph_path))
+                    roi_pred = model(graph.to(device))
+                    cell_pred = model(graph.to(device), return_cells=True)
+                    torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path))
+                    torch.save(cell_pred, os.path.join(path, 'cell_pred_'+graph_path))
 
