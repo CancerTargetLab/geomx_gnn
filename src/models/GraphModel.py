@@ -61,6 +61,7 @@ class ProjectionHead(torch.nn.Module):
     """
     Implemented in torch following the example of 
     https://github.com/google-research/simclr/blob/master/model_util.py#L141
+    TODO: graph batch data
     """
     def __init__(self, input_dim, output_dim, num_layers=2, use_bn=True, use_relu=True):
         super(ProjectionHead, self).__init__()
@@ -130,8 +131,8 @@ class GraphLearning(torch.nn.Module):
         self.conv_skip.apply(init_weights)
 
 
-    def forward(self, x, edge_index, edge_attr):
-        #x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+    def forward(self, data):#x, edge_index, edge_attr):
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         h_i = self.node_embed(x)
         # h = h_i.clone()
@@ -175,12 +176,12 @@ class ROIExpression(torch.nn.Module):
                                       num_layers=2)
 
 
-    def forward(self, x, edge_index, edge_attr, batch):
-        x = self.gnn(x, edge_index, edge_attr)
+    def forward(self, data, return_cells=False):#x, edge_index, edge_attr, batch):
+        x = self.gnn(data)#x, edge_index, edge_attr)
         x = self.project(x)
-        x = self.pool(torch.abs(x), batch=batch)
-        return x
+        if return_cells:
+            return torch.abs(x)
+        else:
+            return self.pool(torch.abs(x), batch=data.batch)#batch)
         
-
-
 

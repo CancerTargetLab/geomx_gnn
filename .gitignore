@@ -6,7 +6,9 @@
 *.pt
 *.pth
 *.zip
+*.pdf
 #data/
 __pycache__*
 figures*
 out/*
+*kek*

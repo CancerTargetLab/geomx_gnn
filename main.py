@@ -1,8 +1,9 @@
 import argparse
 from src.utils.image_preprocess import image_preprocess
 from src.run.CellContrastTrain import train as ImageTrain
-from src.run.CellContrastEmbed import embed
+from src.run.CellContrastEmbed import embed as CellContrastEmbed
 from src.run.GraphTrain import train as GraphTrain
+from src.run.GraphEmbed import embed as GraphEmbed
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments for image and GNN models")
@@ -32,6 +33,7 @@ def parse_args():
     # Copy and rename arguments for the GNN model
     parser.add_argument("--graph_dir", type=str, default="data/")
     parser.add_argument("--graph_raw_subset_dir", type=str, default="TMA1_preprocessed")
+    parser.add_argument("--graph_label_data", type=str, default="label_data.csv")
     parser.add_argument("--batch_size_graph", type=int, default=2)
     parser.add_argument("--epochs_graph", type=int, default=100)
     parser.add_argument("--warmup_epochs_graph", type=int, default=10)
@@ -51,8 +53,10 @@ def parse_args():
     parser.add_argument("--conv_dropout_graph", type=float, default=0.1)
     parser.add_argument("--output_name_graph", type=str, default="out/ROI.pt")
     parser.add_argument("--train_gnn", action="store_true", default=False)
+    parser.add_argument("--embed_gnn_data", action="store_true", default=False)
+    parser.add_argument("--output_graph_embed", type=str, default="out/")
 
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=44)
 
     return parser.parse_args()
 
@@ -63,9 +67,11 @@ def main(args):
     if args['train_image_model']:
         ImageTrain(args)
     if args['embed_image_data']:
-        embed(args)
+        CellContrastEmbed(args)
     if args['train_gnn']:
         GraphTrain(args)
+    if args['embed_gnn_data']:
+        GraphEmbed(args)
 
 
 if __name__ == '__main__':

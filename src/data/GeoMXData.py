@@ -11,10 +11,11 @@ from tqdm import tqdm
 class GeoMXDataset(Dataset):
     def __init__(self, root_dir='data/', raw_subset_dir='',
                  train_ratio = 0.6, val_ratio = 0.2, node_dropout=0.2,
-                 edge_dropout=0.3, transform=None):
+                 edge_dropout=0.3, label_data='label_data.csv', transform=None):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
         self.processed_path = os.path.join(self.root_dir, 'processed')
+        self.label_data = label_data
 
         self.node_dropout = node_dropout
         self.edge_dropout = edge_dropout
@@ -30,7 +31,7 @@ class GeoMXDataset(Dataset):
 
         self.data = np.array(self.processed_file_names)
 
-        df = pd.read_csv(os.path.join(self.raw_dir, 'label_data.csv'), header=0, sep=',')
+        df = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
         IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
         un_IDs = np.unique(IDs)
 
@@ -84,7 +85,7 @@ class GeoMXDataset(Dataset):
         pass
 
     def process(self):
-        label = pd.read_csv(os.path.join(self.raw_dir, 'label_data.csv'), header=0, sep=',')
+        label = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
         df = pd.read_csv(self.cell_pos, header=0, sep=",")
         df['Centroid.X.x'] = df['Centroid.X.px'].round().astype(float)
         df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(float)
@@ -145,4 +146,13 @@ class GeoMXDataset(Dataset):
             return torch.load(os.path.join(self.processed_dir, self.data[self.test_map][idx]))
         else:
             return torch.load(os.path.join(self.processed_dir, self.data[idx]))
+    
+    def embed(self, model, path, device='cpu'):
+        with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
+            for graph_path in data:
+                graph = torch.load(os.path.join(self.processed_dir, graph_path))
+                roi_pred = model(graph.to(device))
+                cell_pred = model(graph.to(device), return_cells=True)
+                torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path))
+                torch.save(cell_pred, os.path.join(path, 'cell_pred_'+graph_path))
 

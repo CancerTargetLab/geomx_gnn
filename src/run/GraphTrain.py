@@ -23,7 +23,8 @@ def train(args):
                            train_ratio=args['train_ratio_graph'],
                            val_ratio=args['val_ratio_graph'],
                            node_dropout=args['node_dropout'],
-                           edge_dropout=args['edge_dropout'])
+                           edge_dropout=args['edge_dropout'],
+                           label_data=args['graph_label_data'])
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     dataset.setMode(dataset.val)
