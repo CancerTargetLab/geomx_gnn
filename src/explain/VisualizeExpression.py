@@ -31,14 +31,16 @@ def get_predicted_cell_expression(value_dict, path):
 def get_patient_ids(label_data):
     df = pd.read_csv(os.path.join(os.getcwd(), 'data', 'raw', label_data), header=0, sep=',')
     IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
-    return IDs
+    exps = df.columns.values[2:] #TODO: 2: for p2106
+    return IDs, exps
 
-def visualize_bulk_expression(value_dict, IDs, name, key='y'):
+def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     rois = list(value_dict.keys())
     rois.sort()
     rois_np = np.array(rois)
     adata = sc.AnnData(np.zeros((len(rois), value_dict[rois[0]][key].shape[0])))
     adata.obs['ID'] = -1
+    adata.var_names = exps
 
     i = 0
     for id in np.unique(IDs).tolist():
@@ -58,8 +60,10 @@ def visualize_bulk_expression(value_dict, IDs, name, key='y'):
     sc.tl.umap(adata)
     sc.tl.leiden(adata)
     sc.pl.umap(adata, color=['ID', 'leiden'], save=name+'.png', show=False)
+    sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
+    sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
-def visualize_cell_expression(value_dict, IDs, name):
+def visualize_cell_expression(value_dict, IDs, exps, name):
     rois = list(value_dict.keys())
     rois.sort()
     rois_np = np.array(rois)
@@ -80,6 +84,7 @@ def visualize_cell_expression(value_dict, IDs, name):
             i += 1
     adata = sc.AnnData(counts)
     adata.obs['ID'] = ids
+    adata.var_names = exps
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)
     sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
@@ -90,14 +95,16 @@ def visualize_cell_expression(value_dict, IDs, name):
     sc.tl.umap(adata)
     sc.tl.leiden(adata)
     sc.pl.umap(adata, color=['ID', 'leiden'], save=name+'.png', show=False)
+    sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
+    sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
 
 
 value_dict = get_true_graph_expression_dict('data/processed/')
 value_dict = get_predicted_graph_expression(value_dict, 'out/TMA1')
 value_dict = get_predicted_cell_expression(value_dict, 'out/TMA1')
-IDs = get_patient_ids('OC1_all.csv')
-visualize_bulk_expression(value_dict, IDs, '_true', key='y')
-visualize_bulk_expression(value_dict, IDs, '_pred', key='roi_pred')
-visualize_cell_expression(value_dict, IDs, '_cells')
+IDs, exps = get_patient_ids('OC1_all.csv')
+visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
+visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
+visualize_cell_expression(value_dict, IDs, exps, '_cells')
 
