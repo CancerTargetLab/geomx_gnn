@@ -101,7 +101,7 @@ def train(args):
                         batch = batch.to(device)
                         out = model(batch)
                         l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
-                        running_loss += l.item()
+                        running_loss += l.item() * out.shape[0]
                         running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
                         num_graphs += out.shape[0]
 
@@ -138,7 +138,7 @@ def train(args):
                 batch = batch.to(device)
                 out = model(batch)
                 l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
-                running_loss += l.item()
+                running_loss += l.item() * out.shape[0]
                 running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
                 num_graphs += out.shape[0]
 

@@ -1,5 +1,5 @@
 import torch
-import torch_geometric
+import matplotlib.pyplot as plt
 import numpy as np
 import scanpy as sc
 import pandas as pd
@@ -31,7 +31,7 @@ def get_predicted_cell_expression(value_dict, path):
 def get_patient_ids(label_data):
     df = pd.read_csv(os.path.join(os.getcwd(), 'data', 'raw', label_data), header=0, sep=',')
     IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
-    exps = df.columns.values[2:] #TODO: 2: for p2106
+    exps = df.columns.values[3:] #TODO: 2: for p2106
     return IDs, exps
 
 def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
@@ -56,7 +56,7 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     sc.pl.highly_variable_genes(adata, save=name+'.png', show=False)
     sc.pp.scale(adata)
     sc.tl.pca(adata, svd_solver='arpack')
-    sc.pp.neighbors(adata, n_neighbors=10, n_pcs=value_dict[rois[0]][key].shape[0]-1)
+    sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
     sc.tl.umap(adata)
     sc.tl.leiden(adata)
     sc.pl.umap(adata, color=['ID', 'leiden'], save=name+'.png', show=False)
@@ -91,10 +91,19 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
     sc.pl.highly_variable_genes(adata, save=name+'.png', show=False)
     sc.pp.scale(adata)
     sc.tl.pca(adata, svd_solver='arpack')
-    sc.pp.neighbors(adata, n_neighbors=10, n_pcs=value_dict[rois[0]][key].shape[1]-1)
+    sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
     sc.tl.umap(adata)
-    sc.tl.leiden(adata)
-    sc.pl.umap(adata, color=['ID', 'leiden'], save=name+'.png', show=False)
+    sc.tl.leiden(adata, resolution=0.5)
+
+    categories = np.unique(adata.obs['ID'])
+    colors = np.linspace(0, 1, len(categories))
+    colordict = dict(zip(categories, colors))
+    adata.obs['Color'] = adata.obs['ID'].apply(lambda x: colordict[x])
+    plt.scatter(adata.obsm['X_umap'][:,0], adata.obsm['X_umap'][:,1], c=adata.obs['Color'], alpha=0.4, cmap='gist_ncar', s=1)
+    plt.savefig('figures/umap'+name+'_ID.png')
+
+    sc.pl.umap(adata, color='leiden', save=name+'.png', show=False)
+    sc.pl.umap(adata, color='ID', save=name+'.png', show=False, color_map='gist_ncar')
     sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
