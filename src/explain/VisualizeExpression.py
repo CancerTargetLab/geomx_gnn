@@ -64,36 +64,45 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
 def visualize_cell_expression(value_dict, IDs, exps, name):
-    rois = list(value_dict.keys())
-    rois.sort()
-    rois_np = np.array(rois)
-    counts = None
-    ids = np.array([])
+    if os.path.exists('out/'+name+'.h5ad'):
+        adata = sc.read('out/'+name+'.h5ad')
+    else:
+        rois = list(value_dict.keys())
+        rois.sort()
+        rois_np = np.array(rois)
+        counts = None
+        ids = np.array([])
 
-    i = 0
-    key = 'cell_pred'
-    for id in np.unique(IDs).tolist():
-        id_map = IDs==id
-        id_keys = rois_np[id_map].tolist()
-        for id_key in id_keys:
-            if counts is not None:
-                counts = np.concatenate((counts, value_dict[id_key][key]))
-            else:
-                counts = value_dict[id_key][key]
-            ids = np.concatenate((ids, np.array([id]*value_dict[id_key][key].shape[0])))
-            i += 1
-    adata = sc.AnnData(counts)
-    adata.obs['ID'] = ids
-    adata.var_names = exps
-    sc.pp.normalize_total(adata)
-    sc.pp.log1p(adata)
-    sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+        i = 0
+        key = 'cell_pred'
+        for id in np.unique(IDs).tolist():
+            id_map = IDs==id
+            id_keys = rois_np[id_map].tolist()
+            for id_key in id_keys:
+                if counts is not None:
+                    counts = np.concatenate((counts, value_dict[id_key][key]))
+                else:
+                    counts = value_dict[id_key][key]
+                ids = np.concatenate((ids, np.array([id]*value_dict[id_key][key].shape[0])))
+                i += 1
+        adata = sc.AnnData(counts)
+        adata.obs['ID'] = ids
+        adata.var_names = exps
+        sc.pp.normalize_total(adata)
+        sc.pp.log1p(adata)
+        sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+        
+        sc.pp.scale(adata)
+        sc.tl.pca(adata, svd_solver='arpack')
+        sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
+        sc.tl.umap(adata)
+        sc.tl.leiden(adata, resolution=0.5)
+
+        sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
+
+        adata.write('out/'+name+'.h5ad')
+    
     sc.pl.highly_variable_genes(adata, save=name+'.png', show=False)
-    sc.pp.scale(adata)
-    sc.tl.pca(adata, svd_solver='arpack')
-    sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
-    sc.tl.umap(adata)
-    sc.tl.leiden(adata, resolution=0.5)
 
     categories = np.unique(adata.obs['ID'])
     colors = np.linspace(0, 1, len(categories))
@@ -103,9 +112,9 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
     plt.savefig('figures/umap'+name+'_ID.png')
 
     sc.pl.umap(adata, color='leiden', save=name+'.png', show=False)
-    sc.pl.umap(adata, color='ID', save=name+'.png', show=False, color_map='gist_ncar')
-    sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
+
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
+
 
 
 
