@@ -72,6 +72,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
         rois_np = np.array(rois)
         counts = None
         ids = np.array([])
+        files = np.array([])
 
         i = 0
         key = 'cell_pred'
@@ -84,9 +85,12 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
                 else:
                     counts = value_dict[id_key][key]
                 ids = np.concatenate((ids, np.array([id]*value_dict[id_key][key].shape[0])))
+                files = np.concatenate((files, np.array([id_key]*value_dict[id_key][key].shape[0])))
                 i += 1
+        counts = np.array(counts)
         adata = sc.AnnData(counts)
         adata.obs['ID'] = ids
+        adata.obs['files'] = files
         adata.var_names = exps
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
