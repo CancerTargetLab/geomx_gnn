@@ -12,7 +12,7 @@ import torch
 
 df = pd.read_csv("data/raw/measurements.csv", header=0, sep=",")
 df = df[["Image", "Centroid.X.px", "Centroid.Y.px"]] #'Class'
-df = df[df["Image"] == "001-1B65.tiff"]
+df = df[df["Image"] == "026-6B78.tiff"]
 df = df.drop("Image", axis=1)
 mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
 df = df[mask]
@@ -21,7 +21,7 @@ df = df[mask]
 # df["Centroid Y px"] = df["Centroid Y px"].str.replace(',', '.').astype(float)
 
 
-img = io.imread('data/raw/001-1B65.tiff', plugin='tifffile')
+img = io.imread('data/raw/026-6B78.tiff', plugin='tifffile')
 
 image = np.expand_dims(img, axis=3)
 test=sq.im.ImageContainer(image, dims=("y", "x", "z", "channels"))
@@ -115,8 +115,11 @@ sc.tl.umap(adata)
 print("Leiden")
 sc.tl.leiden(adata, resolution=resolution)
 
+cluster = np.load('out/026-6B78.npy', allow_pickle=True)
+adata.obs['cluster'] = cluster
+
 sq.pl.spatial_scatter(adata, 
-                      color="leiden",
+                      color="cluster",
                       #connectivity_key="spatial_connectivities",
                       #edges_color="grey",
                       #edges_width=1,

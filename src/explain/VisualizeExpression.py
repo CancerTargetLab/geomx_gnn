@@ -65,7 +65,7 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
 
 def visualize_cell_expression(value_dict, IDs, exps, name):
     if os.path.exists('out/'+name+'.h5ad'):
-        adata = sc.read('out/'+name+'.h5ad')
+        adata = sc.read_h5ad('out/'+name+'.h5ad')
     else:
         rois = list(value_dict.keys())
         rois.sort()
@@ -115,7 +115,9 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
     plt.scatter(adata.obsm['X_umap'][:,0], adata.obsm['X_umap'][:,1], c=adata.obs['Color'], alpha=0.4, cmap='gist_ncar', s=1)
     plt.savefig('figures/umap'+name+'_ID.png')
 
-    sc.pl.umap(adata, color='leiden', save=name+'.png', show=False)
+    adata.obs['ID']=adata.obs['ID'].astype(str)
+    sc.pl.umap(adata, color='ID', save=name+'_ID2.png', show=False, )
+    sc.pl.umap(adata, color='leiden', save=name+'_cluster.png', show=False)
 
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
