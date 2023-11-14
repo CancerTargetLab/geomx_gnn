@@ -14,8 +14,9 @@ class GeoMXDataset(Dataset):
                  edge_dropout=0.3, label_data='label_data.csv', transform=None):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
-        self.processed_path = os.path.join(self.root_dir, 'processed')
+        self.processed_path = os.path.join(self.root_dir, 'processed', raw_subset_dir)
         self.label_data = label_data
+        self.raw_subset_dir = raw_subset_dir
 
         self.node_dropout = node_dropout
         self.edge_dropout = edge_dropout
@@ -69,7 +70,10 @@ class GeoMXDataset(Dataset):
         for i, path in enumerate(self.raw_files):
             i += 1
             appendix = path.split('/')[-1].split('_')[0]
-            processed_filename.append(f"graph_{appendix}.pt")
+            if len(self.raw_subset_dir) > 0:
+                processed_filename.append(f'{self.raw_subset_dir}/graph_{appendix}.pt')
+            else:
+                processed_filename.append(f'graph_{appendix}.pt')
         processed_filename.sort()
         return processed_filename
     

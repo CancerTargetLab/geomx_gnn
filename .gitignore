@@ -8,6 +8,7 @@
 *.zip
 *.pdf
 *.h5ad
+*.xlsx
 #data/
 __pycache__*
 figures*
