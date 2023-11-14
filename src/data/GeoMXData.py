@@ -143,19 +143,19 @@ class GeoMXDataset(Dataset):
 
     def get(self, idx):
         if self.mode == self.train:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.train_map][idx]))
+            return torch.load(os.path.join(self.processed_path, self.data[self.train_map][idx]))
         elif self.mode == self.val:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.val_map][idx]))
+            return torch.load(os.path.join(self.processed_path, self.data[self.val_map][idx]))
         elif self.mode == self.test:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.test_map][idx]))
+            return torch.load(os.path.join(self.processed_path, self.data[self.test_map][idx]))
         else:
-            return torch.load(os.path.join(self.processed_dir, self.data[idx]))
+            return torch.load(os.path.join(self.processed_path, self.data[idx]))
     
     def embed(self, model, path, device='cpu'):
         with torch.no_grad():
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
                 for graph_path in data:
-                    graph = torch.load(os.path.join(self.processed_dir, graph_path))
+                    graph = torch.load(os.path.join(self.processed_path, graph_path))
                     roi_pred = model(graph.to(device))
                     cell_pred = model(graph.to(device), return_cells=True)
                     torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path))
