@@ -158,6 +158,6 @@ class GeoMXDataset(Dataset):
                     graph = torch.load(os.path.join(self.processed_dir, graph_path))
                     roi_pred = model(graph.to(device))
                     cell_pred = model(graph.to(device), return_cells=True)
-                    torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path))
-                    torch.save(cell_pred, os.path.join(path, 'cell_pred_'+graph_path))
+                    torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path.split('/')[-1]))
+                    torch.save(cell_pred, os.path.join(path, 'cell_pred_'+graph_path.split('/')[-1]))
 
