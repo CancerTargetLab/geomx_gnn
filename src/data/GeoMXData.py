@@ -116,7 +116,7 @@ class GeoMXDataset(Dataset):
 
         label = label[label['ROI']==file_prefix]   #label[label['ROI']==int(file_prefix.lstrip('0'))]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy())
-        if np.sum(label) > 0:
+        if torch.sum(label) > 0:
             data = Data(x=node_features,
                         edge_index=edge_index,
                         edge_attr=edge_attr,
