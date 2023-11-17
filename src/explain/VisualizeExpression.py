@@ -106,7 +106,9 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
 
         adata.write('out/'+name+'.h5ad')
     
-    sc.pl.highly_variable_genes(adata, save=name+'.png', show=False)
+    #with plt.rc_context():
+    sc.pl.highly_variable_genes(adata, show=False)
+    #plt.save('figures/')
 
     categories = np.unique(adata.obs['ID'])
     colors = np.linspace(0, 1, len(categories))
