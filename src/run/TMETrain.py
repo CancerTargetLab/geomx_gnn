@@ -23,11 +23,9 @@ def train(args):
                            raw_subset_dir=args['graph_raw_subset_dir'],
                            train_ratio=args['train_ratio_graph'],
                            val_ratio=args['val_ratio_graph'],
-                           node_dropout=args['node_dropout'],
-                           edge_dropout=args['edge_dropout'],
                            label_data=args['graph_label_data'],
                            walk_length=3,
-                           repeat=0)
+                           repeat=1)
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, follow_batch=['x_s', 'x_t'])
     dataset.setMode(dataset.val)
@@ -35,7 +33,7 @@ def train(args):
     dataset.setMode(dataset.test)
     test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, follow_batch=['x_s', 'x_t'])
 
-    model = kTME(layers=args['layers_graph'],
+    model = kTME(k=args['layers_graph'],
                           num_node_features=args['num_node_features'],
                           num_edge_features=args['num_edge_features'],
                           num_embed_features=args['num_embed_features'],

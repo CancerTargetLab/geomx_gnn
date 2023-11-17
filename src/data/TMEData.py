@@ -11,6 +11,10 @@ class PairData(Data):
             return self.x_s.size(0)
         if key == 'edge_index_t':
             return self.x_t.size(0)
+        if key == 'n_sub_batch_s':
+            return 0
+        if key == 'n_sub_batch_t':
+            return 0
         return super().__inc__(key, value, *args, **kwargs)
 
 
@@ -53,10 +57,10 @@ class TMEDataset(GeoMXDataset):
         max_val = 0
         for n_batch in torch.unique(batch.x_s_batch):
             batch.n_sub_batch_s[batch.x_s_batch==n_batch] += max_val
-            max_val = torch.max(batch.n_sub_batch_s[batch.x_s_batch==n_batch])
+            max_val = torch.max(batch.n_sub_batch_s[batch.x_s_batch==n_batch]) + 1
         for n_batch in torch.unique(batch.x_t_batch):
             batch.n_sub_batch_t[batch.x_t_batch==n_batch] += max_val
-            max_val = torch.max(batch.n_sub_batch_t[batch.x_t_batch==n_batch])
+            max_val = torch.max(batch.n_sub_batch_t[batch.x_t_batch==n_batch]) + 1
         batch = Data(x=torch.cat((batch.x_s, batch.x_t)),
                      edge_index=torch.cat((batch.edge_index_s, batch.edge_index_t), dim=1),
                      edge_attr=torch.cat((batch.edge_attr_s, batch.edge_attr_t)),
