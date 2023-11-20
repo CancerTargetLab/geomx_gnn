@@ -21,11 +21,13 @@ def train(args):
 
     dataset = TMEDataset(root_dir=args['tme_dir'],
                            raw_subset_dir=args['tme_raw_subset_dir'],
-                           train_ratio=args['tme_ratio_graph'],
-                           val_ratio=args['tme_ratio_graph'],
+                           train_ratio=args['train_ratio_tme'],
+                           val_ratio=args['val_ratio_tme'],
+                           node_dropout=args['node_dropout_tme'],
+                           edge_dropout=args['edge_dropout_tme'],
                            label_data=args['tme_label_data'],
-                           walk_length=args['walk_length_tme'],
-                           repeat=args['repeat_tme'])
+                           num_hops=args['num_hops_tme'],
+                           subgraphs_per_graph=args['subgraphs_per_batch_tme'])
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, follow_batch=['x_s', 'x_t'])
     dataset.setMode(dataset.val)
