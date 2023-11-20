@@ -13,6 +13,7 @@ def train(args):
     lr = args['lr_graph']
     num_workers = args['num_workers_graph']
     early_stopping = args['early_stopping_graph']
+    is_log = args['data_is_log_tme']
 
     # move to GPU (if available)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -75,7 +76,10 @@ def train(args):
                     batch = batch.to(device)
                     optimizer.zero_grad()
                     out = model(batch)
-                    l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
+                    if is_log:
+                        l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
+                    else:
+                        l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                     l.backward()
                     optimizer.step()
                     # scheduler.step()
@@ -100,7 +104,10 @@ def train(args):
                     for idx, batch in enumerate(val_loader):
                         batch = batch.to(device)
                         out = model(batch)
-                        l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
+                        if is_log:
+                            l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
+                        else:
+                            l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                         running_loss += l.item() * out.shape[0]
                         running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
                         num_graphs += out.shape[0]
@@ -137,7 +144,10 @@ def train(args):
             for idx, batch in enumerate(test_loader):
                 batch = batch.to(device)
                 out = model(batch)
-                l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
+                if is_log:
+                    l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
+                else:
+                    l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                 running_loss += l.item() * out.shape[0]
                 running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
                 num_graphs += out.shape[0]

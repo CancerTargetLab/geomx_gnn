@@ -4,6 +4,8 @@ from src.run.CellContrastTrain import train as ImageTrain
 from src.run.CellContrastEmbed import embed as CellContrastEmbed
 from src.run.GraphTrain import train as GraphTrain
 from src.run.GraphEmbed import embed as GraphEmbed
+from src.run.TMETrain import train as TMETrain
+#from src.run.TMEEmbed import embed as TMEEmbed
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments for image and GNN models")
@@ -30,21 +32,22 @@ def parse_args():
     parser.add_argument("--train_image_model", action="store_true", default=False)
     parser.add_argument("--embed_image_data", action="store_true", default=False)
 
-    # Copy and rename arguments for the GNN model
+    # Arguments for the GNN model
     parser.add_argument("--graph_dir", type=str, default="data/")
     parser.add_argument("--graph_raw_subset_dir", type=str, default="TMA1_preprocessed")
-    parser.add_argument("--graph_label_data", type=str, default="label_data.csv")
-    parser.add_argument("--batch_size_graph", type=int, default=2)
+    parser.add_argument("--graph_label_data", type=str, default="OC1_all.csv")
+    parser.add_argument("--data_is_log_graph", type=bool, default=False)
+    parser.add_argument("--batch_size_graph", type=int, default=1)
     parser.add_argument("--epochs_graph", type=int, default=100)
     parser.add_argument("--warmup_epochs_graph", type=int, default=10)
     parser.add_argument("--num_workers_graph", type=int, default=1)
-    parser.add_argument("--lr_graph", type=float, default=0.0005)
+    parser.add_argument("--lr_graph", type=float, default=0.005)
     parser.add_argument("--early_stopping_graph", type=int, default=10)
     parser.add_argument("--train_ratio_graph", type=float, default=0.6)
     parser.add_argument("--val_ratio_graph", type=float, default=0.2)
     parser.add_argument("--node_dropout", type=float, default=0.3)
     parser.add_argument("--edge_dropout", type=float, default=0.5)
-    parser.add_argument("--layers_graph", type=int, default=3)
+    parser.add_argument("--layers_graph", type=int, default=1)
     parser.add_argument("--num_node_features", type=int, default=256)
     parser.add_argument("--num_edge_features", type=int, default=1)
     parser.add_argument("--num_embed_features", type=int, default=128)
@@ -55,6 +58,34 @@ def parse_args():
     parser.add_argument("--train_gnn", action="store_true", default=False)
     parser.add_argument("--embed_gnn_data", action="store_true", default=False)
     parser.add_argument("--output_graph_embed", type=str, default="out/")
+
+    # Arguments for the TME model
+    parser.add_argument("--tme_dir", type=str, default="data/")
+    parser.add_argument("--tme_raw_subset_dir", type=str, default="TMA1_preprocessed")
+    parser.add_argument("--tme_label_data", type=str, default="OC1_all.csv")
+    parser.add_argument("--data_is_log_tme", type=bool, default=False)
+    parser.add_argument("--batch_size_tme", type=int, default=1)
+    parser.add_argument("--epochs_tme", type=int, default=100)
+    parser.add_argument("--warmup_epochs_tme", type=int, default=10)
+    parser.add_argument("--num_workers_tme", type=int, default=1)
+    parser.add_argument("--lr_tme", type=float, default=0.005)
+    parser.add_argument("--early_stopping_tme", type=int, default=10)
+    parser.add_argument("--train_ratio_tme", type=float, default=0.6)
+    parser.add_argument("--val_ratio_tme", type=float, default=0.2)
+    parser.add_argument("--walk_length_tme", type=int, default=1)
+    parser.add_argument("--repeat_tme", type=int, default=1)
+    parser.add_argument("--layers_tme", type=int, default=1)
+    parser.add_argument("--num_node_features_tme", type=int, default=256)
+    parser.add_argument("--num_edge_features_tme", type=int, default=1)
+    parser.add_argument("--num_embed_features_tme", type=int, default=64)
+    parser.add_argument("--num_out_features_tme", type=int, default=32)
+    parser.add_argument("--heads_tme", type=int, default=1)
+    parser.add_argument("--embed_dropout_tme", type=float, default=0.1)
+    parser.add_argument("--conv_dropout_tme", type=float, default=0.1)
+    parser.add_argument("--output_name_tme", type=str, default="out/TME.pt")
+    parser.add_argument("--train_tme", action="store_true", default=False)
+    parser.add_argument("--embed_tme_data", action="store_true", default=False)
+    parser.add_argument("--output_tme_embed", type=str, default="out/")
 
     parser.add_argument("--seed", type=int, default=44)
 
@@ -72,6 +103,10 @@ def main(args):
         GraphTrain(args)
     if args['embed_gnn_data']:
         GraphEmbed(args)
+    if args['train_tme']:
+        TMETrain(args)
+    # if args['embed_tme_data']:
+    #     TMEEmbed(args)
 
 
 if __name__ == '__main__':

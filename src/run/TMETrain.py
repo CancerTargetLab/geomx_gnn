@@ -8,24 +8,24 @@ from tqdm import tqdm
 
 def train(args):
 
-    EPOCH = args['epochs_graph']
+    EPOCH = args['epochs_tme']
     SEED = args['seed']
-    batch_size = args['batch_size_graph']
-    lr = args['lr_graph']
-    num_workers = args['num_workers_graph']
-    early_stopping = args['early_stopping_graph']
+    batch_size = args['batch_size_tme']
+    lr = args['lr_tme']
+    num_workers = args['num_workers_tme']
+    early_stopping = args['early_stopping_tme']
 
     # move to GPU (if available)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     set_seed(SEED)
 
-    dataset = TMEDataset(root_dir=args['graph_dir'],
-                           raw_subset_dir=args['graph_raw_subset_dir'],
-                           train_ratio=args['train_ratio_graph'],
-                           val_ratio=args['val_ratio_graph'],
-                           label_data=args['graph_label_data'],
-                           walk_length=3,
-                           repeat=1)
+    dataset = TMEDataset(root_dir=args['tme_dir'],
+                           raw_subset_dir=args['tme_raw_subset_dir'],
+                           train_ratio=args['tme_ratio_graph'],
+                           val_ratio=args['tme_ratio_graph'],
+                           label_data=args['tme_label_data'],
+                           walk_length=args['walk_length_tme'],
+                           repeat=args['repeat_tme'])
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, follow_batch=['x_s', 'x_t'])
     dataset.setMode(dataset.val)
@@ -33,14 +33,14 @@ def train(args):
     dataset.setMode(dataset.test)
     test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, follow_batch=['x_s', 'x_t'])
 
-    model = kTME(k=args['layers_graph'],
-                          num_node_features=args['num_node_features'],
-                          num_edge_features=args['num_edge_features'],
-                          num_embed_features=args['num_embed_features'],
-                          embed_dropout=args['embed_dropout_graph'],
-                          conv_dropout=args['conv_dropout_graph'],
-                          num_out_features=dataset.get(0).y.shape[0],
-                          heads=args['heads_graph']).to(device, dtype=float)
+    model = kTME(k=args['layers_tme'],
+                          num_node_features=args['num_node_features_tme'],
+                          num_edge_features=args['num_edge_features_tme'],
+                          num_embed_features=args['num_embed_features_tme'],
+                          embed_dropout=args['embed_dropout_tme'],
+                          conv_dropout=args['conv_dropout_tme'],
+                          num_out_features=args['num_out_features_tme'],
+                          heads=args['heads_tme']).to(device, dtype=float)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
     dataset.setMode(dataset.train)
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
@@ -129,7 +129,7 @@ def train(args):
                             "val_acc": val_acc_list,
                             "val_list": val_loss_list,
                             "epoch": epoch
-                        }, args['output_name_graph'])
+                        }, args['output_name_tme'])
                     print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
 
 
@@ -137,7 +137,7 @@ def train(args):
         running_loss = 0
         running_acc = 0
         num_graphs = 0
-        model.load_state_dict(torch.load(args['output_name_graph'])['model'])
+        model.load_state_dict(torch.load(args['output_name_tme'])['model'])
         model.eval()
         dataset.setMode(dataset.test)
 
