@@ -77,7 +77,7 @@ def train(args):
                     optimizer.zero_grad()
                     out = model(batch)
                     if is_log:
-                        l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
+                        l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                     else:
                         l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                     l.backward()
@@ -105,7 +105,7 @@ def train(args):
                         batch = batch.to(device)
                         out = model(batch)
                         if is_log:
-                            l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
+                            l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                         else:
                             l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                         running_loss += l.item() * out.shape[0]
@@ -145,7 +145,7 @@ def train(args):
                 batch = batch.to(device)
                 out = model(batch)
                 if is_log:
-                    l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
+                    l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                 else:
                     l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                 running_loss += l.item() * out.shape[0]
