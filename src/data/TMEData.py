@@ -1,7 +1,7 @@
 from src.data.GeoMXData import GeoMXDataset
 from torch_geometric.transforms import RootedEgoNets
 from torch_geometric.data import Data
-from torch_geometric.utils import dropout_edge, dropout_node
+from torch_geometric.utils import dropout_edge, dropout_node, k_hop_subgraph
 from torch_geometric.transforms import RemoveIsolatedNodes, AddRemainingSelfLoops
 from torch import Tensor
 import torch
@@ -36,46 +36,61 @@ class TMEDataset(GeoMXDataset):
         self.num_hops = num_hops
         self.subgraphs_per_graph = subgraphs_per_graph
         self.RootedEgoNets = RootedEgoNets(num_hops=1)
+        self.RemoveIsolatedNodes = RemoveIsolatedNodes()
+        self.AddRemainingSelfLoops = AddRemainingSelfLoops(attr='edge_attr', fill_value=0.1)
         self.node_dropout = node_dropout
         self.edge_dropout = edge_dropout
         super().__init__(root_dir=root_dir, raw_subset_dir=raw_subset_dir, label_data=label_data,
                  train_ratio=train_ratio, val_ratio=val_ratio, transform=self.transform)
     
     def transform(self, data):
-        subs1 = self.RootedEgoNets(data)
-        subs1 = Data(x=subs1.x[subs1.n_id], edge_index=subs1.sub_edge_index,
-                        edge_attr=subs1.edge_attr[subs1.e_id], n_sub_batch=subs1.n_sub_batch)
-        subs2 = subs1.clone()
-        num_nodes = subs1.num_nodes 
-        egonets = torch.unique(subs1.n_sub_batch)
+        sub = torch.randint(0, data.num_nodes, (int(torch.min(torch.Tensor([data.num_nodes, self.subgraphs_per_graph]))),), device=data.edge_index.device)
+        new_data = None
+        for node_i in list(range(sub.shape[0])):
+            subset, edge_index, mapping, edge_mask = k_hop_subgraph(sub[node_i].item(), self.num_hops, data.edge_index, relabel_nodes=True)
+            subgraph = Data(x=data.x[subset], edge_index=edge_index, edge_attr=data.edge_attr[edge_mask])
 
-        node_map = dropout_node(subs1.edge_index, p=self.node_dropout, training=self.mode==self.train)
-        subs1.edge_index, subs1.edge_attr = node_map[0], subs1.edge_attr[node_map[1]]
-        subs1.x, subs1.n_sub_batch = subs1.x[node_map[2]], subs1.n_sub_batch[node_map[2]]
-        edge_map = dropout_edge(subs1.edge_index, p=self.edge_dropout, force_undirected=True, training=self.mode==self.train)
-        subs1.edge_index, subs1.edge_attr = edge_map[0], subs1.edge_attr[edge_map[1]]
+            valid_dropout = True
+            while valid_dropout:
+                subs1 = subgraph.clone()
+                node_map = dropout_node(subs1.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
+                subs1.edge_index, subs1.edge_attr = subs1.edge_index[:,node_map], subs1.edge_attr[node_map]
+                edge_map = dropout_edge(subs1.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
+                subs1.edge_index, subs1.edge_attr = subs1.edge_index[:,edge_map], subs1.edge_attr[edge_map]
+                subs1 = self.RemoveIsolatedNodes(subs1)
+                subs1 = self.AddRemainingSelfLoops(subs1)
+                valid_dropout =  0 == subs1.x.shape[0]
 
-        node_map = dropout_node(subs2.edge_index, p=self.node_dropout, training=self.mode==self.train)
-        subs2.edge_index, subs2.edge_attr = node_map[0], subs2.edge_attr[node_map[1]]
-        subs2.x, subs2.n_sub_batch = subs2.x[node_map[2]], subs2.n_sub_batch[node_map[2]]
-        edge_map = dropout_edge(subs2.edge_index, p=self.edge_dropout, force_undirected=True, training=self.mode==self.train)
-        subs2.edge_index, subs2.edge_attr = edge_map[0], subs2.edge_attr[edge_map[1]]
+            valid_dropout = True
+            while valid_dropout:
+                subs2 = subgraph.clone()
+                node_map = dropout_node(subs2.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
+                subs2.edge_index, subs2.edge_attr = subs2.edge_index[:,node_map], subs2.edge_attr[node_map]
+                edge_map = dropout_edge(subs2.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
+                subs2.edge_index, subs2.edge_attr = subs2.edge_index[:,edge_map], subs2.edge_attr[edge_map]
+                subs2 = self.RemoveIsolatedNodes(subs2)
+                subs2 = self.AddRemainingSelfLoops(subs2)
+                valid_dropout =  0 == subs2.x.shape[0]
 
-        if self.mode==self.train:
-            sub = torch.randint(0, data.num_nodes, (int(torch.min(torch.Tensor([data.num_nodes, self.subgraphs_per_graph]))),), device=data.edge_index.device)
-            subs1.n_id, subs1.n_sub_batch = subs1.n_id[torch.isin(subs1.n_sub_batch, sub)], subs1.n_sub_batch[torch.isin(subs1.n_sub_batch, sub)]
-            subs1.e_id, subs1.e_sub_batch, subs1.sub_edge_index = subs1.e_id[torch.isin(subs1.e_sub_batch, sub)], subs1.e_sub_batch[torch.isin(subs1.e_sub_batch, sub)], subs1.sub_edge_index[:,torch.isin(subs1.e_sub_batch, sub)]
-            subs2.n_id, subs2.n_sub_batch = subs2.n_id[torch.isin(subs2.n_sub_batch, sub)], subs2.n_sub_batch[torch.isin(subs2.n_sub_batch, sub)]
-            subs2.e_id, subs2.e_sub_batch, subs2.sub_edge_index = subs2.e_id[torch.isin(subs2.e_sub_batch, sub)], subs2.e_sub_batch[torch.isin(subs2.e_sub_batch, sub)], subs2.sub_edge_index[:,torch.isin(subs2.e_sub_batch, sub)]
+            if new_data is not None:
+                new_data.edge_index_s = torch.cat((new_data.edge_index_s, subs1.edge_index+new_data.x_s.shape[0]+1), dim=1)
+                new_data.edge_index_t = torch.cat((new_data.edge_index_t, subs2.edge_index+new_data.x_t.shape[0]+1), dim=1)
+                new_data.x_s, new_data.x_t = torch.cat((new_data.x_s, subs1.x)), torch.cat((new_data.x_t, subs2.x))
+                new_data.edge_attr_s = torch.cat((new_data.edge_attr_s, subs1.edge_attr))
+                new_data.edge_attr_t = torch.cat((new_data.edge_attr_t, subs2.edge_attr))
+                new_data.n_sub_batch_s= torch.cat((new_data.n_sub_batch_s, torch.tensor([node_i]*subs1.num_nodes, dtype=int)))
+                new_data.n_sub_batch_t = torch.cat((new_data.n_sub_batch_t, torch.tensor([node_i]*subs2.num_nodes, dtype=int)))
+                if not torch.unique(new_data.n_sub_batch_s).shape[0] == torch.unique(new_data.n_sub_batch_t).shape[0]:
+                    raise Exception('Data is unequal!!')
+            else:
+                new_data = PairData(x_s=subs1.x, edge_index_s=subs1.edge_index,
+                                    edge_attr_s=subs1.edge_attr, n_sub_batch_s=torch.tensor([node_i]*subs1.num_nodes, dtype=int),
+                                    x_t=subs2.x, edge_index_t=subs2.edge_index,
+                                    edge_attr_t=subs2.edge_attr, n_sub_batch_t=torch.tensor([node_i]*subs2.num_nodes, dtype=int))
+                if not torch.unique(new_data.n_sub_batch_s).shape[0] == torch.unique(new_data.n_sub_batch_t).shape[0]:
+                    raise Exception('Data is unequal!!')
 
-        data_s, data_t = RemoveIsolatedNodes()(data_s), RemoveIsolatedNodes()(data_t)
-        data_s, data_t = AddRemainingSelfLoops(data_s), AddRemainingSelfLoops(data_t)
-
-        data = PairData(x_s=data_s.x, edge_index_s=data_s.edge_index,
-                        edge_attr_s=data_s.edge_attr[subs1.e_id], n_sub_batch_s=data_s.n_sub_batch,
-                        x_t=data_t.x, edge_index_t=data_t.edge_index,
-                        edge_attr_t=data_t.edge_attr, n_sub_batch_t=data_t.n_sub_batch)
-        return data
+        return new_data
     
     def get(self, idx):
         if self.mode == self.train:

@@ -208,7 +208,11 @@ class kTME(torch.nn.Module):
                                 embed_dropout=embed_dropout,
                                 conv_dropout=conv_dropout,)
         
-        self.pool = torch_geometric.nn.pool.global_mean_pool
+        self.lin_block = ProjectionHead(input_dim=num_embed_features, 
+                                      output_dim=num_embed_features,
+                                      num_layers=6)
+        
+        self.pool = torch_geometric.nn.pool.global_add_pool
 
         self.project = ProjectionHead(input_dim=num_embed_features, 
                                       output_dim=num_out_features,
@@ -217,6 +221,7 @@ class kTME(torch.nn.Module):
 
     def forward(self, data):
         x = self.gnn(data)
+        x = self.lin_block(x)
         x = self.pool(x, batch=data.batch)
         if self.mode == 'train':
             return x
