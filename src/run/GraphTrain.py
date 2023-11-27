@@ -57,14 +57,17 @@ def train(args):
 
     train_acc_list = []
     train_loss_list = []
+    train_total_loss_list = []
     val_acc_list = []
     val_loss_list = []
+    val_total_loss_list = []
     best_acc = -1.0
     best_run = 0
 
     for epoch in list(range(EPOCH)):
         best_run += 1
         running_loss = 0
+        running_total_loss = 0
         running_acc = 0
         num_graphs = 0
         model.train()
@@ -80,21 +83,27 @@ def train(args):
                         l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                     else:
                         l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
-                    l.backward()
-                    optimizer.step()
+                    sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
                     # scheduler.step()
                     running_loss += l.item() * out.shape[0]
-                    running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
+                    running_acc += sim.item() * out.shape[0]
                     num_graphs += out.shape[0]
+                    l += 1 - sim
+                    running_total_loss += l.item() * out.shape[0]
+                    l.backward()
+                    optimizer.step()
 
                 train_acc = running_acc / num_graphs
                 train_acc_list.append(train_acc)
-                epoch_loss = running_loss / num_graphs
-                train_loss_list.append(epoch_loss)
+                geo_loss = running_loss / num_graphs
+                train_loss_list.append(geo_loss)
+                epoch_loss = running_total_loss / num_graphs
+                train_total_loss_list.append(epoch_loss)
                 print(f"Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}")
 
             with torch.no_grad():
                 running_loss = 0
+                running_total_loss = 0
                 running_acc = 0
                 num_graphs = 0
                 model.eval()
@@ -108,15 +117,20 @@ def train(args):
                             l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                         else:
                             l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
+                        sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
                         running_loss += l.item() * out.shape[0]
-                        running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
+                        running_acc += sim.item() * out.shape[0]
                         num_graphs += out.shape[0]
+                        l += 1 - sim
+                        running_total_loss += l.item() * out.shape[0]
 
                     val_acc = running_acc / num_graphs
                     val_acc_list.append(val_acc)
-                    epoch_loss = running_loss / num_graphs
+                    geo_loss = running_loss / num_graphs
                     # scheduler.step(epoch_loss)
-                    val_loss_list.append(epoch_loss)
+                    val_loss_list.append(geo_loss)
+                    epoch_loss = running_total_loss / num_graphs
+                    val_total_loss_list.append(epoch_loss)
                     if val_acc > best_acc:
                         best_acc = val_acc
                         best_run = 0
@@ -125,8 +139,10 @@ def train(args):
                             "opt": optimizer.state_dict(),
                             "train_acc": train_acc_list,
                             "train_list": train_loss_list,
+                            "train_total_list": train_total_loss_list,
                             "val_acc": val_acc_list,
                             "val_list": val_loss_list,
+                            "val_total_list": val_total_loss_list,
                             "epoch": epoch
                         }, args['output_name_graph'])
                     print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
@@ -134,6 +150,7 @@ def train(args):
 
     with torch.no_grad():
         running_loss = 0
+        running_total_loss = 0
         running_acc = 0
         num_graphs = 0
         model.load_state_dict(torch.load(args['output_name_graph'])['model'])
@@ -148,10 +165,14 @@ def train(args):
                     l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                 else:
                     l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
+                sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
                 running_loss += l.item() * out.shape[0]
-                running_acc += torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))).item() * out.shape[0]
+                running_acc += sim.item() * out.shape[0]
                 num_graphs += out.shape[0]
+                l += 1 - sim
+                running_total_loss += l.item() * out.shape[0]
 
             test_acc = running_acc / num_graphs
-            epoch_loss = running_loss / num_graphs
+            geo_loss = running_loss / num_graphs
+            epoch_loss = running_total_loss / num_graphs
             print(f"Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}")
