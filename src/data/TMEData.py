@@ -53,9 +53,9 @@ class TMEDataset(GeoMXDataset):
             valid_dropout = True
             while valid_dropout:
                 subs1 = subgraph.clone()
-                node_map = dropout_node(subs1.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
+                node_map = dropout_node(subs1.edge_index, p=self.node_dropout)[1]
                 subs1.edge_index, subs1.edge_attr = subs1.edge_index[:,node_map], subs1.edge_attr[node_map]
-                edge_map = dropout_edge(subs1.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
+                edge_map = dropout_edge(subs1.edge_index, p=self.edge_dropout)[1]
                 subs1.edge_index, subs1.edge_attr = subs1.edge_index[:,edge_map], subs1.edge_attr[edge_map]
                 subs1 = self.RemoveIsolatedNodes(subs1)
                 subs1 = self.AddRemainingSelfLoops(subs1)
@@ -64,9 +64,9 @@ class TMEDataset(GeoMXDataset):
             valid_dropout = True
             while valid_dropout:
                 subs2 = subgraph.clone()
-                node_map = dropout_node(subs2.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
+                node_map = dropout_node(subs2.edge_index, p=self.node_dropout)[1]
                 subs2.edge_index, subs2.edge_attr = subs2.edge_index[:,node_map], subs2.edge_attr[node_map]
-                edge_map = dropout_edge(subs2.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
+                edge_map = dropout_edge(subs2.edge_index, p=self.edge_dropout)[1]
                 subs2.edge_index, subs2.edge_attr = subs2.edge_index[:,edge_map], subs2.edge_attr[edge_map]
                 subs2 = self.RemoveIsolatedNodes(subs2)
                 subs2 = self.AddRemainingSelfLoops(subs2)
