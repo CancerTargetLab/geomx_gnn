@@ -3,9 +3,7 @@ from torch_geometric.transforms import RootedEgoNets
 from torch_geometric.data import Data
 from torch_geometric.utils import dropout_edge, dropout_node, k_hop_subgraph
 from torch_geometric.transforms import RemoveIsolatedNodes, AddRemainingSelfLoops
-from torch import Tensor
 import torch
-import os
 
 
 class PairData(Data):
@@ -91,16 +89,6 @@ class TMEDataset(GeoMXDataset):
                     raise Exception('Data is unequal!!')
 
         return new_data
-    
-    def get(self, idx):
-        if self.mode == self.train:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.train_map][idx]))
-        elif self.mode == self.val:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.val_map][idx]))
-        elif self.mode == self.test:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.test_map][idx]))
-        else:
-            return torch.load(os.path.join(self.processed_dir, self.data[idx]))
     
     def subgraph_batching(self, batch):
         max_val = 0
