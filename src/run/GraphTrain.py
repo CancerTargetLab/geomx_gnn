@@ -61,7 +61,7 @@ def train(args):
     val_acc_list = []
     val_loss_list = []
     val_total_loss_list = []
-    best_acc = -1.0
+    best_loss = torch.inf
     best_run = 0
 
     for epoch in list(range(EPOCH)):
@@ -131,8 +131,8 @@ def train(args):
                     val_loss_list.append(geo_loss)
                     epoch_loss = running_total_loss / num_graphs
                     val_total_loss_list.append(epoch_loss)
-                    if val_acc > best_acc:
-                        best_acc = val_acc
+                    if epoch_loss < best_loss:
+                        best_loss = epoch_loss
                         best_run = 0
                         torch.save({
                             "model": model.state_dict(),
