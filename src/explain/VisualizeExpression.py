@@ -1,5 +1,6 @@
 import torch
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 import scanpy as sc
 import pandas as pd
@@ -34,13 +35,14 @@ def get_patient_ids(label_data):
     exps = df.columns.values[3:] #TODO: 2: for p2106
     return IDs, exps
 
-def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
+def get_bulk_expression_of(value_dict, IDs, exps, key='y'):
     rois = list(value_dict.keys())
     rois.sort()
     rois_np = np.array(rois)
     adata = sc.AnnData(np.zeros((len(rois), value_dict[rois[0]][key].shape[0])))
     adata.obs['ID'] = -1
     adata.var_names = exps
+    files = np.array([])
 
     i = 0
     for id in np.unique(IDs).tolist():
@@ -49,7 +51,13 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
         for id_key in id_keys:
             adata.X[i] = value_dict[id_key][key]
             adata.obs['ID'][i] = id
+            files = np.concatenate((files, np.array([id_key])))
             i += 1
+    adata.obs['files'] = files
+    return adata
+
+def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
+    adata = get_bulk_expression_of(value_dict, IDs, exps, key)
     sc.pp.normalize_total(adata)
     sc.pp.log1p(adata)
     sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
@@ -123,14 +131,65 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
 
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
+def visualize_graph_accuracy(value_dict, IDs, exps, name):
+    adata_y = get_bulk_expression_of(value_dict, IDs, exps, key='y')
+    adata_p = get_bulk_expression_of(value_dict, IDs, exps, key='roi_pred')
+
+    similarity = torch.nn.CosineSimilarity()
+
+    adata_p.obs['cs'] = similarity(torch.from_numpy(adata_p.X), torch.from_numpy(adata_y.X)).squeeze().detach().numpy()
+    
+    boxplot = plt.boxplot(adata_p.obs['cs'],)# labels=[category])
+    outliers = [flier.get_ydata() for flier in boxplot['fliers']]
+
+    for j, outlier_y in enumerate(outliers):
+        outlier_x = np.full_like(outlier_y, 1.1)
+        #plt.scatter(outlier_x, outlier_y, marker='o', color='red', label='Outliers' if j == 0 else '')
+
+        for x, y, info in zip(outlier_x, outlier_y, adata_p.obs['files']):
+            plt.annotate(info, (x, y), textcoords="offset points", xytext=(0, 10), ha='center', fontsize=8, color='red')
+
+
+    plt.ylabel('Cosine Similarity')
+    plt.title('Boxplots of Cosine Similarity')
+    # Adjust layout
+    plt.tight_layout()
+    plt.savefig(f'out/all_boxplot{name}.png')
+    plt.close()
+
+    plt.scatter(adata_p.obs['ID'].apply(lambda x: str(x)).values, adata_p.obs['cs'])
+    plt.title('Cosine Similarity of IDs')
+    plt.ylabel('Cosine Similarity')
+    plt.xticks(rotation=90)  # Rotate x-axis labels vertically
+    plt.xlabel('IDs')
+    plt.savefig(f'out/cosine_similarity_IDs{name}.png')
+    plt.close()
+
+    df = pd.DataFrame()
+    df['cs'] = adata_p.obs['cs'].values
+    df['slides'] = adata_p.obs['files'].apply(lambda x: x.split('-')[-1]).values
+    sns.boxplot(data=df, y='cs', x='slides')
+    sns.title('Cosine Similarity of Slides')
+    sns.ylabel('Cosine Similarity')
+    sns.xlabel('Slides')
+    sns.savefig(f'out/cosine_similarity_slides{name}.png')
+    sns.close()
 
 
 
-value_dict = get_true_graph_expression_dict('data/processed/')
+
+
+
+    
+
+
+
+value_dict = get_true_graph_expression_dict('data/processed/TMA1_preprocessed')
 value_dict = get_predicted_graph_expression(value_dict, 'out/TMA1')
 value_dict = get_predicted_cell_expression(value_dict, 'out/TMA1')
 IDs, exps = get_patient_ids('OC1_all.csv')
-visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
-visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
-visualize_cell_expression(value_dict, IDs, exps, '_cells')
+# visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
+# visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
+# visualize_cell_expression(value_dict, IDs, exps, '_cells')
+visualize_graph_accuracy(value_dict, IDs, exps, '_cells')
 
