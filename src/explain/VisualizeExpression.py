@@ -104,7 +104,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
         sc.pp.log1p(adata)
         adata.layers['logs'] = adata.X.copy()
         adata.X = adata.layers['counts'].copy() 
-        sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.15)
+        sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
         
@@ -114,7 +114,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
         sc.tl.umap(adata)
         sc.tl.leiden(adata, resolution=0.5)
 
-        sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False, layer='logs')
+        sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
 
         adata.write('out/'+name+'.h5ad')
     
@@ -182,7 +182,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     df = pd.DataFrame()
     df['cs'] = adata_p.obs['cs'].values
     df['slides'] = adata_p.obs['files'].apply(lambda x: x.split('-')[-1]).values
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(15, 10))
     sns.boxplot(data=df, y='cs', x='slides')
     plt.title('Cosine Similarity of Slides')
     plt.ylabel('Cosine Similarity')
@@ -190,14 +190,6 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     plt.xticks(rotation=90)  # Rotate x-axis labels vertically
     plt.savefig(f'figures/cosine_similarity_slides{name}.png')
     plt.close()
-
-
-
-
-
-
-    
-
 
 
 value_dict = get_true_graph_expression_dict('data/processed/TMA1_preprocessed')
