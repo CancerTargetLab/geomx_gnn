@@ -115,8 +115,9 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
         adata.write('out/'+name+'.h5ad')
     
     #with plt.rc_context():
-    sc.pl.highly_variable_genes(adata, show=False)
+    sc.pl.highly_variable_genes(adata, show=False, save=name+'.png')
     #plt.save('figures/')
+    plt.close()
 
     categories = np.unique(adata.obs['ID'])
     colors = np.linspace(0, 1, len(categories))
@@ -125,11 +126,18 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
     plt.scatter(adata.obsm['X_umap'][:,0], adata.obsm['X_umap'][:,1], c=adata.obs['Color'], alpha=0.4, cmap='gist_ncar', s=1)
     plt.savefig('figures/umap'+name+'_ID.png')
 
-    adata.obs['ID']=adata.obs['ID'].astype(str)
-    sc.pl.umap(adata, color='ID', save=name+'_ID2.png', show=False, )
     sc.pl.umap(adata, color='leiden', save=name+'_cluster.png', show=False)
+    sc.pl.umap(adata, color='leiden', save=name+'_cluster_named.png',
+               show=False, add_outline=True, legend_loc='on data',
+               legend_fontsize=12, legend_fontoutline=2,frameon=False)
 
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
+    sc.pl.rank_genes_groups_heatmap(adata, show_gene_labels=True, show=False, save=name+'.png') #n_genes=80
+
+    sc.pl.heatmap(adata, adata.var_names, groupby='leiden', show=False, save=name+'.png')
+    sc.pl.violin(adata, adata.var['highly_variable'].index[adata.var['highly_variable'].values].values, groupby='leiden', show=False, save=name+'.png')
+
+
 
 def visualize_graph_accuracy(value_dict, IDs, exps, name):
     adata_y = get_bulk_expression_of(value_dict, IDs, exps, key='y')
@@ -154,7 +162,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     plt.title('Boxplots of Cosine Similarity')
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(f'out/all_boxplot{name}.png')
+    plt.savefig(f'figures/all_boxplot{name}.png')
     plt.close()
 
     plt.scatter(adata_p.obs['ID'].apply(lambda x: str(x)).values, adata_p.obs['cs'])
@@ -162,18 +170,18 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     plt.ylabel('Cosine Similarity')
     plt.xticks(rotation=90)  # Rotate x-axis labels vertically
     plt.xlabel('IDs')
-    plt.savefig(f'out/cosine_similarity_IDs{name}.png')
+    plt.savefig(f'figures/cosine_similarity_IDs{name}.png')
     plt.close()
 
     df = pd.DataFrame()
     df['cs'] = adata_p.obs['cs'].values
     df['slides'] = adata_p.obs['files'].apply(lambda x: x.split('-')[-1]).values
     sns.boxplot(data=df, y='cs', x='slides')
-    sns.title('Cosine Similarity of Slides')
-    sns.ylabel('Cosine Similarity')
-    sns.xlabel('Slides')
-    sns.savefig(f'out/cosine_similarity_slides{name}.png')
-    sns.close()
+    plt.title('Cosine Similarity of Slides')
+    plt.ylabel('Cosine Similarity')
+    plt.xlabel('Slides')
+    plt.savefig(f'figures/cosine_similarity_slides{name}.png')
+    plt.close()
 
 
 
@@ -190,6 +198,6 @@ value_dict = get_predicted_cell_expression(value_dict, 'out/TMA1')
 IDs, exps = get_patient_ids('OC1_all.csv')
 # visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
 # visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
-# visualize_cell_expression(value_dict, IDs, exps, '_cells')
+visualize_cell_expression(value_dict, IDs, exps, '_cells')
 visualize_graph_accuracy(value_dict, IDs, exps, '_cells')
 
