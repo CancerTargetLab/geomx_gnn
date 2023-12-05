@@ -100,7 +100,11 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
         adata.obs['ID'] = ids
         adata.obs['files'] = files
         adata.var_names = exps
-        sc.pp.normalize_total(adata)
+        adata.layers['counts'] = adata.X.copy() 
+        sc.pp.log1p(adata)
+        adata.layers['logs'] = adata.X.copy()
+        adata.X = adata.layers['counts'].copy() 
+        sc.pp.normalize_total(adata, exclude_highly_expressed=True, max_fraction=0.15)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
         
@@ -110,12 +114,12 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
         sc.tl.umap(adata)
         sc.tl.leiden(adata, resolution=0.5)
 
-        sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
+        sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False, layer='logs')
 
         adata.write('out/'+name+'.h5ad')
     
     #with plt.rc_context():
-    sc.pl.highly_variable_genes(adata, show=False, save=name+'.png')
+    sc.pl.highly_variable_genes(adata, show=False, save=name+'.png',)
     #plt.save('figures/')
     plt.close()
 
@@ -132,11 +136,11 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
                legend_fontsize=12, legend_fontoutline=2,frameon=False)
 
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
-    sc.pl.rank_genes_groups_heatmap(adata, show_gene_labels=True, show=False, save=name+'.png') #n_genes=80
+    sc.pl.rank_genes_groups_heatmap(adata, show_gene_labels=True, show=False, save=name+'_rank_genes.png', layer='logs', n_genes=5)
 
-    sc.pl.heatmap(adata, adata.var_names, groupby='leiden', show=False, save=name+'.png')
-    sc.pl.violin(adata, adata.var['highly_variable'].index[adata.var['highly_variable'].values].values, groupby='leiden', show=False, save=name+'.png')
-
+    sc.pl.heatmap(adata, adata.var_names, groupby='leiden', show=False, save=name+'.png', layer='logs')
+    sc.pl.violin(adata, adata.var['highly_variable'].index[adata.var['highly_variable'].values].values, groupby='leiden', show=False, save=name+'.png', layer='logs')
+    plt.close()
 
 
 def visualize_graph_accuracy(value_dict, IDs, exps, name):
@@ -147,6 +151,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
 
     adata_p.obs['cs'] = similarity(torch.from_numpy(adata_p.X), torch.from_numpy(adata_y.X)).squeeze().detach().numpy()
     
+    plt.close('all')
     boxplot = plt.boxplot(adata_p.obs['cs'],)# labels=[category])
     outliers = [flier.get_ydata() for flier in boxplot['fliers']]
 
@@ -165,7 +170,8 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     plt.savefig(f'figures/all_boxplot{name}.png')
     plt.close()
 
-    plt.scatter(adata_p.obs['ID'].apply(lambda x: str(x)).values, adata_p.obs['cs'])
+    plt.figure(figsize=(30, 5))
+    plt.scatter(adata_p.obs['ID'].apply(lambda x: str(x)).values, adata_p.obs['cs'], s=10)
     plt.title('Cosine Similarity of IDs')
     plt.ylabel('Cosine Similarity')
     plt.xticks(rotation=90)  # Rotate x-axis labels vertically
@@ -176,10 +182,12 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     df = pd.DataFrame()
     df['cs'] = adata_p.obs['cs'].values
     df['slides'] = adata_p.obs['files'].apply(lambda x: x.split('-')[-1]).values
+    plt.figure(figsize=(10, 5))
     sns.boxplot(data=df, y='cs', x='slides')
     plt.title('Cosine Similarity of Slides')
     plt.ylabel('Cosine Similarity')
     plt.xlabel('Slides')
+    plt.xticks(rotation=90)  # Rotate x-axis labels vertically
     plt.savefig(f'figures/cosine_similarity_slides{name}.png')
     plt.close()
 
