@@ -12,7 +12,7 @@ import torch
 
 df = pd.read_csv("data/raw/measurements.csv", header=0, sep=",")
 df = df[["Image", "Centroid.X.px", "Centroid.Y.px"]] #'Class'
-df = df[df["Image"] == "026-6B78.tiff"]
+df = df[df["Image"] == "023-2B27.tiff"]
 df = df.drop("Image", axis=1)
 mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
 df = df[mask]
@@ -21,7 +21,7 @@ df = df[mask]
 # df["Centroid Y px"] = df["Centroid Y px"].str.replace(',', '.').astype(float)
 
 
-img = io.imread('data/raw/026-6B78.tiff', plugin='tifffile')
+img = io.imread('data/023-2B27.tiff', plugin='tifffile')
 
 image = np.expand_dims(img, axis=3)
 test=sq.im.ImageContainer(image, dims=("y", "x", "z", "channels"))
@@ -98,24 +98,24 @@ adata.uns[spatial_key][library_id]["scalefactors"] = {
     "spot_diameter_fullres": 0.5,
 }
 
-print("normalize total")
-sc.pp.normalize_total(adata)
-print("log transform")
-sc.pp.log1p(adata)
-print("scale")
-sc.pp.scale(adata, max_value=10)
+# print("normalize total")
+# sc.pp.normalize_total(adata)
+# print("log transform")
+# sc.pp.log1p(adata)
+# print("scale")
+# sc.pp.scale(adata, max_value=10)
 
-resolution = 0.5
-print("PCA")
-sc.tl.pca(adata, svd_solver="arpack")
-print("neighbors")
-sc.pp.neighbors(adata, n_neighbors=10, n_pcs=5)
-print("UMAP")
-sc.tl.umap(adata)
-print("Leiden")
-sc.tl.leiden(adata, resolution=resolution)
+# resolution = 0.5
+# print("PCA")
+# sc.tl.pca(adata, svd_solver="arpack")
+# print("neighbors")
+# sc.pp.neighbors(adata, n_neighbors=10, n_pcs=5)
+# print("UMAP")
+# sc.tl.umap(adata)
+# print("Leiden")
+# sc.tl.leiden(adata, resolution=resolution)
 
-cluster = np.load('out/026-6B78.npy', allow_pickle=True)
+cluster = np.load('out/p0_023-2B27.npy', allow_pickle=True)
 adata.obs['cluster'] = cluster
 
 sq.pl.spatial_scatter(adata, 
