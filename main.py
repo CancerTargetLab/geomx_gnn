@@ -6,6 +6,7 @@ from src.run.GraphTrain import train as GraphTrain
 from src.run.GraphEmbed import embed as GraphEmbed
 from src.run.TMETrain import train as TMETrain
 #from src.run.TMEEmbed import embed as TMEEmbed
+from src.explain.VisualizeExpression import visualizeExpression
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments for image and GNN models")
@@ -91,6 +92,13 @@ def parse_args():
 
     parser.add_argument("--seed", type=int, default=44)
 
+    parser.add_argument("--visualize_expression", action="store_true", default=False)
+    parser.add_argument("--vis_label_data", type=str, default="OC1_all.csv")
+    parser.add_argument("--processed_subset_dir", type=str, default="TMA1_preprocessed")
+    parser.add_argument("--figure_dir", type=str, default="figures/")
+    parser.add_argument("--embed_dir", type=str, default="out/")
+    parser.add_argument("--vis_name", type=str, default="_cells")
+
     return parser.parse_args()
 
 
@@ -109,6 +117,12 @@ def main(args):
         TMETrain(args)
     # if args['embed_tme_data']:
     #     TMEEmbed(args)
+    if args['visualize_expression']:
+        visualizeExpression(processed_dir=args['processed_subset_dir'],
+                            embed_dir=args['embed_dir'],
+                            label_data=args['vis_label_data'],
+                            figure_dir=args['figure_dir'],
+                            name=args['vis_name'])
 
 
 if __name__ == '__main__':

@@ -32,7 +32,7 @@ def get_predicted_cell_expression(value_dict, path):
 def get_patient_ids(label_data):
     df = pd.read_csv(os.path.join(os.getcwd(), 'data', 'raw', label_data), header=0, sep=',')
     IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
-    exps = df.columns.values[3:] #TODO: 2: for p2106
+    exps = df.columns.values[2:] #TODO: 2: for p2106
     return IDs, exps
 
 def get_bulk_expression_of(value_dict, IDs, exps, key='y'):
@@ -71,7 +71,7 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
-def visualize_cell_expression(value_dict, IDs, exps, name):
+def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir):
     if os.path.exists('out/'+name+'.h5ad'):
         adata = sc.read_h5ad('out/'+name+'.h5ad')
     else:
@@ -119,7 +119,8 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
         adata.write('out/'+name+'.h5ad')
     
     #with plt.rc_context():
-    sc.pl.highly_variable_genes(adata, show=False, save=name+'.png',)
+    sc.pl.highly_variable_genes(adata, show=False)
+    plt.savefig(os.path.join(figure_dir, f'highly_varible_genes{name}.png'))
     #plt.save('figures/')
     plt.close()
 
@@ -128,22 +129,34 @@ def visualize_cell_expression(value_dict, IDs, exps, name):
     colordict = dict(zip(categories, colors))
     adata.obs['Color'] = adata.obs['ID'].apply(lambda x: colordict[x])
     plt.scatter(adata.obsm['X_umap'][:,0], adata.obsm['X_umap'][:,1], c=adata.obs['Color'], alpha=0.4, cmap='gist_ncar', s=1)
-    plt.savefig('figures/umap'+name+'_ID.png')
+    plt.savefig(os.path.join(figure_dir, f'umap{name}_ID.png'))
+    plt.close()
 
-    sc.pl.umap(adata, color='leiden', save=name+'_cluster.png', show=False)
-    sc.pl.umap(adata, color='leiden', save=name+'_cluster_named.png',
+    sc.pl.umap(adata, color='leiden', show=False)
+    plt.savefig(os.path.join(figure_dir, f'umap{name}_cluster.png'))
+    plt.close()
+    sc.pl.umap(adata, color='leiden',
                show=False, add_outline=True, legend_loc='on data',
                legend_fontsize=12, legend_fontoutline=2,frameon=False)
+    plt.savefig(os.path.join(figure_dir, f'umap{name}_cluster_named.png'))
+    plt.close()
 
-    sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
-    sc.pl.rank_genes_groups_heatmap(adata, show_gene_labels=True, show=False, save=name+'_rank_genes.png', layer='logs', n_genes=5)
+    sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, show=False)
+    plt.savefig(os.path.join(figure_dir, f'rank_genes_group{name}.png'))
+    plt.close()
+    sc.pl.rank_genes_groups_heatmap(adata, show_gene_labels=True, show=False, layer='logs', n_genes=5)
+    plt.savefig(os.path.join(figure_dir, f'rank_genes_group{name}_heatmap.png'))
+    plt.close()
 
-    sc.pl.heatmap(adata, adata.var_names, groupby='leiden', show=False, save=name+'.png', layer='logs')
-    sc.pl.violin(adata, adata.var['highly_variable'].index[adata.var['highly_variable'].values].values, groupby='leiden', show=False, save=name+'.png', layer='logs')
+    sc.pl.heatmap(adata, adata.var_names, groupby='leiden', show=False, layer='logs')
+    plt.savefig(os.path.join(figure_dir, f'heatmap{name}.png'))
+    plt.close()
+    sc.pl.violin(adata, adata.var['highly_variable'].index[adata.var['highly_variable'].values].values, groupby='leiden', show=False, layer='logs')
+    plt.savefig(os.path.join(figure_dir, f'violin_highly_varible{name}.png'))
     plt.close()
 
 
-def visualize_graph_accuracy(value_dict, IDs, exps, name):
+def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     adata_y = get_bulk_expression_of(value_dict, IDs, exps, key='y')
     adata_p = get_bulk_expression_of(value_dict, IDs, exps, key='roi_pred')
 
@@ -173,7 +186,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     plt.title('Boxplots of Cosine Similarity')
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(f'figures/all_boxplot{name}.png')
+    plt.savefig(os.path.join(figure_dir, 'all_boxplot{name}.png'))
     plt.close()
 
     plt.figure(figsize=(30, 5))
@@ -182,7 +195,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     plt.ylabel('Cosine Similarity')
     plt.xticks(rotation=90)  # Rotate x-axis labels vertically
     plt.xlabel('IDs')
-    plt.savefig(f'figures/cosine_similarity_IDs{name}.png')
+    plt.savefig(os.path.join(figure_dir, f'cosine_similarity_IDs{name}.png'))
     plt.close()
 
     df = pd.DataFrame()
@@ -194,16 +207,22 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     plt.ylabel('Cosine Similarity')
     plt.xlabel('Slides')
     plt.xticks(rotation=90)  # Rotate x-axis labels vertically
-    plt.savefig(f'figures/cosine_similarity_slides{name}.png')
+    plt.savefig(os.path.join(figure_dir, f'cosine_similarity_slides{name}.png'))
     plt.close()
 
-
-value_dict = get_true_graph_expression_dict('data/processed/TMA1_preprocessed')
-value_dict = get_predicted_graph_expression(value_dict, 'out/TMA1')
-value_dict = get_predicted_cell_expression(value_dict, 'out/TMA1')
-IDs, exps = get_patient_ids('OC1_all.csv')
-# visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
-# visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
-visualize_cell_expression(value_dict, IDs, exps, '_cells')
-visualize_graph_accuracy(value_dict, IDs, exps, '_cells')
+def visualizeExpression(processed_dir='TMA1_processed',
+                        embed_dir='out/',
+                        label_data='label_data.csv',
+                        figure_dir='figures/',
+                        name='_cells'):
+    value_dict = get_true_graph_expression_dict(os.path.join('data/processed', processed_dir))
+    value_dict = get_predicted_graph_expression(value_dict, embed_dir)
+    value_dict = get_predicted_cell_expression(value_dict, embed_dir)
+    IDs, exps = get_patient_ids(label_data)
+    if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
+        os.makedirs(figure_dir)
+    # visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
+    # visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
+    visualize_cell_expression(value_dict, IDs, exps, name, figure_dir)
+    visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir)
 
