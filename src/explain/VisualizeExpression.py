@@ -150,6 +150,12 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name):
     similarity = torch.nn.CosineSimilarity()
 
     adata_p.obs['cs'] = similarity(torch.from_numpy(adata_p.X), torch.from_numpy(adata_y.X)).squeeze().detach().numpy()
+
+    outlier_map = adata_p.obs['cs'] < 0.78
+    outlier_cs = adata_p.obs['cs'][outlier_map]
+    outlier_f = adata_p.obs['files'][outlier_map]
+    for i in range(outlier_cs.shape[0]):
+        print(f'ROI: {outlier_f[i]}; Cosine Similarity: {outlier_cs[i]:.4f}')
     
     plt.close('all')
     boxplot = plt.boxplot(adata_p.obs['cs'],)# labels=[category])
