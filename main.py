@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument("--embed_dropout_graph", type=float, default=0.1)
     parser.add_argument("--conv_dropout_graph", type=float, default=0.1)
     parser.add_argument("--output_name_graph", type=str, default="out/ROI.pt")
-    parser.add_argument("--train_gnn", action="store_true", default=True)
+    parser.add_argument("--train_gnn", action="store_true", default=False)
     parser.add_argument("--embed_gnn_data", action="store_true", default=False)
     parser.add_argument("--output_graph_embed", type=str, default="out/")
 
@@ -90,7 +90,15 @@ def parse_args():
     parser.add_argument("--processed_subset_dir", type=str, default="TMA1_preprocessed")
     parser.add_argument("--figure_dir", type=str, default="figures/")
     parser.add_argument("--embed_dir", type=str, default="out/")
-    parser.add_argument("--vis_name", type=str, default="_cells")
+    parser.add_argument("--vis_name", type=str, default="_cells")   #alo for visualize image
+
+    # Visualize Image
+    parser.add_argument("--visualize_image", action="store_true", default=False)
+    parser.add_argument("--vis_img_raw_subset_dir", type=str, default="TMA1_preprocessed")
+    parser.add_argument("--name_tiff", type=str, default="027-2B27.tiff")
+    parser.add_argument("--figure_img_dir", type=str, default="figures/")
+    parser.add_argument("--vis_channel", type=int, default=0)
+    parser.add_argument("--vis_all_channels", action="store_true", default=False)
 
     return parser.parse_args()
 
@@ -138,6 +146,13 @@ def main(**args):
                             label_data=args['vis_label_data'],
                             figure_dir=args['figure_dir'],
                             name=args['vis_name'])
+    if args['visualize_image']:
+        from src.explain.VisualizeImage import visualizeImage
+        visualizeImage(raw_subset_dir=args['vis_img_raw_subset_dir'],
+                       name_tiff=args['name_tiff'],
+                       figure_dir=args['figure_img_dir'],
+                       vis_name=args['vis_name'],
+                       args=args)
 
 
 if __name__ == '__main__':

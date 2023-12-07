@@ -1,0 +1,71 @@
+import os
+from skimage import io
+import numpy as np
+import pandas as pd
+import squidpy as sq
+import scanpy as sc
+from anndata import AnnData
+import matplotlib.pyplot as plt
+
+def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
+  df = pd.read_csv(os.path.join('data/processed', raw_subset_dir, 'measurements.csv'), header=0, sep=",")
+  df = df[["Image", "Centroid.X.px", "Centroid.Y.px"]] #'Class'
+  df = df[df["Image"] == name_tiff]
+  df = df.drop("Image", axis=1)
+  mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
+  df = df[mask]
+
+  img = io.imread(os.path.join('data/raw', raw_subset_dir, name_tiff), plugin='tifffile')
+
+  counts = np.random.default_rng(42).integers(0, 15, size=(df.shape[0], 100))
+
+  coordinates = np.column_stack((df["Centroid.X.px"].to_numpy(), df["Centroid.Y.px"].to_numpy()))
+
+  adata = AnnData(counts, obsm={"spatial": coordinates})
+
+  sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
+  edge_matrix = adata.obsp["spatial_distances"]
+  edge_matrix[edge_matrix > 60] = 0.
+  adata.obsp["spatial_distances"] = edge_matrix
+
+
+  spatial_key = "spatial"
+  library_id = "tissue42"
+  adata.uns[spatial_key] = {library_id: {}}
+  adata.uns[spatial_key][library_id]["images"] = {}
+  adata.uns[spatial_key][library_id]["images"] = {"hires": img}
+  adata.uns[spatial_key][library_id]["scalefactors"] = {
+      "tissue_hires_scalef": 1,
+      "spot_diameter_fullres": 0.5,
+  }
+
+  cluster = sc.read_h5ad(os.path.join('out/', vis_name))
+  cluster.obs['prefix'] = cluster.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
+  adata.obs['cluster'] = cluster.obs['leiden'][cluster.obs['prefix']==name_tiff.split('.')[0]]
+
+  if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
+    os.makedirs(figure_dir)
+
+  sq.pl.spatial_scatter(adata, 
+                        color="cluster",
+                        size=25,
+                        img_channel=args['vis_channel'])
+  plt.savefig(os.path.join(figure_dir, f'cluster_{vis_name}.png'))
+  plt.close()
+
+  sq.pl.spatial_scatter(adata, 
+                        color="cluster",
+                        connectivity_key="spatial_connectivities",
+                        edges_color="grey",
+                        edges_width=1,
+                        size=25,
+                        img_channel=args['vis_channel'])
+  plt.savefig(os.path.join(figure_dir, f'cluster_graph_{vis_name}.png'))
+  plt.close()
+
+  if args['vis_all_channels']:
+    for channel in range(img.shape[2]):
+      sq.pl.spatial_scatter(adata,
+                          img_channel=channel)
+      plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}.png'))
+      plt.close()
