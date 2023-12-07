@@ -100,6 +100,13 @@ def parse_args():
     parser.add_argument("--vis_channel", type=int, default=0)
     parser.add_argument("--vis_all_channels", action="store_true", default=False)
 
+    # Visualize Model Run
+    parser.add_argument("--visualize_model_run", action="store_true", default=False)
+    parser.add_argument("--model_path", type=str, default="out/models/ROI.pt")
+    parser.add_argument("--output_name_model", type=str, default="ROI")
+    parser.add_argument("--figure_model_dir", type=str, default="figures/")
+    parser.add_argument("--is_cs", action="store_true", default=False)
+
     return parser.parse_args()
 
 
@@ -153,6 +160,12 @@ def main(**args):
                        figure_dir=args['figure_img_dir'],
                        vis_name=args['vis_name'],
                        args=args)
+    if args['visualize_model_run']:
+        from src.utils.per_epoch_metrics import epochMetrics
+        epochMetrics(model_path=args['model_path'],
+                     figure_dir=args['figure_model_dir'],
+                     is_cs=args['is_cs'],
+                     name=args['output_model_name'])
 
 
 if __name__ == '__main__':
