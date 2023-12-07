@@ -4,7 +4,7 @@ from src.utils.setSeed import set_seed
 import torch
 import os
 
-def embed(args):
+def embed(raw_subset_dir, label_data, model_name, output_dir, args):
 
     SEED = args['seed']
 
@@ -13,12 +13,12 @@ def embed(args):
     set_seed(SEED)
 
     dataset = GeoMXDataset(root_dir=args['graph_dir'],
-                           raw_subset_dir=args['graph_raw_subset_dir'],
+                           raw_subset_dir=raw_subset_dir,
                            train_ratio=args['train_ratio_graph'],
                            val_ratio=args['val_ratio_graph'],
                            node_dropout=args['node_dropout'],
                            edge_dropout=args['edge_dropout'],
-                           label_data=args['graph_label_data'])
+                           label_data=label_data)
 
     model = ROIExpression(layers=args['layers_graph'],
                           num_node_features=args['num_node_features'],
@@ -29,7 +29,7 @@ def embed(args):
                           num_out_features=dataset.get(0).y.shape[0],
                           heads=args['heads_graph']).to(device, dtype=float)
     model.eval()
-    model.load_state_dict(torch.load(args['output_name_graph'])['model'])
-    if not os.path.exists(args['output_graph_embed']) and not os.path.isdir(args['output_graph_embed']):
-        os.makedirs(args['output_graph_embed'])
-    dataset.embed(model, args['output_graph_embed'], device=device)
+    model.load_state_dict(torch.load(model_name)['model'])
+    if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+    dataset.embed(model, output_dir, device=device)

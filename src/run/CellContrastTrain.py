@@ -7,7 +7,7 @@ from src.loss.ContrastiveLoss import add_contrastive_loss
 from src.optimizer.LARC import LARC
 from src.utils.setSeed import set_seed
 
-def train(args):
+def train(image_dir, output_name, args):
     batch_size = args['batch_size_image']
     lr = args['lr_image']
     warmup_epochs = args['warmup_epochs_image']
@@ -21,7 +21,7 @@ def train(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     set_seed(seed)
 
-    dataset = EmbedDataset(root_dir=args['image_dir'], 
+    dataset = EmbedDataset(root_dir=image_dir, 
                            crop_factor=args['crop_factor'],
                            train_ratio=args['train_ratio_image'],
                            val_ratio=args['val_ratio_image'])
@@ -33,11 +33,25 @@ def train(args):
     #TODO: https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets
     # -> more mem eff
     dataset.setMode(dataset.train)
-    train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, drop_last=True, pin_memory=True)
+    train_loader = DataLoader(dataset,
+                              batch_size=batch_size,
+                              shuffle=True,
+                              num_workers=num_workers,
+                              drop_last=True,
+                              pin_memory=True)
     dataset.setMode(dataset.val)
-    val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=True, pin_memory=True)
+    val_loader = DataLoader(dataset,
+                            batch_size=batch_size,
+                            shuffle=False,
+                            num_workers=num_workers,
+                            drop_last=True,
+                            pin_memory=True)
     dataset.setMode(dataset.test)
-    test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=True)
+    test_loader = DataLoader(dataset,
+                             batch_size=batch_size,
+                             shuffle=False,
+                             num_workers=num_workers,
+                             drop_last=True)
 
     #TODO: lr scheduling
     #sc_lr = lr * batch_size / 256
@@ -53,7 +67,6 @@ def train(args):
                                                     final_div_factor=1e5)
     optimizer = LARC(optimizer, clip=False)
     loss = add_contrastive_loss
-
 
     train_acc_list = []
     train_loss_list = []
@@ -125,14 +138,13 @@ def train(args):
                             "val_acc": val_acc_list,
                             "val_list": val_loss_list,
                             "epoch": epoch
-                        }, args['output_name_image'])
+                        }, output_name)
                     print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
-
 
     with torch.no_grad():
         running_loss = 0
         running_acc = 0
-        model.load_state_dict(torch.load(args['output_name_image']['model']))
+        model.load_state_dict(torch.load(output_name)['model'])
         model.eval()
         dataset.setMode(dataset.test)
 

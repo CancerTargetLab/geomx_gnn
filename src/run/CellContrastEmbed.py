@@ -6,7 +6,7 @@ from src.models.CellContrastModel import ContrastiveLearning
 from src.utils.load import load
 from src.utils.setSeed import set_seed
 
-def embed(args):
+def embed(image_dir, model_name, args):
 
     batch_size = args['batch_size_image']
     num_workers = args['num_workers_image']
@@ -16,7 +16,7 @@ def embed(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     set_seed(seed)
 
-    dataset = EmbedDataset(root_dir=args['image_dir'], 
+    dataset = EmbedDataset(root_dir=image_dir, 
                            crop_factor=args['crop_factor'],
                            train_ratio=args['train_ratio_image'],
                            val_ratio=args['val_ratio_image'])
@@ -27,7 +27,7 @@ def embed(args):
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
                                 resnet=args['resnet_model']).to(device, dtype=float)
-    model.load_state_dict(load(args['output_name_image'], save_keys='model', device=device))
+    model.load_state_dict(load(model_name, save_keys='model', device=device))
     model.eval()
     model.mode = 'embed'
 

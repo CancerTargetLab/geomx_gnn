@@ -1,12 +1,4 @@
 import argparse
-from src.utils.image_preprocess import image_preprocess
-from src.run.CellContrastTrain import train as ImageTrain
-from src.run.CellContrastEmbed import embed as CellContrastEmbed
-from src.run.GraphTrain import train as GraphTrain
-from src.run.GraphEmbed import embed as GraphEmbed
-from src.run.TMETrain import train as TMETrain
-#from src.run.TMEEmbed import embed as TMEEmbed
-from src.explain.VisualizeExpression import visualizeExpression
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments for image and GNN models")
@@ -56,7 +48,7 @@ def parse_args():
     parser.add_argument("--embed_dropout_graph", type=float, default=0.1)
     parser.add_argument("--conv_dropout_graph", type=float, default=0.1)
     parser.add_argument("--output_name_graph", type=str, default="out/ROI.pt")
-    parser.add_argument("--train_gnn", action="store_true", default=False)
+    parser.add_argument("--train_gnn", action="store_true", default=True)
     parser.add_argument("--embed_gnn_data", action="store_true", default=False)
     parser.add_argument("--output_graph_embed", type=str, default="out/")
 
@@ -92,6 +84,7 @@ def parse_args():
 
     parser.add_argument("--seed", type=int, default=44)
 
+    # Visualize Expression 
     parser.add_argument("--visualize_expression", action="store_true", default=False)
     parser.add_argument("--vis_label_data", type=str, default="OC1_all.csv")
     parser.add_argument("--processed_subset_dir", type=str, default="TMA1_preprocessed")
@@ -102,22 +95,44 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args):
+def main(**args):
     if args['image_preprocess']:
-        image_preprocess(args['preprocess_dir'])
+        from src.utils.image_preprocess import image_preprocess as ImagePreprocess
+        ImagePreprocess(path=args['preprocess_dir'])
     if args['train_image_model']:
-        ImageTrain(args)
+        from src.run.CellContrastTrain import train as ImageTrain
+        ImageTrain(image_dir=args['image_dir'],
+                   output_name=args['output_name_image'],
+                   args=args)
     if args['embed_image_data']:
-        CellContrastEmbed(args)
+        from src.run.CellContrastEmbed import embed as CellContrastEmbed
+        CellContrastEmbed(image_dir=args['image_dir'],
+                          model_name=args['output_name_image'],
+                          args=args)
     if args['train_gnn']:
-        GraphTrain(args)
+        from src.run.GraphTrain import train as GraphTrain
+        GraphTrain(raw_subset_dir=args['graph_raw_subset_dir'],
+                   label_data=args['graph_label_data'],
+                   output_name=args['output_name_graph'],
+                   args=args)
     if args['embed_gnn_data']:
-        GraphEmbed(args)
+        from src.run.GraphEmbed import embed as GraphEmbed
+        GraphEmbed(raw_subset_dir=args['graph_raw_subset_dir'],
+                   label_data=args['graph_label_data'],
+                   model_name=args['output_name_graph'],
+                   output_dir=args['output_graph_embed'],
+                   args=args)
     if args['train_tme']:
-        TMETrain(args)
+        from src.run.TMETrain import train as TMETrain
+        TMETrain(raw_subset_dir=args['tme_raw_subset_dir'],
+                label_data=args['tme_label_data'],
+                output_name=args['output_name_tme'],
+                args=args)
     # if args['embed_tme_data']:
+    #     from src.run.TMEEmbed import embed as TMEEmbed
     #     TMEEmbed(args)
     if args['visualize_expression']:
+        from src.explain.VisualizeExpression import visualizeExpression
         visualizeExpression(processed_dir=args['processed_subset_dir'],
                             embed_dir=args['embed_dir'],
                             label_data=args['vis_label_data'],
@@ -127,4 +142,4 @@ def main(args):
 
 if __name__ == '__main__':
     args = vars(parse_args())
-    main(args)
+    main(**args)

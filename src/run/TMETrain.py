@@ -6,7 +6,7 @@ from torch_geometric.loader import DataLoader
 import torch
 from tqdm import tqdm
 
-def train(args):
+def train(raw_subset_dir, label_data, output_name, args):
 
     EPOCH = args['epochs_tme']
     SEED = args['seed']
@@ -20,12 +20,12 @@ def train(args):
     set_seed(SEED)
 
     dataset = TMEDataset(root_dir=args['tme_dir'],
-                           raw_subset_dir=args['tme_raw_subset_dir'],
+                           raw_subset_dir=raw_subset_dir,
                            train_ratio=args['train_ratio_tme'],
                            val_ratio=args['val_ratio_tme'],
                            node_dropout=args['node_dropout_tme'],
                            edge_dropout=args['edge_dropout_tme'],
-                           label_data=args['tme_label_data'],
+                           label_data=label_data,
                            num_hops=args['num_hops_tme'],
                            subgraphs_per_graph=args['subgraphs_per_batch_tme'])
     dataset.setMode(dataset.train)
@@ -131,7 +131,7 @@ def train(args):
                             "val_acc": val_acc_list,
                             "val_list": val_loss_list,
                             "epoch": epoch
-                        }, args['output_name_tme'])
+                        }, output_name)
                     print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
 
 
@@ -139,7 +139,7 @@ def train(args):
         running_loss = 0
         running_acc = 0
         num_graphs = 0
-        model.load_state_dict(torch.load(args['output_name_tme'])['model'])
+        model.load_state_dict(torch.load(output_name)['model'])
         model.eval()
         dataset.setMode(dataset.test)
 

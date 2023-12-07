@@ -5,7 +5,7 @@ from torch_geometric.loader import DataLoader
 import torch
 from tqdm import tqdm
 
-def train(args):
+def train(raw_subset_dir, label_data, output_name, args):
 
     EPOCH = args['epochs_graph']
     SEED = args['seed']
@@ -20,12 +20,12 @@ def train(args):
     set_seed(SEED)
 
     dataset = GeoMXDataset(root_dir=args['graph_dir'],
-                           raw_subset_dir=args['graph_raw_subset_dir'],
+                           raw_subset_dir=raw_subset_dir,
                            train_ratio=args['train_ratio_graph'],
                            val_ratio=args['val_ratio_graph'],
                            node_dropout=args['node_dropout'],
                            edge_dropout=args['edge_dropout'],
-                           label_data=args['graph_label_data'])
+                           label_data=label_data)
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     dataset.setMode(dataset.val)
@@ -43,14 +43,6 @@ def train(args):
                           heads=args['heads_graph']).to(device, dtype=float)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
     dataset.setMode(dataset.train)
-    # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
-    #                                                 max_lr=lr, 
-    #                                                 epochs=EPOCH, 
-    #                                                 steps_per_epoch=len(train_loader), 
-    #                                                 pct_start=0.1,
-    #                                                 div_factor=25,
-    #                                                 final_div_factor=1e6)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
     loss = torch.nn.MSELoss()
     similarity = torch.nn.CosineSimilarity()
@@ -84,7 +76,6 @@ def train(args):
                     else:
                         l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                     sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
-                    # scheduler.step()
                     running_loss += l.item() * out.shape[0]
                     running_acc += sim.item() * out.shape[0]
                     num_graphs += out.shape[0]
@@ -127,7 +118,6 @@ def train(args):
                     val_acc = running_acc / num_graphs
                     val_acc_list.append(val_acc)
                     geo_loss = running_loss / num_graphs
-                    # scheduler.step(epoch_loss)
                     val_loss_list.append(geo_loss)
                     epoch_loss = running_total_loss / num_graphs
                     val_total_loss_list.append(epoch_loss)
@@ -144,7 +134,7 @@ def train(args):
                             "val_list": val_loss_list,
                             "val_total_list": val_total_loss_list,
                             "epoch": epoch
-                        }, args['output_name_graph'])
+                        }, output_name)
                     print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
 
 
@@ -153,7 +143,7 @@ def train(args):
         running_total_loss = 0
         running_acc = 0
         num_graphs = 0
-        model.load_state_dict(torch.load(args['output_name_graph'])['model'])
+        model.load_state_dict(torch.load(output_name)['model'])
         model.eval()
         dataset.setMode(dataset.test)
 
