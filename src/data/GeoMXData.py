@@ -32,6 +32,10 @@ class GeoMXDataset(Dataset):
 
         self.data = np.array(self.processed_file_names)
 
+        test = os.path.join(self.processed_dir, self.data[0])
+        self.x = test.x.shape[1]
+        self.y = test.y.shape[0]
+
         df = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
         IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
         un_IDs = np.unique(IDs)
@@ -66,6 +70,19 @@ class GeoMXDataset(Dataset):
                 processed_filename.append(f'graph_{appendix}.pt')
         processed_filename.sort()
         return processed_filename
+    
+    def test(self, path):
+        tries = 0
+        data = torch.load(path)
+        while data.x.shape[1] != self.x and data.y.shape[0] != self.y and tries < 10:
+            tries += 1
+            data = torch.load(path)
+        if tries == 10:
+            raise Exception(f'Tried to load {path} 10 times, but something went wrong!')
+        elif tries > 0:
+            print(f'Tried {tries} times until correctly loading {path}!')
+        else:
+            return data
     
     def transform(self, data):
         node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
@@ -142,13 +159,13 @@ class GeoMXDataset(Dataset):
 
     def get(self, idx):
         if self.mode == self.train:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.train_map][idx]))
+            return self.test(os.path.join(self.processed_dir, self.data[self.train_map][idx]))
         elif self.mode == self.val:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.val_map][idx]))
+            return self.test(os.path.join(self.processed_dir, self.data[self.val_map][idx]))
         elif self.mode == self.test:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.test_map][idx]))
+            return self.test(os.path.join(self.processed_dir, self.data[self.test_map][idx]))
         else:
-            return torch.load(os.path.join(self.processed_dir, self.data[idx]))
+            return self.test(os.path.join(self.processed_dir, self.data[idx]))
     
     def embed(self, model, path, device='cpu'):
         with torch.no_grad():
