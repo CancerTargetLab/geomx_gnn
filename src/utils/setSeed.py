@@ -1,7 +1,6 @@
 import random
 import numpy as np
 import torch
-from sklearn.utils import check_random_state
 
 def set_seed(seed, cuda_reproduce=True):
     """
@@ -14,9 +13,6 @@ def set_seed(seed, cuda_reproduce=True):
     
     # Set seed for NumPy
     np.random.seed(seed)
-    
-    # Set seed for scikit-learn (sklearn)
-    rng = check_random_state(seed)
     
     # Set seed for PyTorch
     torch.manual_seed(seed)

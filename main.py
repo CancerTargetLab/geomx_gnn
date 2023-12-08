@@ -82,6 +82,7 @@ def parse_args():
     parser.add_argument("--embed_tme_data", action="store_true", default=False)
     parser.add_argument("--output_tme_embed", type=str, default="out/")
 
+    parser.add_argument("--deterministic", action="store_true", default=False)
     parser.add_argument("--seed", type=int, default=44)
 
     # Visualize Expression 

@@ -72,8 +72,10 @@ class GeoMXDataset(Dataset):
         data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
         edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
         data.edge_index, data.edge_attr = data.edge_index[:,edge_map], data.edge_attr[edge_map]
+        y = data.y
         data = torch_geometric.transforms.RemoveIsolatedNodes()(data)
         data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.1)(data)
+        data.y = y
         return data   
     
     def download(self):

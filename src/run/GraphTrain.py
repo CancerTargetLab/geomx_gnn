@@ -17,7 +17,8 @@ def train(raw_subset_dir, label_data, output_name, args):
 
     # move to GPU (if available)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    set_seed(SEED)
+    if args['deterministic']:
+        set_seed(SEED)
 
     dataset = GeoMXDataset(root_dir=args['graph_dir'],
                            raw_subset_dir=raw_subset_dir,

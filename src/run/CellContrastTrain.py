@@ -19,7 +19,8 @@ def train(image_dir, output_name, args):
 
     # move to GPU (if available)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    set_seed(seed)
+    if args['deterministic']:
+        set_seed(seed)
 
     dataset = EmbedDataset(root_dir=image_dir, 
                            crop_factor=args['crop_factor'],
