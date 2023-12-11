@@ -14,8 +14,14 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dataset = GeoMXDataset(root_dir='data/',
                         raw_subset_dir='TMA1_preprocessed',)
 dataset.mode = 'explain'
-model = ROIExpression(layers=3,
-                      num_out_features=dataset.get(0).y.shape[0], ).to(device, dtype=float)
+model = ROIExpression(layers=1,
+                        num_node_features=256,
+                        num_edge_features=1,
+                        num_embed_features=128,
+                        embed_dropout=0.3,
+                        conv_dropout=0.3,
+                        num_out_features=dataset.get(0).y.shape[0],
+                        heads=1).to(device, dtype=float)
 model.load_state_dict(load('out/ROI.pt', 'model'))
 model.eval()
 
