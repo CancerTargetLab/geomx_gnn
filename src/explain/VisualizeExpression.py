@@ -12,7 +12,10 @@ def get_true_graph_expression_dict(path):
     graph_paths = [p for p in os.listdir(path) if p.startswith('graph')]
     value_dict = {}
     for graph_p in graph_paths:
-        value_dict[graph_p] = {'y': torch.load(os.path.join(path, graph_p), map_location='cpu').y.numpy()}
+        graph = torch.load(os.path.join(path, graph_p), map_location='cpu')
+        value_dict[graph_p] = {'y': graph.y.numpy()}
+        if 'Class' in graph.to_dict().keys():
+            value_dict[graph_p]['cell_class'] =graph.Class.numpy()
     return value_dict
 
 def get_predicted_graph_expression(value_dict, path):
@@ -79,6 +82,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir):
         rois.sort()
         rois_np = np.array(rois)
         counts = None
+        cell_class = None
         ids = np.array([])
         files = np.array([])
 
@@ -90,13 +94,20 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir):
             for id_key in id_keys:
                 if counts is not None:
                     counts = np.concatenate((counts, value_dict[id_key][key]))
+                    if ('cell_class' in value_dict[id_key].keys()) and cell_class is not None:
+                        cell_class = np.concatenate((cell_class, value_dict[id_key]['cell_class']))
                 else:
                     counts = value_dict[id_key][key]
+                    if ('cell_class' in value_dict[id_key].keys()):
+                        cell_class = value_dict[id_key]['cell_class']
                 ids = np.concatenate((ids, np.array([id]*value_dict[id_key][key].shape[0])))
                 files = np.concatenate((files, np.array([id_key]*value_dict[id_key][key].shape[0])))
                 i += 1
         counts = np.array(counts)
         adata = sc.AnnData(counts)
+        if cell_class is not None:
+            cell_class = np.array(cell_class)
+            adata.obs['cell_class'] = cell_class
         adata.obs['ID'] = ids
         adata.obs['files'] = files
         adata.var_names = exps
@@ -155,6 +166,23 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir):
     plt.savefig(os.path.join(figure_dir, f'violin_highly_varible{name}.png'))
     plt.close()
 
+    if 'cell_class' in adata.obs.columns.values.tolist():
+        confusion_matrix = np.zeros((len(np.unique(adata.obs['leiden'])), len(np.unique(adata.obs['cell_class']))))
+
+        # Fill the matrix based on the relationships between categories
+        for i, category_a in enumerate(np.unique(adata.obs['leiden'])):
+            for j, category_b in enumerate(np.unique(adata.obs['cell_class'])):
+                count = np.sum((adata.obs['leiden'] == category_a) & (adata.obs['cell_class'] == category_b))
+                confusion_matrix[i, j] = count
+
+        # Create a heatmap using seaborn
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(confusion_matrix, annot=True, fmt='g', cmap='Blues',
+                    xticklabels=np.unique(adata.obs['cell_class']), yticklabels=np.unique(adata.obs['leiden']))
+        plt.xlabel('Categories')
+        plt.ylabel('Leiden Clusters')
+        plt.title('Relationship Between predicted Cell Clusters and Categories')
+        plt.savefig(os.path.join(figure_dir, f'Cell_Class_label_heatmap{name}.png'))
 
 def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     adata_y = get_bulk_expression_of(value_dict, IDs, exps, key='y')

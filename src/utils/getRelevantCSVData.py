@@ -11,7 +11,7 @@ def getExpressionData(path, sep=','):
 
 def getAllPositionData(path, sep=','):
     df = pd.read_csv(path[0], header=0, sep=sep)
-    df = df[['Image', 'Centroid.X.px', 'Centroid.Y.px']]
+    df = df[['Image', 'Centroid.X.px', 'Centroid.Y.px', 'Class']]
     for p in path[1:]:
         df1 = pd.read_csv(p, header=0, sep=sep)
         df1 = df[['Image', 'Centroid.X.px', 'Centroid.Y.px']]
@@ -22,7 +22,7 @@ def getAllPositionData(path, sep=','):
         mask = ~df2.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df2.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
         df2 = df2[mask]
         df1 = pd.concat([df1, df2])
-    df1.to_csv('measurements.csv', sep=',', header=True, index=False, )
+    df1.to_csv('data/measurements_w_class.csv', sep=',', header=True, index=False, )
 
-getExpressionData('data/dataset.csv', sep=',')
-#getAllPositionData(['data/measurements_CD8_roi.tsv', 'data/measurements_CD45_roi.tsv'], sep='\t')
+#getExpressionData('data/dataset.csv', sep=',')
+getAllPositionData(['data/measurements_CD8_roi.tsv', 'data/measurements_CD45_roi.tsv'], sep='\t')

@@ -110,11 +110,17 @@ class GeoMXDataset(Dataset):
         label = label[label['ROI']==file_prefix]   #label[label['ROI']==int(file_prefix.lstrip('0'))]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy())
         if torch.sum(label) > 0:
-            data = Data(x=node_features,
+            if 'Class' in df.columns:
+                data = Data(x=node_features,
                         edge_index=edge_index,
                         edge_attr=edge_attr,
-                        y=label
-                        )
+                        y=label,
+                        Class=torch.from_numpy(df['Class'].values))
+            else:
+                data = Data(x=node_features,
+                            edge_index=edge_index,
+                            edge_attr=edge_attr,
+                            y=label)
             data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.1)(data)
             torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
         else: 
