@@ -100,9 +100,10 @@ class GeoMXDataset(Dataset):
         counts = np.zeros((df.shape[0], 1))
         coordinates = np.column_stack((df["Centroid.X.px"].to_numpy(), df["Centroid.Y.px"].to_numpy()))
         adata = AnnData(counts, obsm={"spatial": coordinates})
-        sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
+        #sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True) # TODO: test diff graph constr
+        sq.gr.spatial_neighbors(adata, coord_type="generic", n_neighs=6)
         edge_matrix = adata.obsp["spatial_distances"]
-        edge_matrix[edge_matrix > 60] = 0.
+        #edge_matrix[edge_matrix > 60] = 0.
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
         node_features =torch.load(file)[torch.from_numpy(mask.values)]
