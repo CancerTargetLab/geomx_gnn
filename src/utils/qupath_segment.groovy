@@ -19,13 +19,16 @@ import qupath.lib.scripting.QP
 // that takes a single channel as input (e.g. dsb2018_heavy_augment.pb)
 // You can find some at https://github.com/qupath/models
 // (Check credit & reuse info before downloading)
-def modelPath = "/path/to/dsb2018_heavy_augment.pb"
+def modelPath = "/proj/berzelius-2023-241/users/x_mahei/QPath/dsb2018_heavy_augment.pb"
+
+//REQUIRED CONVERSION FOR GPU PROCESSING
+def dnn = DnnTools.builder(modelPath).build();
 
 // Customize how the StarDist detection should be applied
 // Here some reasonable default options are specified
 def stardist = StarDist2D
-    .builder(modelPath)
-    .channels('Channel 1')            // Extract channel called 'DAPI'
+    .builder(dnn)
+    .channels('FITC/525nm')            // Extract channel called 'DAPI'
     .normalizePercentiles(1, 99) // Percentile normalization
     .threshold(0.5)              // Probability (detection) threshold
     .pixelSize(0.5)              // Resolution for detection
@@ -52,5 +55,9 @@ for (entry in project.getImageList()) {
     print entry.getImageName() + ' DONE'
 }
 stardist.close() // This can help clean up & regain memory
+//CLOSE DNN TO FREE UP VRAM
+dnn.getPredictionFunction().net.close()
+
 println('Done!')
-//./QuPath/bin/QuPath script -p=1C-54/project.qpproj star_dist_seg_fluo.groovy
+
+//./qupath/build/dist/QuPath/bin/QuPath script -p=1C-54/project.qpproj segment.groovy
