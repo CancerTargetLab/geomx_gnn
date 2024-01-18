@@ -174,6 +174,10 @@ class ROIExpression(torch.nn.Module):
         self.project = ProjectionHead(input_dim=num_embed_features, 
                                       output_dim=num_out_features,
                                       num_layers=2)
+        
+        self.phenotype = ProjectionHead(input_dim=num_out_features, 
+                                      output_dim=15,
+                                      num_layers=2)
 
 
     def forward(self, data, return_cells=False):#x, edge_index, edge_attr, batch):
@@ -182,7 +186,7 @@ class ROIExpression(torch.nn.Module):
         if return_cells:
             return torch.abs(x)
         else:
-            return self.pool(torch.abs(x), batch=data.batch)#batch)
+            return self.pool(torch.abs(x), batch=data.batch), self.phenotype(torch.abs(x))#batch)
         
 
 class kTME(torch.nn.Module):

@@ -47,6 +47,8 @@ def train(raw_subset_dir, label_data, output_name, args):
 
     loss = torch.nn.MSELoss()
     similarity = torch.nn.CosineSimilarity()
+    def phenotype_entropy_loss(x):
+        return ((-x/x.sum(-1, keepdim=True)*torch.log(x/x.sum(-1, keepdim=True)+1e-15)).sum(dim=-1)/torch.log(torch.tensor(x.shape[1], dtype=torch.float32, device=device))).mean()
 
     train_acc_list = []
     train_loss_list = []
@@ -71,16 +73,17 @@ def train(raw_subset_dir, label_data, output_name, args):
                 for idx, batch in enumerate(train_loader):
                     batch = batch.to(device)
                     optimizer.zero_grad()
-                    out = model(batch)
+                    out, ph_logits = model(batch)
                     if is_log:
                         l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                     else:
                         l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                     sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
+                    ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                     running_loss += l.item() * out.shape[0]
                     running_acc += sim.item() * out.shape[0]
                     num_graphs += out.shape[0]
-                    l += 1 - sim
+                    l += 1 - sim + ph
                     running_total_loss += l.item() * out.shape[0]
                     l.backward()
                     optimizer.step()
@@ -104,16 +107,17 @@ def train(raw_subset_dir, label_data, output_name, args):
                 with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
                     for idx, batch in enumerate(val_loader):
                         batch = batch.to(device)
-                        out = model(batch)
+                        out, ph_logits = model(batch)
                         if is_log:
                             l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                         else:
                             l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                         sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
+                        ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                         running_loss += l.item() * out.shape[0]
                         running_acc += sim.item() * out.shape[0]
                         num_graphs += out.shape[0]
-                        l += 1 - sim
+                        l += 1 - sim + ph
                         running_total_loss += l.item() * out.shape[0]
 
                     val_acc = running_acc / num_graphs
@@ -151,16 +155,17 @@ def train(raw_subset_dir, label_data, output_name, args):
         with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
             for idx, batch in enumerate(test_loader):
                 batch = batch.to(device)
-                out = model(batch)
+                out, ph_logits = model(batch)
                 if is_log:
                     l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
                 else:
                     l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
                 sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
+                ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                 running_loss += l.item() * out.shape[0]
                 running_acc += sim.item() * out.shape[0]
                 num_graphs += out.shape[0]
-                l += 1 - sim
+                l += 1 - sim + ph
                 running_total_loss += l.item() * out.shape[0]
 
             test_acc = running_acc / num_graphs
