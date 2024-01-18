@@ -12,7 +12,7 @@ def parse_args():
     parser.add_argument("--batch_size_image", type=int, default=256)
     parser.add_argument("--epochs_image", type=int, default=100)
     parser.add_argument("--warmup_epochs_image", type=int, default=10)
-    parser.add_argument("--num_workers_image", type=int, default=8)
+    parser.add_argument("--num_workers_image", type=int, default=1)
     parser.add_argument("--lr_image", type=float, default=0.1)
     parser.add_argument("--embedding_size_image", type=int, default=256)
     parser.add_argument("--contrast_size_image", type=int, default=124)

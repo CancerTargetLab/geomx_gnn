@@ -37,23 +37,18 @@ def stardist = StarDist2D
     .measureIntensity()          // Add cell measurements (in all compartments)
     .build()
 
-def project = getProject()
-
-for (entry in project.getImageList()) {
-    // Run detection for the all objects
-    def imageData = entry.readImageData()
-    def hierarchy = imageData.getHierarchy()
-    def pathObjects = hierarchy.getAnnotationObjects()
-    if (pathObjects.isEmpty()) {
-        QP.getLogger().error("No parent objects are selected!")
-        return
-    }
-    stardist.detectObjects(imageData, pathObjects)
-    
-    hierarchy.resolveHierarchy()
-    entry.saveImageData(imageData)
-    print entry.getImageName() + ' DONE'
+def imageData = getCurrentImageData()
+def pathObjects = QP.getAnnotationObjects()
+if (pathObjects.isEmpty()) {
+    QP.getLogger().error("No parent objects are selected!")
+    return
 }
+stardist.detectObjects(imageData, pathObjects)
+
+//hierarchy.resolveHierarchy()
+//entry.saveImageData(imageData)
+//println entry.getImageName() + ' DONE'
+
 stardist.close() // This can help clean up & regain memory
 //CLOSE DNN TO FREE UP VRAM
 dnn.getPredictionFunction().net.close()
