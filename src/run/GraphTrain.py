@@ -75,9 +75,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                     optimizer.zero_grad()
                     out, ph_logits = model(batch)
                     if is_log:
-                        l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
+                        l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                     else:
-                        l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
+                        l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
                     sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
                     ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                     running_loss += l.item() * out.shape[0]
@@ -109,9 +109,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                         batch = batch.to(device)
                         out, ph_logits = model(batch)
                         if is_log:
-                            l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
+                            l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                         else:
-                            l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
+                            l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
                         sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
                         ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                         running_loss += l.item() * out.shape[0]
@@ -157,9 +157,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                 batch = batch.to(device)
                 out, ph_logits = model(batch)
                 if is_log:
-                    l = loss(torch.log10(out), batch.y.view(out.shape[0], out.shape[1]))
+                    l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                 else:
-                    l = loss(torch.log10(out), torch.log10(batch.y.view(out.shape[0], out.shape[1])))
+                    l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
                 sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
                 ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                 running_loss += l.item() * out.shape[0]
