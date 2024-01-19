@@ -40,7 +40,7 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
 
     if 'val_total_list' in model_stuff.keys():
         train_loss = model_stuff['train_total_list']
-        val_loss = model_stuff['val_ltotal_ist']
+        val_loss = model_stuff['val_total_list']
 
         plt.plot(train_loss, label="Train", color='red', marker='o')
         plt.plot(val_loss, label='Val', color='blue', marker='o')

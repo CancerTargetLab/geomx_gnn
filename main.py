@@ -104,7 +104,7 @@ def parse_args():
     # Visualize Model Run
     parser.add_argument("--visualize_model_run", action="store_true", default=False)
     parser.add_argument("--model_path", type=str, default="out/models/ROI.pt")
-    parser.add_argument("--output_name_model", type=str, default="ROI")
+    parser.add_argument("--output_model_name", type=str, default="ROI")
     parser.add_argument("--figure_model_dir", type=str, default="figures/")
     parser.add_argument("--is_cs", action="store_true", default=False)
 
