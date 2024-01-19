@@ -214,7 +214,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     plt.title('Boxplots of Cosine Similarity')
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(os.path.join(figure_dir, 'all_boxplot{name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'all_boxplot{name}.png'))
     plt.close()
 
     plt.figure(figsize=(30, 5))
