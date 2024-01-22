@@ -1,5 +1,6 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.models.GraphModel import ROIExpression
+from src.loss.CellEntropyLoss import phenotype_entropy_loss
 from src.utils.setSeed import set_seed
 from torch_geometric.loader import DataLoader
 import torch
@@ -9,6 +10,7 @@ def train(raw_subset_dir, label_data, output_name, args):
 
     EPOCH = args['epochs_graph']
     SEED = args['seed']
+    model_type = args['graph_model_type']
     batch_size = args['batch_size_graph']
     lr = args['lr_graph']
     num_workers = args['num_workers_graph']
@@ -34,27 +36,47 @@ def train(raw_subset_dir, label_data, output_name, args):
     dataset.setMode(dataset.test)
     test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    model = ROIExpression(layers=args['layers_graph'],
-                          num_node_features=args['num_node_features'],
-                          num_edge_features=args['num_edge_features'],
-                          num_embed_features=args['num_embed_features'],
-                          embed_dropout=args['embed_dropout_graph'],
-                          conv_dropout=args['conv_dropout_graph'],
-                          num_out_features=dataset.get(0).y.shape[0],
-                          heads=args['heads_graph']).to(device, dtype=float)
+    if model_type == 'GAT':
+        model = ROIExpression(layers=args['layers_graph'],
+                            num_node_features=args['num_node_features'],
+                            num_edge_features=args['num_edge_features'],
+                            num_embed_features=args['num_embed_features'],
+                            embed_dropout=args['embed_dropout_graph'],
+                            conv_dropout=args['conv_dropout_graph'],
+                            num_out_features=dataset.get(0).y.shape[0],
+                            heads=args['heads_graph']).to(device, dtype=float)
+    elif model_type == 'GAT_ph':
+        model = ROIExpression(layers=args['layers_graph'],
+                            num_node_features=args['num_node_features'],
+                            num_edge_features=args['num_edge_features'],
+                            num_embed_features=args['num_embed_features'],
+                            embed_dropout=args['embed_dropout_graph'],
+                            conv_dropout=args['conv_dropout_graph'],
+                            num_out_features=dataset.get(0).y.shape[0],
+                            heads=args['heads_graph']).to(device, dtype=float)
+    elif model_type == 'LIN':
+        model = ROIExpression(layers=args['layers_graph'],
+                            num_node_features=args['num_node_features'],
+                            num_edge_features=args['num_edge_features'],
+                            num_embed_features=args['num_embed_features'],
+                            embed_dropout=args['embed_dropout_graph'],
+                            conv_dropout=args['conv_dropout_graph'],
+                            num_out_features=dataset.get(0).y.shape[0],
+                            heads=args['heads_graph']).to(device, dtype=float)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
     dataset.setMode(dataset.train)
 
     loss = torch.nn.MSELoss()
     similarity = torch.nn.CosineSimilarity()
-    def phenotype_entropy_loss(x):
-        return ((-x/x.sum(-1, keepdim=True)*torch.log(x/x.sum(-1, keepdim=True)+1e-15)).sum(dim=-1)/torch.log(torch.tensor(x.shape[1], dtype=torch.float32, device=device))).mean()
+
 
     train_acc_list = []
     train_loss_list = []
+    train_ph_entropy_list = []
     train_total_loss_list = []
     val_acc_list = []
     val_loss_list = []
+    val_ph_entropy_list = []
     val_total_loss_list = []
     best_acc = -1.0
     best_run = 0
@@ -64,6 +86,7 @@ def train(raw_subset_dir, label_data, output_name, args):
         running_loss = 0
         running_total_loss = 0
         running_acc = 0
+        running_ph_entropy = 0
         num_graphs = 0
         model.train()
         dataset.setMode(dataset.train)
@@ -73,17 +96,24 @@ def train(raw_subset_dir, label_data, output_name, args):
                 for idx, batch in enumerate(train_loader):
                     batch = batch.to(device)
                     optimizer.zero_grad()
-                    out, ph_logits = model(batch)
+                    if model_type.endswith('_ph'):
+                        out, ph_logits = model(batch)
+                        ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
+                    else:
+                        out = model(batch)
                     if is_log:
                         l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                     else:
                         l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
                     sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
-                    ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                     running_loss += l.item() * out.shape[0]
                     running_acc += sim.item() * out.shape[0]
                     num_graphs += out.shape[0]
-                    l += 1 - sim + ph
+                    if model_type.endswith('_ph'):
+                        running_ph_entropy += ph.item() * out.shape[0]
+                        l += 1 - sim + ph
+                    else:
+                        l += 1 - sim
                     running_total_loss += l.item() * out.shape[0]
                     l.backward()
                     optimizer.step()
@@ -94,12 +124,18 @@ def train(raw_subset_dir, label_data, output_name, args):
                 train_loss_list.append(geo_loss)
                 epoch_loss = running_total_loss / num_graphs
                 train_total_loss_list.append(epoch_loss)
-                print(f"Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}")
+                if model_type.endswith('_ph'):
+                    ph_entropy = running_ph_entropy / num_graphs
+                    train_ph_entropy_list.append(ph_entropy)
+                    print(f"Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}, Train Phenotype Entropy: {ph_entropy:.4f}")
+                else: 
+                    print(f"Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}")
 
             with torch.no_grad():
                 running_loss = 0
                 running_total_loss = 0
                 running_acc = 0
+                running_ph_entropy = 0
                 num_graphs = 0
                 model.eval()
                 dataset.setMode("val")
@@ -107,17 +143,24 @@ def train(raw_subset_dir, label_data, output_name, args):
                 with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
                     for idx, batch in enumerate(val_loader):
                         batch = batch.to(device)
-                        out, ph_logits = model(batch)
+                        if model_type.endswith('_ph'):
+                            out, ph_logits = model(batch)
+                            ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
+                        else: 
+                            out = model(batch)
                         if is_log:
                             l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                         else:
                             l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
                         sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
-                        ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                         running_loss += l.item() * out.shape[0]
                         running_acc += sim.item() * out.shape[0]
                         num_graphs += out.shape[0]
-                        l += 1 - sim + ph
+                        if model_type.endswith('_ph'):
+                            running_ph_entropy += ph.item() * out.shape[0]
+                            l += 1 - sim + ph
+                        else:
+                            l += 1 - sim
                         running_total_loss += l.item() * out.shape[0]
 
                     val_acc = running_acc / num_graphs
@@ -126,27 +169,47 @@ def train(raw_subset_dir, label_data, output_name, args):
                     val_loss_list.append(geo_loss)
                     epoch_loss = running_total_loss / num_graphs
                     val_total_loss_list.append(epoch_loss)
-                    if val_acc > best_acc:
-                        best_acc = val_acc
-                        best_run = 0
-                        torch.save({
-                            "model": model.state_dict(),
-                            "opt": optimizer.state_dict(),
-                            "train_acc": train_acc_list,
-                            "train_list": train_loss_list,
-                            "train_total_list": train_total_loss_list,
-                            "val_acc": val_acc_list,
-                            "val_list": val_loss_list,
-                            "val_total_list": val_total_loss_list,
-                            "epoch": epoch
-                        }, output_name)
-                    print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
+                    if model_type.endswith('_ph'):
+                        ph_entropy = running_ph_entropy / num_graphs
+                        val_ph_entropy_list.append(ph_entropy)
+                        if val_acc > best_acc:
+                            best_acc = val_acc
+                            best_run = 0
+                            torch.save({
+                                "model": model.state_dict(),
+                                "opt": optimizer.state_dict(),
+                                "train_acc": train_acc_list,
+                                "train_list": train_loss_list,
+                                "train_total_list": train_total_loss_list,
+                                "val_acc": val_acc_list,
+                                "val_list": val_loss_list,
+                                "val_total_list": val_total_loss_list,
+                                "epoch": epoch
+                            }, output_name)
+                        print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}")
+                    else:
+                        if val_acc > best_acc:
+                            best_acc = val_acc
+                            best_run = 0
+                            torch.save({
+                                "model": model.state_dict(),
+                                "opt": optimizer.state_dict(),
+                                "train_acc": train_acc_list,
+                                "train_list": train_loss_list,
+                                "train_total_list": train_total_loss_list,
+                                "val_acc": val_acc_list,
+                                "val_list": val_loss_list,
+                                "val_total_list": val_total_loss_list,
+                                "epoch": epoch
+                            }, output_name)
+                        print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
 
 
     with torch.no_grad():
         running_loss = 0
         running_total_loss = 0
         running_acc = 0
+        running_ph_entropy = 0
         num_graphs = 0
         model.load_state_dict(torch.load(output_name)['model'])
         model.eval()
@@ -155,20 +218,31 @@ def train(raw_subset_dir, label_data, output_name, args):
         with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
             for idx, batch in enumerate(test_loader):
                 batch = batch.to(device)
-                out, ph_logits = model(batch)
+                if model_type.endswith('_ph'):
+                    out, ph_logits = model(batch)
+                    ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
+                else:
+                    out = model(batch)
                 if is_log:
                     l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                 else:
                     l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
                 sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
-                ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
                 running_loss += l.item() * out.shape[0]
                 running_acc += sim.item() * out.shape[0]
                 num_graphs += out.shape[0]
-                l += 1 - sim + ph
+                if model_type.endswith('_ph'):
+                    running_ph_entropy += ph.item() * out.shape[0]
+                    l += 1 - sim + ph
+                else:
+                    l += 1 - sim
                 running_total_loss += l.item() * out.shape[0]
 
             test_acc = running_acc / num_graphs
             geo_loss = running_loss / num_graphs
             epoch_loss = running_total_loss / num_graphs
-            print(f"Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}")
+            if model_type.endswith('_ph'):
+                ph_entropy = running_ph_entropy / num_graphs
+                print(f"Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}")
+            else:
+                print(f"Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}")
