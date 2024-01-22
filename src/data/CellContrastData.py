@@ -27,6 +27,8 @@ class EmbedDataset(Dataset):
             self.data_index_list.append(data.shape[0])
             self.data = torch.cat((self.data, data))
         
+        self.data = torch.Tensor(self.data)
+        
         total_samples = self.data.shape[0]
         train_size = int(train_ratio * total_samples)
         val_size = int(val_ratio * total_samples)
