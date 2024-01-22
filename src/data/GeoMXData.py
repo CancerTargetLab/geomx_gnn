@@ -74,7 +74,7 @@ class GeoMXDataset(Dataset):
         data.edge_index, data.edge_attr = data.edge_index[:,edge_map], data.edge_attr[edge_map]
         y = data.y
         data = torch_geometric.transforms.RemoveIsolatedNodes()(data)
-        data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.1)(data)
+        data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=1.0)(data)
         data.y = y
         return data   
     
@@ -122,7 +122,7 @@ class GeoMXDataset(Dataset):
                             edge_index=edge_index,
                             edge_attr=edge_attr,
                             y=label)
-            data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.1)(data)
+            data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=1.0)(data)
             torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
         else: 
             print(f'File {file} has no Expression data in {self.label_data}!!!')
