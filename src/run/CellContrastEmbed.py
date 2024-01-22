@@ -26,7 +26,7 @@ def embed(image_dir, model_name, args):
     model = ContrastiveLearning(channels=dataset.__getitem__(0).shape[0],
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
-                                resnet=args['resnet_model']).to(device, dtype=float)
+                                resnet=args['resnet_model']).to(device, torch.float32)
     model.load_state_dict(load(model_name, save_keys='model', device=device))
     model.eval()
     model.mode = 'embed'
@@ -36,5 +36,5 @@ def embed(image_dir, model_name, args):
             embed = torch.Tensor()
             for idx, batch in enumerate(embed_loader):
                 out = model(batch.to(device))
-                embed = torch.cat((embed, out.to('cpu')), dim=0)
+                embed = torch.cat((embed, out.to('cpu', torch.float32)), dim=0)
             dataset.save_embed_data(embed)

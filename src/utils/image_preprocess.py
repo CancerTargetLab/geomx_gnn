@@ -42,7 +42,7 @@ def zscore(image_paths, mean, std):
         img = (img-mean)/(std+1e-16)
         img = np.reshape(img,(x,y,chan))
 
-        torch.save(torch.from_numpy(img), img_p.split('.')[0]+'.pt')
+        torch.save(torch.from_numpy(img).to(torch.float32), img_p.split('.')[0]+'.pt')
 
 def cell_seg(df_path, image_paths):
     df = pd.read_csv(df_path, header=0, sep=',')

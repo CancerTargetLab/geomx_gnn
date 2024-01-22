@@ -44,7 +44,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
-                            heads=args['heads_graph']).to(device, dtype=float)
+                            heads=args['heads_graph']).to(device, dtype=torch.float32)
     elif model_type == 'GAT_ph':
         model = ROIExpression_ph(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
@@ -55,14 +55,14 @@ def train(raw_subset_dir, label_data, output_name, args):
                             num_out_features=dataset.get(0).y.shape[0],
                             heads=args['heads_graph'],
                             num_phenotypes=args['num_phenotypes_graph'],
-                            num_phenotypes_layers_graph=args['num_phenotypes_layers_graph']).to(device, dtype=float)
+                            num_phenotypes_layers_graph=args['num_phenotypes_layers_graph']).to(device, dtype=torch.float32)
     elif model_type == 'LIN':
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_embed_features=args['num_embed_features'],
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
-                            num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=float)
+                            num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=torch.float32)
     elif model_type == 'LIN':
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
@@ -71,7 +71,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
                             num_phenotypes=args['num_phenotypes_graph'],
-                            num_phenotypes_layers_graph=args['num_phenotypes_layers_graph']).to(device, dtype=float)
+                            num_phenotypes_layers_graph=args['num_phenotypes_layers_graph']).to(device, dtype=torch.float32)
     else:
         raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)

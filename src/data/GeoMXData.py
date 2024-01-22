@@ -84,8 +84,8 @@ class GeoMXDataset(Dataset):
     def process(self):
         label = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
         df = pd.read_csv(self.cell_pos, header=0, sep=",")
-        df['Centroid.X.x'] = df['Centroid.X.px'].round().astype(float)
-        df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(float)
+        df['Centroid.X.x'] = df['Centroid.X.px'].round().astype(np.float32)
+        df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(np.float32)
         with tqdm(self.raw_paths, total=len(self.raw_paths), desc='Preprocessing Graphs') as raw_paths:
             for file in raw_paths:
                 self._process_one_step(file, df, label)

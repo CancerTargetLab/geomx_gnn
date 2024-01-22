@@ -27,7 +27,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                           embed_dropout=args['embed_dropout_graph'],
                           conv_dropout=args['conv_dropout_graph'],
                           num_out_features=dataset.get(0).y.shape[0],
-                          heads=args['heads_graph']).to(device, dtype=float)
+                          heads=args['heads_graph']).to(device, dtype=torch.float32)
     model.eval()
     model.load_state_dict(torch.load(model_name)['model'])
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
