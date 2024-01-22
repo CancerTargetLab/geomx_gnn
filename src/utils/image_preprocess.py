@@ -54,6 +54,8 @@ def cell_seg(df_path, image_paths):
         x = df_img['Centroid.X.px'].values
         y = df_img['Centroid.Y.px'].values
         all_cells = torch.Tensor()
+        if x.shape[0] < 1:
+            raise Exception(f'No coordinates in {df_path} for {image}!!!') 
         try:
             for cell in list(range(x.shape[0])):
                 delta_x1 = 10 if x[cell] >= 10 else x[cell]
