@@ -1,5 +1,5 @@
 from src.data.GeoMXData import GeoMXDataset
-from src.models.GraphModel import ROIExpression
+from src.models.GraphModel import ROIExpression, ROIExpression_ph, ROIExpression_lin, ROIExpression_lin_ph
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
 from src.utils.setSeed import set_seed
 from torch_geometric.loader import DataLoader
@@ -46,23 +46,34 @@ def train(raw_subset_dir, label_data, output_name, args):
                             num_out_features=dataset.get(0).y.shape[0],
                             heads=args['heads_graph']).to(device, dtype=float)
     elif model_type == 'GAT_ph':
-        model = ROIExpression(layers=args['layers_graph'],
+        model = ROIExpression_ph(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_edge_features=args['num_edge_features'],
                             num_embed_features=args['num_embed_features'],
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
-                            heads=args['heads_graph']).to(device, dtype=float)
+                            heads=args['heads_graph'],
+                            num_phenotypes=args['num_phenotypes_graph'],
+                            num_phenotypes_layers_graph=args['num_phenotypes_layers_graph']).to(device, dtype=float)
     elif model_type == 'LIN':
-        model = ROIExpression(layers=args['layers_graph'],
+        model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
-                            num_edge_features=args['num_edge_features'],
+                            num_embed_features=args['num_embed_features'],
+                            embed_dropout=args['embed_dropout_graph'],
+                            conv_dropout=args['conv_dropout_graph'],
+                            num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=float)
+    elif model_type == 'LIN':
+        model = ROIExpression_lin(layers=args['layers_graph'],
+                            num_node_features=args['num_node_features'],
                             num_embed_features=args['num_embed_features'],
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
-                            heads=args['heads_graph']).to(device, dtype=float)
+                            num_phenotypes=args['num_phenotypes_graph'],
+                            num_phenotypes_layers_graph=args['num_phenotypes_layers_graph']).to(device, dtype=float)
+    else:
+        raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
     dataset.setMode(dataset.train)
 

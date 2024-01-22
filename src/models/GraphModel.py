@@ -174,11 +174,6 @@ class ROIExpression(torch.nn.Module):
         self.project = ProjectionHead(input_dim=num_embed_features, 
                                       output_dim=num_out_features,
                                       num_layers=2)
-        
-        self.phenotype = ProjectionHead(input_dim=num_out_features, 
-                                      output_dim=15,
-                                      num_layers=2)
-
 
     def forward(self, data, return_cells=False):#x, edge_index, edge_attr, batch):
         x = self.gnn(data)#x, edge_index, edge_attr)
@@ -186,8 +181,97 @@ class ROIExpression(torch.nn.Module):
         if return_cells:
             return torch.abs(x)
         else:
-            return self.pool(torch.abs(x), batch=data.batch), self.phenotype(torch.abs(x))#batch)
+            return self.pool(torch.abs(x), batch=data.batch)#batch)
         
+
+class ROIExpression_ph(ROIExpression):
+    def __init__(self,
+                 layers=1,
+                 num_node_features=256, 
+                 num_edge_features=1,
+                 num_embed_features=128,
+                 num_out_features=128,
+                 heads=1,
+                 embed_dropout=0.1,
+                 conv_dropout=0.1,
+                 num_phenotypes=15,
+                 num_phenotype_layers=2):
+        super().__init__(layers=layers,
+                        num_node_features=num_node_features, 
+                        num_edge_features=num_edge_features,
+                        num_embed_features=num_embed_features,
+                        num_out_features=num_out_features,
+                        heads=heads,
+                        embed_dropout=embed_dropout,
+                        conv_dropout=conv_dropout,)
+
+        
+        self.phenotype = ProjectionHead(input_dim=num_out_features, 
+                                      output_dim=num_phenotypes,
+                                      num_layers=num_phenotype_layers)
+
+    def forward(self, data, return_cells=False):
+        x = self.gnn(data)
+        x = self.project(x)
+        if return_cells:
+            return torch.abs(x)
+        else:
+            return self.pool(torch.abs(x), batch=data.batch), self.phenotype(torch.abs(x))
+
+
+class ROIExpression_lin(torch.nn.Module):
+    def __init__(self,
+                layers=1,
+                num_node_features=256,
+                num_embed_features=128,
+                num_out_features=128,
+                embed_dropout=0.1,
+                conv_dropout=0.1):
+        super().__init__()
+
+        self.node_embed = torch.nn.Sequential(
+            torch.nn.Linear(num_node_features, num_embed_features),
+            torch.nn.LayerNorm(num_embed_features),
+            torch.nn.Dropout(p=embed_dropout, inplace=True),
+            torch.nn.LeakyReLU(inplace=True)
+            )
+        
+        self.project = ProjectionHead(input_dim=num_embed_features, 
+                                    output_dim=num_out_features,
+                                    num_layers=layers)
+    
+    def forward(self, data):
+        x = self.node_embed(data.x)
+        x = self.project(x)
+        return torch.abs(x)
+
+
+class ROIExpression_lin_ph(ROIExpression_lin):
+    def __init__(self,
+                layers=1,
+                num_node_features=256,
+                num_embed_features=128,
+                num_out_features=128,
+                embed_dropout=0.1,
+                conv_dropout=0.1,
+                num_phenotypes=15,
+                num_phenotype_layers=2):
+        super().__init__(layers=layers,
+                num_node_features=num_node_features,
+                num_embed_features=num_embed_features,
+                num_out_features=num_out_features,
+                embed_dropout=embed_dropout,
+                conv_dropout=conv_dropout)
+        
+        self.phenotype = ProjectionHead(input_dim=num_out_features, 
+                                      output_dim=num_phenotypes,
+                                      num_layers=num_phenotype_layers)
+    
+    def forwoard(self, data):
+        x = self.node_embed(data.x)
+        x = torch.abs(self.project(x))
+        return x, self.phenotype(x)
+
 
 class kTME(torch.nn.Module):
     def __init__(self,
