@@ -66,7 +66,7 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
     sc.pl.highly_variable_genes(adata, save=name+'.png', show=False)
     sc.pp.scale(adata)
-    sc.tl.pca(adata, svd_solver='arpack', chunked=True, chunk_size=40000)
+    sc.tl.pca(adata, svd_solver='arpack')
     sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
     sc.tl.umap(adata)
     sc.tl.leiden(adata)
@@ -120,7 +120,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir):
         sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
         
         sc.pp.scale(adata)
-        sc.tl.pca(adata, svd_solver='arpack')
+        sc.tl.pca(adata, svd_solver='arpack', chunked=True, chunk_size=40000)
         sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
         sc.tl.umap(adata)
         sc.tl.leiden(adata, resolution=0.5)
