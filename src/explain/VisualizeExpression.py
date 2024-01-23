@@ -15,7 +15,7 @@ def get_true_graph_expression_dict(path):
         graph = torch.load(os.path.join(path, graph_p), map_location='cpu')
         value_dict[graph_p] = {'y': graph.y.numpy()}
         if 'Class' in graph.to_dict().keys():
-            value_dict[graph_p]['cell_class'] =graph.Class.numpy()
+            value_dict[graph_p]['cell_class'] =graph.Class
     return value_dict
 
 def get_predicted_graph_expression(value_dict, path):
@@ -66,7 +66,7 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
     sc.pl.highly_variable_genes(adata, save=name+'.png', show=False)
     sc.pp.scale(adata)
-    sc.tl.pca(adata, svd_solver='arpack')
+    sc.tl.pca(adata, svd_solver='arpack', chunked=True, chunk_size=40000)
     sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
     sc.tl.umap(adata)
     sc.tl.leiden(adata)

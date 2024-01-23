@@ -109,12 +109,12 @@ class GeoMXDataset(Dataset):
         node_features =torch.load(file)[torch.from_numpy(mask.values)]
 
         label = label[label['ROI']==file_prefix]   #label[label['ROI']==int(file_prefix.lstrip('0'))]
-        label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy())
+        label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
         if torch.sum(label) > 0:
             if 'Class' in df.columns:
                 data = Data(x=node_features,
                         edge_index=edge_index,
-                        edge_attr=edge_attr,
+                        edge_attr=edge_attr.to(torch.float32),
                         y=label,
                         Class=torch.from_numpy(df['Class'].values))
             else:
