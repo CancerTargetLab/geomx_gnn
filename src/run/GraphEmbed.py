@@ -1,5 +1,5 @@
 from src.data.GeoMXData import GeoMXDataset
-from src.models.GraphModel import ROIExpression
+from src.models.GraphModel import ROIExpression, ROIExpression_lin, ROIExpression_ph, ROIExpression_lin_ph
 from src.utils.setSeed import set_seed
 import torch
 import os
@@ -10,6 +10,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
 
     # move to GPU (if available)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model_type = args['graph_model_type']
     set_seed(SEED)
 
     dataset = GeoMXDataset(root_dir=args['graph_dir'],
@@ -20,14 +21,44 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                            edge_dropout=args['edge_dropout'],
                            label_data=label_data)
 
-    model = ROIExpression(layers=args['layers_graph'],
-                          num_node_features=args['num_node_features'],
-                          num_edge_features=args['num_edge_features'],
-                          num_embed_features=args['num_embed_features'],
-                          embed_dropout=args['embed_dropout_graph'],
-                          conv_dropout=args['conv_dropout_graph'],
-                          num_out_features=dataset.get(0).y.shape[0],
-                          heads=args['heads_graph']).to(device, dtype=torch.float32)
+    if model_type == 'GAT':
+        model = ROIExpression(layers=args['layers_graph'],
+                            num_node_features=args['num_node_features'],
+                            num_edge_features=args['num_edge_features'],
+                            num_embed_features=args['num_embed_features'],
+                            embed_dropout=args['embed_dropout_graph'],
+                            conv_dropout=args['conv_dropout_graph'],
+                            num_out_features=dataset.get(0).y.shape[0],
+                            heads=args['heads_graph']).to(device, dtype=torch.float32)
+    elif model_type == 'GAT_ph':
+        model = ROIExpression_ph(layers=args['layers_graph'],
+                            num_node_features=args['num_node_features'],
+                            num_edge_features=args['num_edge_features'],
+                            num_embed_features=args['num_embed_features'],
+                            embed_dropout=args['embed_dropout_graph'],
+                            conv_dropout=args['conv_dropout_graph'],
+                            num_out_features=dataset.get(0).y.shape[0],
+                            heads=args['heads_graph'],
+                            num_phenotypes=args['num_phenotypes_graph'],
+                            num_phenotype_layers=args['num_phenotypes_layers_graph']).to(device, dtype=torch.float32)
+    elif model_type == 'LIN':
+        model = ROIExpression_lin(layers=args['layers_graph'],
+                            num_node_features=args['num_node_features'],
+                            num_embed_features=args['num_embed_features'],
+                            embed_dropout=args['embed_dropout_graph'],
+                            conv_dropout=args['conv_dropout_graph'],
+                            num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=torch.float32)
+    elif model_type == 'LIN_ph':
+        model = ROIExpression_lin_ph(layers=args['layers_graph'],
+                            num_node_features=args['num_node_features'],
+                            num_embed_features=args['num_embed_features'],
+                            embed_dropout=args['embed_dropout_graph'],
+                            conv_dropout=args['conv_dropout_graph'],
+                            num_out_features=dataset.get(0).y.shape[0],
+                            num_phenotypes=args['num_phenotypes_graph'],
+                            num_phenotype_layers=args['num_phenotypes_layers_graph']).to(device, dtype=torch.float32)
+    else:
+        raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
     model.eval()
     model.load_state_dict(torch.load(model_name)['model'])
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
