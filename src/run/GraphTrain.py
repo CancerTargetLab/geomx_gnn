@@ -1,5 +1,5 @@
 from src.data.GeoMXData import GeoMXDataset
-from src.models.GraphModel import ROIExpression, ROIExpression_ph, ROIExpression_lin, ROIExpression_lin_ph
+from src.models.GraphModel import ROIExpression, ROIExpression_lin
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
 from src.utils.setSeed import set_seed
 from torch_geometric.loader import DataLoader
@@ -36,7 +36,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     dataset.setMode(dataset.test)
     test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    if model_type == 'GAT':
+    if 'GAT' in model_type:
         model = ROIExpression(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_edge_features=args['num_edge_features'],
@@ -45,33 +45,13 @@ def train(raw_subset_dir, label_data, output_name, args):
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
                             heads=args['heads_graph']).to(device, dtype=torch.float32)
-    elif model_type == 'GAT_ph':
-        model = ROIExpression_ph(layers=args['layers_graph'],
-                            num_node_features=args['num_node_features'],
-                            num_edge_features=args['num_edge_features'],
-                            num_embed_features=args['num_embed_features'],
-                            embed_dropout=args['embed_dropout_graph'],
-                            conv_dropout=args['conv_dropout_graph'],
-                            num_out_features=dataset.get(0).y.shape[0],
-                            heads=args['heads_graph'],
-                            num_phenotypes=args['num_phenotypes_graph'],
-                            num_phenotype_layers=args['num_phenotypes_layers_graph']).to(device, dtype=torch.float32)
-    elif model_type == 'LIN':
+    elif 'LIN' in model_type:
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_embed_features=args['num_embed_features'],
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=torch.float32)
-    elif model_type == 'LIN_ph':
-        model = ROIExpression_lin_ph(layers=args['layers_graph'],
-                            num_node_features=args['num_node_features'],
-                            num_embed_features=args['num_embed_features'],
-                            embed_dropout=args['embed_dropout_graph'],
-                            conv_dropout=args['conv_dropout_graph'],
-                            num_out_features=dataset.get(0).y.shape[0],
-                            num_phenotypes=args['num_phenotypes_graph'],
-                            num_phenotype_layers=args['num_phenotypes_layers_graph']).to(device, dtype=torch.float32)
     else:
         raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
@@ -108,8 +88,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                     batch = batch.to(device)
                     optimizer.zero_grad()
                     if model_type.endswith('_ph'):
-                        out, ph_logits = model(batch)
-                        ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
+                        out = model(batch)
+                        ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1))
                     else:
                         out = model(batch)
                     if is_log:
@@ -155,8 +135,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                     for idx, batch in enumerate(val_loader):
                         batch = batch.to(device)
                         if model_type.endswith('_ph'):
-                            out, ph_logits = model(batch)
-                            ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
+                            out = model(batch)
+                            ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1))
                         else: 
                             out = model(batch)
                         if is_log:
@@ -191,9 +171,11 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 "opt": optimizer.state_dict(),
                                 "train_acc": train_acc_list,
                                 "train_list": train_loss_list,
+                                "train_ph_entropy": train_ph_entropy_list,
                                 "train_total_list": train_total_loss_list,
                                 "val_acc": val_acc_list,
                                 "val_list": val_loss_list,
+                                "val_ph_entropy": val_ph_entropy_list,
                                 "val_total_list": val_total_loss_list,
                                 "epoch": epoch
                             }, output_name)
@@ -230,8 +212,8 @@ def train(raw_subset_dir, label_data, output_name, args):
             for idx, batch in enumerate(test_loader):
                 batch = batch.to(device)
                 if model_type.endswith('_ph'):
-                    out, ph_logits = model(batch)
-                    ph = phenotype_entropy_loss(torch.softmax(ph_logits, 1))
+                    out = model(batch)
+                    ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1))
                 else:
                     out = model(batch)
                 if is_log:
