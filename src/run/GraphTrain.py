@@ -16,6 +16,9 @@ def train(raw_subset_dir, label_data, output_name, args):
     num_workers = args['num_workers_graph']
     early_stopping = args['early_stopping_graph']
     is_log = args['data_is_log_tme']
+    alpha = args['graph_mse_mult']
+    beta = args['graph_cos_sim_mult']
+    theta = args['graph_entropy_mult']
 
     # move to GPU (if available)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -89,14 +92,15 @@ def train(raw_subset_dir, label_data, output_name, args):
                     optimizer.zero_grad()
                     if model_type.endswith('_ph'):
                         out = model(batch)
-                        ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1))
+                        ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
                     else:
                         out = model(batch)
                     if is_log:
                         l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                     else:
                         l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
-                    sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1])))
+                    l = alpha * l
+                    sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))) * beta
                     running_loss += l.item() * out.shape[0]
                     running_acc += sim.item() * out.shape[0]
                     num_graphs += out.shape[0]
