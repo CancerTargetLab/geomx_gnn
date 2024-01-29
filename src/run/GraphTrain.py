@@ -118,9 +118,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                 if model_type.endswith('_ph'):
                     ph_entropy = running_ph_entropy / num_graphs
                     train_ph_entropy_list.append(ph_entropy)
-                    print(f"Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}, Train Phenotype Entropy: {ph_entropy:.4f}")
+                    print(f"Train Loss: {epoch_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train Phenotype Entropy: {ph_entropy:.4f}")
                 else: 
-                    print(f"Train Loss: {epoch_loss:.4f}, Train Accuracy: {train_acc:.4f}")
+                    print(f"Train Loss: {epoch_loss:.4f}, Train Cosine Sim: {train_acc:.4f}")
 
             with torch.no_grad():
                 running_loss = 0
@@ -179,7 +179,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 "val_total_list": val_total_loss_list,
                                 "epoch": epoch
                             }, output_name)
-                        print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}")
+                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}")
                     else:
                         if val_acc > best_acc:
                             best_acc = val_acc
@@ -195,7 +195,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 "val_total_list": val_total_loss_list,
                                 "epoch": epoch
                             }, output_name)
-                        print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
+                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}")
 
 
     with torch.no_grad():
@@ -236,6 +236,6 @@ def train(raw_subset_dir, label_data, output_name, args):
             epoch_loss = running_total_loss / num_graphs
             if model_type.endswith('_ph'):
                 ph_entropy = running_ph_entropy / num_graphs
-                print(f"Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}")
             else:
-                print(f"Test Loss: {epoch_loss:.4f}, Test Accuracy: {test_acc:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}")
