@@ -239,11 +239,16 @@ class ROIExpression_lin(torch.nn.Module):
         self.project = ProjectionHead(input_dim=num_embed_features, 
                                     output_dim=num_out_features,
                                     num_layers=layers)
+        
+        self.pool = torch_geometric.nn.pool.global_add_pool
     
-    def forward(self, data):
+    def forward(self, data, return_cells=False):
         x = self.node_embed(data.x)
         x = self.project(x)
-        return torch.abs(x)
+        if return_cells:
+            return torch.abs(x)
+        else:
+            return self.pool(torch.abs(x), batch=data.batch)
 
 
 class ROIExpression_lin_ph(ROIExpression_lin):
@@ -267,7 +272,7 @@ class ROIExpression_lin_ph(ROIExpression_lin):
                                       output_dim=num_phenotypes,
                                       num_layers=num_phenotype_layers)
     
-    def forwoard(self, data):
+    def forward(self, data):
         x = self.node_embed(data.x)
         x = torch.abs(self.project(x))
         return x, self.phenotype(x)
