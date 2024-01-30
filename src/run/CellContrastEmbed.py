@@ -31,10 +31,11 @@ def embed(image_dir, model_name, args):
     model.eval()
     model.mode = 'embed'
 
-    with torch.no_grad():
-        with tqdm(embed_loader, total=len(embed_loader), desc='Embeding Cell Images') as embed_loader:
-            embed = torch.Tensor()
-            for idx, batch in enumerate(embed_loader):
-                out = model(batch.to(device))
-                embed = torch.cat((embed, out.to('cpu', torch.float32)), dim=0)
-            dataset.save_embed_data(embed)
+    # with torch.no_grad():
+    #     with tqdm(embed_loader, total=len(embed_loader), desc='Embeding Cell Images') as embed_loader:
+    #         embed = torch.Tensor()
+    #         for idx, batch in enumerate(embed_loader):
+    #             out = model(batch.to(device))
+    #             embed = torch.cat((embed, out.to('cpu', torch.float32)), dim=0)
+    #         dataset.save_embed_data(embed)
+    dataset.embed(model, device=device)

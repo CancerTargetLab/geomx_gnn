@@ -93,14 +93,22 @@ class EmbedDataset(Dataset):
         else:
             return self.transform(self.data[idx])
     
-    def save_embed_data(self, data):
-        if data.shape[0] == self.data.shape[0]:
-            data = data.to('cpu')
-            with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
-                c_sum = 0
-                for i, path in enumerate(cells_path):
-                    torch.save(data[c_sum:c_sum + self.data_index_list[i+1]], path.split('.')[0]+'_embed.pt')
-                    c_sum += self.data_index_list[i+1]
-        else:
-            print('Warning: Data to save not equal number of examples as data loaded.')
+    # def save_embed_data(self, data):
+    #     if data.shape[0] == self.data.shape[0]:
+    #         data = data.to('cpu')
+    #         with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
+    #             c_sum = 0
+    #             for i, path in enumerate(cells_path):
+    #                 torch.save(data[c_sum:c_sum + self.data_index_list[i+1]], path.split('.')[0]+'_embed.pt')
+    #                 c_sum += self.data_index_list[i+1]
+    #     else:
+    #         print('Warning: Data to save not equal number of examples as data loaded.')
     
+    def embed(self, model, device='cpu'):
+        with torch.no_grad():
+            with tqdm(self.cells_path, total=self.cells_path, desc='Save embedings') as cells_path:
+                for path in cells_path:
+                    data = torch.load(os.path.join(path))
+                    data = model(data.to(device, torch.float32))
+                    torch.save(data, os.path.join(path, path.split('.')[0]+'_embed.pt'))
+
