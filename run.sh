@@ -9,7 +9,6 @@
 
 # Apptainer images can only be used outside /home. In this example the
 # image is located here
-cd /proj/TODO/users/TODO/geomx_gnn
 
 module load Anaconda/2021.05-nsc1
 conda activate test

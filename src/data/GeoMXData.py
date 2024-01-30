@@ -116,7 +116,7 @@ class GeoMXDataset(Dataset):
                         edge_index=edge_index,
                         edge_attr=edge_attr.to(torch.float32),
                         y=label,
-                        Class=torch.from_numpy(df['Class'].values))
+                        Class=df['Class'].values)
             else:
                 data = Data(x=node_features,
                             edge_index=edge_index,
