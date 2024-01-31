@@ -53,6 +53,17 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     plt.savefig(os.path.join(figure_dir, f'cluster_{vis_name}.png'))
     plt.close()
 
+    if len(args['vis_protein']) > 0:
+      proteins = args['vis_protein'].split(',')
+      for prt in proteins:
+        adata.obs[prt] = cluster.obs[prt][cluster.obs['prefix']==name_tiff.split('.')[0]]
+      sq.pl.spatial_scatter(adata, 
+                            color=proteins,
+                            size=25,
+                            img_channel=args['vis_channel'])
+      plt.savefig(os.path.join(figure_dir, f'cell_expression_pred_{vis_name}.png'))
+      plt.close()
+
     sq.pl.spatial_scatter(adata, 
                           color="cluster",
                           connectivity_key="spatial_connectivities",

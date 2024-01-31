@@ -104,6 +104,7 @@ def parse_args():
     parser.add_argument("--vis_img_raw_subset_dir", type=str, default="TMA1_preprocessed")
     parser.add_argument("--name_tiff", type=str, default="027-2B27.tiff")
     parser.add_argument("--figure_img_dir", type=str, default="figures/")
+    parser.add_argument("--vis_protein", type=str, default="")
     parser.add_argument("--vis_channel", type=int, default=0)
     parser.add_argument("--vis_all_channels", action="store_true", default=False)
 
