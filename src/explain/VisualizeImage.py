@@ -8,7 +8,9 @@ from anndata import AnnData
 import matplotlib.pyplot as plt
 
 def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
-    df = pd.read_csv(os.path.join('data/processed', raw_subset_dir, 'measurements.csv'), header=0, sep=",")
+    path = os.path.join('data/raw', raw_subset_dir)
+    df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
+    df = pd.read_csv(df_path, header=0, sep=",")
     df = df[["Image", "Centroid.X.px", "Centroid.Y.px"]] #'Class'
     df = df[df["Image"] == name_tiff]
     df = df.drop("Image", axis=1)
@@ -50,18 +52,18 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                           color="cluster",
                           size=25,
                           img_channel=args['vis_channel'])
-    plt.savefig(os.path.join(figure_dir, f'cluster_{vis_name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'cluster_{vis_name}_{name_tiff}.png'))
     plt.close()
 
     if len(args['vis_protein']) > 0:
-      proteins = args['vis_protein'].split(',')
+      proteins = args['vis_protein'].replace('.', ' ').split(',')
       for prt in proteins:
-        adata.obs[prt] = cluster.obs[prt][cluster.obs['prefix']==name_tiff.split('.')[0]]
+        adata.obs[prt] = cluster.X[:,np.argmax(cluster.var_names.values==prt)][cluster.obs['prefix']==name_tiff.split('.')[0]]
       sq.pl.spatial_scatter(adata, 
                             color=proteins,
                             size=25,
                             img_channel=args['vis_channel'])
-      plt.savefig(os.path.join(figure_dir, f'cell_expression_pred_{vis_name}.png'))
+      plt.savefig(os.path.join(figure_dir, f'cell_expression_pred_{vis_name}_{name_tiff}.png'))
       plt.close()
 
     sq.pl.spatial_scatter(adata, 
@@ -71,12 +73,12 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                           edges_width=1,
                           size=25,
                           img_channel=args['vis_channel'])
-    plt.savefig(os.path.join(figure_dir, f'cluster_graph_{vis_name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'cluster_graph_{vis_name}}_{name_tiff}.png'))
     plt.close()
 
     if args['vis_all_channels']:
       for channel in range(img.shape[2]):
         sq.pl.spatial_scatter(adata,
                             img_channel=channel)
-        plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}.png'))
+        plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}_{name_tiff}.png'))
         plt.close()
