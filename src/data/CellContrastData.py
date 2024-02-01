@@ -104,9 +104,9 @@ class EmbedDataset(Dataset):
     #     else:
     #         print('Warning: Data to save not equal number of examples as data loaded.')
     
-    def embed(self, model, device='cpu'):
+    def save_embed_data(self, model, device='cpu'):
         with torch.no_grad():
-            with tqdm(self.cells_path, total=self.cells_path, desc='Save embedings') as cells_path:
+            with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 for path in cells_path:
                     data = torch.load(os.path.join(path))
                     data = model(data.to(device, torch.float32))

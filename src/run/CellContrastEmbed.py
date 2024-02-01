@@ -38,4 +38,4 @@ def embed(image_dir, model_name, args):
     #             out = model(batch.to(device))
     #             embed = torch.cat((embed, out.to('cpu', torch.float32)), dim=0)
     #         dataset.save_embed_data(embed)
-    dataset.embed(model, device=device)
+    dataset.save_embed_data(model, device=device)
