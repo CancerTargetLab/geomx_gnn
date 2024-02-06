@@ -56,7 +56,7 @@ def parse_args():
                         help="Number of Graphs per Batch")
     parser.add_argument("--epochs_graph", type=int, default=100,
                         help="Number of epochs for which to train")
-    parser.add_argument("--warmup_epochs_graph", type=int, default=10)
+    #parser.add_argument("--warmup_epochs_graph", type=int, default=10)
     parser.add_argument("--num_workers_graph", type=int, default=1,
                         help="Number of worker processes to be used(loading data etc)")
     parser.add_argument("--lr_graph", type=float, default=0.005,

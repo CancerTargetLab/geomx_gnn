@@ -2,6 +2,7 @@ from src.data.GeoMXData import GeoMXDataset
 from src.models.GraphModel import ROIExpression, ROIExpression_lin
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
 from src.utils.setSeed import set_seed
+from src.utils.stats import per_gene_pcc
 from torch_geometric.loader import DataLoader
 import torch
 from tqdm import tqdm
@@ -72,6 +73,8 @@ def train(raw_subset_dir, label_data, output_name, args):
     val_loss_list = []
     val_ph_entropy_list = []
     val_total_loss_list = []
+    val_pcc_statistic_list = []
+    val_pcc_pval_list = []
     best_acc = -1.0
     best_run = 0
 
@@ -136,6 +139,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                 dataset.setMode("val")
 
                 with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
+                    running_y = torch.Tensor()
+                    running_out = torch.Tensor()
                     for idx, batch in enumerate(val_loader):
                         batch = batch.to(device)
                         if model_type.endswith('_ph'):
@@ -143,6 +148,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                             ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
                         else: 
                             out = model(batch)
+                        running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
+                        running_out = torch.concatenate((running_out, batch.out))
                         if is_log:
                             l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                         else:
@@ -165,6 +172,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                     val_loss_list.append(geo_loss)
                     epoch_loss = running_total_loss / num_graphs
                     val_total_loss_list.append(epoch_loss)
+                    statistic, pval = per_gene_pcc(running_out.to('cpu').numpy(), running_y.to('cpu').numpy(), mean=True)
+                    val_pcc_statistic_list.append(statistic)
+                    val_pcc_pval_list.append(pval)
                     if model_type.endswith('_ph'):
                         ph_entropy = running_ph_entropy / num_graphs
                         val_ph_entropy_list.append(ph_entropy)
@@ -182,9 +192,11 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 "val_list": val_loss_list,
                                 "val_ph_entropy": val_ph_entropy_list,
                                 "val_total_list": val_total_loss_list,
+                                "val_pcc_statistic_list": val_pcc_statistic_list,
+                                "val_pcc_pval_list": val_pcc_pval_list,
                                 "epoch": epoch
                             }, output_name)
-                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}")
+                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
                     else:
                         if val_acc > best_acc:
                             best_acc = val_acc
@@ -200,7 +212,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 "val_total_list": val_total_loss_list,
                                 "epoch": epoch
                             }, output_name)
-                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}")
+                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
 
 
     with torch.no_grad():
@@ -214,6 +226,8 @@ def train(raw_subset_dir, label_data, output_name, args):
         dataset.setMode(dataset.test)
 
         with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
+            running_y = torch.Tensor()
+            running_out = torch.Tensor()
             for idx, batch in enumerate(test_loader):
                 batch = batch.to(device)
                 if model_type.endswith('_ph'):
@@ -221,6 +235,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                     ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
                 else:
                     out = model(batch)
+                running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
+                running_out = torch.concatenate((running_out, batch.out))
                 if is_log:
                     l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                 else:
@@ -240,8 +256,9 @@ def train(raw_subset_dir, label_data, output_name, args):
             test_acc = running_acc / num_graphs
             geo_loss = running_loss / num_graphs
             epoch_loss = running_total_loss / num_graphs
+            statistic, pval = per_gene_pcc(running_out.to('cpu').numpy(), running_y.to('cpu').numpy(), mean=True)
             if model_type.endswith('_ph'):
                 ph_entropy = running_ph_entropy / num_graphs
-                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
             else:
-                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
