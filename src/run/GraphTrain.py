@@ -139,8 +139,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                 dataset.setMode("val")
 
                 with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
-                    running_y = torch.Tensor()
-                    running_out = torch.Tensor()
+                    running_y = torch.Tensor().to(device)
+                    running_out = torch.Tensor().to(device)
                     for idx, batch in enumerate(val_loader):
                         batch = batch.to(device)
                         if model_type.endswith('_ph'):
@@ -149,7 +149,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                         else: 
                             out = model(batch)
                         running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
-                        running_out = torch.concatenate((running_out, batch.out))
+                        running_out = torch.concatenate((running_out, out))
                         if is_log:
                             l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                         else:
@@ -226,8 +226,8 @@ def train(raw_subset_dir, label_data, output_name, args):
         dataset.setMode(dataset.test)
 
         with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
-            running_y = torch.Tensor()
-            running_out = torch.Tensor()
+            running_y = torch.Tensor().to(device)
+            running_out = torch.Tensor().to(device)
             for idx, batch in enumerate(test_loader):
                 batch = batch.to(device)
                 if model_type.endswith('_ph'):
@@ -236,7 +236,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                 else:
                     out = model(batch)
                 running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
-                running_out = torch.concatenate((running_out, batch.out))
+                running_out = torch.concatenate((running_out, out))
                 if is_log:
                     l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
                 else:
