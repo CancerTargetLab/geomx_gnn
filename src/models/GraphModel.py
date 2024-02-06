@@ -1,7 +1,24 @@
 import torch
 from torch_geometric.nn import GATv2Conv, Sequential
 import torch_geometric
+from collections import OrderedDict
 
+
+class MeanAct(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def forward(self, x):
+        return torch.clamp(torch.exp(x), 1e-5, 1e6)
+
+
+class DispAct(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.softplus = torch.nn.Softplus()
+    
+    def forward(self, x):
+        return torch.clamp(self.softplus(x), 1e-4, 1e4)
 
 def init_weights(layer):
     if isinstance(layer, torch.nn.Linear):
@@ -88,6 +105,8 @@ class ProjectionHead(torch.nn.Module):
                 self.layers.append(relu_layer)
 
             dim = next_dim
+        
+        self.layers.apply(init_weights)
 
     def forward(self, hiddens):
         for layer in self.layers:
@@ -158,7 +177,8 @@ class ROIExpression(torch.nn.Module):
                  num_out_features=128,
                  heads=1,
                  embed_dropout=0.1,
-                 conv_dropout=0.1,):
+                 conv_dropout=0.1,
+                 zinb=False):
         super().__init__()
 
         self.gnn = GraphLearning(layers=layers,
@@ -174,14 +194,42 @@ class ROIExpression(torch.nn.Module):
         self.project = ProjectionHead(input_dim=num_embed_features, 
                                       output_dim=num_out_features,
                                       num_layers=2)
+        
+        if zinb:
+            self.mean = torch.nn.Sequential(
+                OrderedDict([
+                ('linear_m', torch.nn.Linear(num_embed_features, num_out_features)),
+                ('meanact', MeanAct())
+                ]))
+
+            self.disp = torch.nn.Sequential(
+                OrderedDict([
+                ('linear_di', torch.nn.Linear(num_embed_features, num_out_features)),
+                ('dispact', DispAct())
+                ]))
+                
+            self.drop = torch.nn.Sequential(
+                OrderedDict([
+                ('linear_dr', torch.nn.Linear(num_embed_features, num_out_features)),
+                ('sigmoid', torch.nn.Sigmoid())
+                ]))
+            self.mean.apply(init_weights)
+            self.disp.apply(init_weights)
+            self.drop.apply(init_weights)
 
     def forward(self, data, return_cells=False):#x, edge_index, edge_attr, batch):
         x = self.gnn(data)#x, edge_index, edge_attr)
-        x = self.project(x)
+        pred = self.project(x)
         if return_cells:
-            return torch.abs(x)
+            return torch.abs(pred)
         else:
-            return self.pool(torch.abs(x), batch=data.batch)#batch)
+            if self.zinb:
+                mean = self.mean(x)
+                disp = self.disp(x)
+                drop = self.drop(x)
+                return self.pool(torch.abs(pred), batch=data.batch), mean, disp, drop
+            else:
+                return self.pool(torch.abs(pred), batch=data.batch)
         
 
 class ROIExpression_ph(ROIExpression):
@@ -226,29 +274,61 @@ class ROIExpression_lin(torch.nn.Module):
                 num_embed_features=128,
                 num_out_features=128,
                 embed_dropout=0.1,
-                conv_dropout=0.1):
+                conv_dropout=0.1,
+                zinb=False):
         super().__init__()
+        self.zinb = zinb
 
         self.node_embed = torch.nn.Sequential(
             torch.nn.Linear(num_node_features, num_embed_features),
             torch.nn.LayerNorm(num_embed_features),
             torch.nn.Dropout(p=embed_dropout, inplace=True),
-            torch.nn.LeakyReLU(inplace=True)
+            torch.nn.ReLU(inplace=True)
             )
         
-        self.project = ProjectionHead(input_dim=num_embed_features, 
-                                    output_dim=num_out_features,
+        self.lin = ProjectionHead(input_dim=num_embed_features, 
+                                    output_dim=num_embed_features,
                                     num_layers=layers)
         
+        self.project = torch.nn.Linear(num_embed_features, num_out_features)
+        
         self.pool = torch_geometric.nn.pool.global_add_pool
+
+        if zinb:
+            self.mean = torch.nn.Sequential(
+                OrderedDict([
+                ('linear_m', torch.nn.Linear(num_embed_features, num_out_features)),
+                ('meanact', MeanAct())
+                ]))
+
+            self.disp = torch.nn.Sequential(
+                OrderedDict([
+                ('linear_di', torch.nn.Linear(num_embed_features, num_out_features)),
+                ('dispact', DispAct())
+                ]))
+                
+            self.drop = torch.nn.Sequential(
+                OrderedDict([
+                ('linear_dr', torch.nn.Linear(num_embed_features, num_out_features)),
+                ('sigmoid', torch.nn.Sigmoid())
+                ]))
+            self.mean.apply(init_weights)
+            self.disp.apply(init_weights)
+            self.drop.apply(init_weights)
     
     def forward(self, data, return_cells=False):
-        x = self.node_embed(data.x)
-        x = self.project(x)
+        x = self.lin(self.node_embed(data.x))
+        pred = self.project(x)
         if return_cells:
-            return torch.abs(x)
+            return torch.abs(pred)
         else:
-            return self.pool(torch.abs(x), batch=data.batch)
+            if self.zinb:
+                mean = self.mean(x)
+                disp = self.disp(x)
+                drop = self.drop(x)
+                return self.pool(torch.abs(pred), batch=data.batch), mean, disp, drop
+            else:
+                return self.pool(torch.abs(pred), batch=data.batch)
 
 
 class ROIExpression_lin_ph(ROIExpression_lin):

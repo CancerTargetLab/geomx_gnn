@@ -1,6 +1,7 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.models.GraphModel import ROIExpression, ROIExpression_lin
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
+from src.loss.zinb import ZINBLoss
 from src.utils.setSeed import set_seed
 from src.utils.stats import per_gene_pcc
 from torch_geometric.loader import DataLoader
@@ -48,14 +49,16 @@ def train(raw_subset_dir, label_data, output_name, args):
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
-                            heads=args['heads_graph']).to(device, dtype=torch.float32)
+                            heads=args['heads_graph'],
+                            zinb=args['graph_zinb']).to(device, dtype=torch.float32)
     elif 'LIN' in model_type:
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_embed_features=args['num_embed_features'],
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
-                            num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=torch.float32)
+                            num_out_features=dataset.get(0).y.shape[0],
+                            zinb=args['graph_zinb']).to(device, dtype=torch.float32)
     else:
         raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
@@ -63,15 +66,18 @@ def train(raw_subset_dir, label_data, output_name, args):
 
     loss = torch.nn.MSELoss()
     similarity = torch.nn.CosineSimilarity()
+    zinb = ZINBLoss(ridge_lambda=0.0, device=device)
 
 
     train_acc_list = []
     train_loss_list = []
     train_ph_entropy_list = []
+    train_zinb_list = []
     train_total_loss_list = []
     val_acc_list = []
     val_loss_list = []
     val_ph_entropy_list = []
+    val_zinb_list = []
     val_total_loss_list = []
     val_pcc_statistic_list = []
     val_pcc_pval_list = []
@@ -84,6 +90,7 @@ def train(raw_subset_dir, label_data, output_name, args):
         running_total_loss = 0
         running_acc = 0
         running_ph_entropy = 0
+        running_zinb = 0
         num_graphs = 0
         model.train()
         dataset.setMode(dataset.train)
@@ -96,6 +103,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                     if model_type.endswith('_ph'):
                         out = model(batch)
                         ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
+                    elif model_type.endswith('_zinb'):
+                        out, mean, disp, drop = model(batch)
+                        loss_zinb = zinb(out, mean, disp, drop)  * theta
                     else:
                         out = model(batch)
                     if is_log:
@@ -110,6 +120,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                     if model_type.endswith('_ph'):
                         running_ph_entropy += ph.item() * out.shape[0]
                         l += 1 - sim + ph
+                    elif model_type.endswith('_zinb'):
+                        running_zinb += loss_zinb.item() * out.shape[0]
+                        l += 1 - sim + loss_zinb
                     else:
                         l += 1 - sim
                     running_total_loss += l.item() * out.shape[0]
@@ -126,6 +139,10 @@ def train(raw_subset_dir, label_data, output_name, args):
                     ph_entropy = running_ph_entropy / num_graphs
                     train_ph_entropy_list.append(ph_entropy)
                     print(f"Train Loss: {epoch_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train Phenotype Entropy: {ph_entropy:.4f}")
+                elif model_type.endswith('_zinb'):
+                    zinb_loss = running_zinb / num_graphs
+                    train_zinb_list.append(zinb_loss)
+                    print(f"Train Loss: {epoch_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train ZINB Loss: {zinb_loss:.4f}")
                 else: 
                     print(f"Train Loss: {epoch_loss:.4f}, Train Cosine Sim: {train_acc:.4f}")
 
@@ -134,6 +151,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                 running_total_loss = 0
                 running_acc = 0
                 running_ph_entropy = 0
+                running_zinb = 0
                 num_graphs = 0
                 model.eval()
                 dataset.setMode("val")
@@ -146,6 +164,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                         if model_type.endswith('_ph'):
                             out = model(batch)
                             ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
+                        elif model_type.endswith('_zinb'):
+                            out, mean, disp, drop = model(batch)
+                            loss_zinb = zinb(out, mean, disp, drop)  * theta
                         else: 
                             out = model(batch)
                         running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
@@ -162,6 +183,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                         if model_type.endswith('_ph'):
                             running_ph_entropy += ph.item() * out.shape[0]
                             l += 1 - sim + ph
+                        elif model_type.endswith('_zinb'):
+                            running_zinb += loss_zinb.item() * out.shape[0]
+                            l += 1 - sim + loss_zinb
                         else:
                             l += 1 - sim
                         running_total_loss += l.item() * out.shape[0]
@@ -175,44 +199,38 @@ def train(raw_subset_dir, label_data, output_name, args):
                     statistic, pval = per_gene_pcc(running_out.to('cpu').numpy(), running_y.to('cpu').numpy(), mean=True)
                     val_pcc_statistic_list.append(statistic)
                     val_pcc_pval_list.append(pval)
+
                     if model_type.endswith('_ph'):
                         ph_entropy = running_ph_entropy / num_graphs
-                        val_ph_entropy_list.append(ph_entropy)
-                        if val_acc > best_acc:
-                            best_acc = val_acc
-                            best_run = 0
-                            torch.save({
-                                "model": model.state_dict(),
-                                "opt": optimizer.state_dict(),
-                                "train_acc": train_acc_list,
-                                "train_list": train_loss_list,
-                                "train_ph_entropy": train_ph_entropy_list,
-                                "train_total_list": train_total_loss_list,
-                                "val_acc": val_acc_list,
-                                "val_list": val_loss_list,
-                                "val_ph_entropy": val_ph_entropy_list,
-                                "val_total_list": val_total_loss_list,
-                                "val_pcc_statistic_list": val_pcc_statistic_list,
-                                "val_pcc_pval_list": val_pcc_pval_list,
-                                "epoch": epoch
-                            }, output_name)
+                        val_ph_entropy_list.append(ph_entropy)                           
                         print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                    elif model_type.endswith('_zinb'):
+                        zinb_loss = running_zinb / num_graphs
+                        val_zinb_list.append(zinb_loss)
+                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
                     else:
-                        if val_acc > best_acc:
-                            best_acc = val_acc
-                            best_run = 0
-                            torch.save({
-                                "model": model.state_dict(),
-                                "opt": optimizer.state_dict(),
-                                "train_acc": train_acc_list,
-                                "train_list": train_loss_list,
-                                "train_total_list": train_total_loss_list,
-                                "val_acc": val_acc_list,
-                                "val_list": val_loss_list,
-                                "val_total_list": val_total_loss_list,
-                                "epoch": epoch
-                            }, output_name)
                         print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+
+                    if val_acc > best_acc:
+                        best_acc = val_acc
+                        best_run = 0
+                        torch.save({
+                            "model": model.state_dict(),
+                            "opt": optimizer.state_dict(),
+                            "train_acc": train_acc_list,
+                            "train_list": train_loss_list,
+                            "train_ph_entropy": train_ph_entropy_list,
+                            "train_total_list": train_total_loss_list,
+                            "train_zinb_list": train_zinb_list,
+                            "val_acc": val_acc_list,
+                            "val_list": val_loss_list,
+                            "val_ph_entropy": val_ph_entropy_list,
+                            "val_total_list": val_total_loss_list,
+                            "val_zinb_list": val_zinb_list,
+                            "val_pcc_statistic_list": val_pcc_statistic_list,
+                            "val_pcc_pval_list": val_pcc_pval_list,
+                            "epoch": epoch
+                        }, output_name)
 
 
     with torch.no_grad():
@@ -220,6 +238,7 @@ def train(raw_subset_dir, label_data, output_name, args):
         running_total_loss = 0
         running_acc = 0
         running_ph_entropy = 0
+        running_zinb = 0
         num_graphs = 0
         model.load_state_dict(torch.load(output_name)['model'])
         model.eval()
@@ -233,6 +252,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                 if model_type.endswith('_ph'):
                     out = model(batch)
                     ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
+                elif model_type.endswith('_zinb'):
+                    out, mean, disp, drop = model(batch)
+                    loss_zinb = zinb(out, mean, disp, drop)  * theta
                 else:
                     out = model(batch)
                 running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
@@ -249,6 +271,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                 if model_type.endswith('_ph'):
                     running_ph_entropy += ph.item() * out.shape[0]
                     l += 1 - sim + ph
+                elif model_type.endswith('_zinb'):
+                    running_zinb += loss_zinb.item() * out.shape[0]
+                    l += 1 - sim + loss_zinb
                 else:
                     l += 1 - sim
                 running_total_loss += l.item() * out.shape[0]
@@ -260,5 +285,8 @@ def train(raw_subset_dir, label_data, output_name, args):
             if model_type.endswith('_ph'):
                 ph_entropy = running_ph_entropy / num_graphs
                 print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+            elif model_type.endswith('_zinb'):
+                zinb_loss = running_zinb / num_graphs
+                print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
             else:
                 print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
