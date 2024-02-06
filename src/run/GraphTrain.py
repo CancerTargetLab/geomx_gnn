@@ -104,8 +104,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                         out = model(batch)
                         ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
                     elif model_type.endswith('_zinb'):
-                        out, mean, disp, drop = model(batch)
-                        loss_zinb = zinb(out, mean, disp, drop)  * theta
+                        out, pred, mean, disp, drop = model(batch)
+                        loss_zinb = zinb(pred, mean, disp, drop)  * theta
                     else:
                         out = model(batch)
                     if is_log:
@@ -165,8 +165,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                             out = model(batch)
                             ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
                         elif model_type.endswith('_zinb'):
-                            out, mean, disp, drop = model(batch)
-                            loss_zinb = zinb(out, mean, disp, drop)  * theta
+                            out, pred, mean, disp, drop = model(batch)
+                            loss_zinb = zinb(pred, mean, disp, drop)  * theta
                         else: 
                             out = model(batch)
                         running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
@@ -253,8 +253,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                     out = model(batch)
                     ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
                 elif model_type.endswith('_zinb'):
-                    out, mean, disp, drop = model(batch)
-                    loss_zinb = zinb(out, mean, disp, drop)  * theta
+                    out, pred, mean, disp, drop = model(batch)
+                    loss_zinb = zinb(pred, mean, disp, drop)  * theta
                 else:
                     out = model(batch)
                 running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
