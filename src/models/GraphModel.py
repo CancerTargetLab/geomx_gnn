@@ -181,6 +181,8 @@ class ROIExpression(torch.nn.Module):
                  zinb=False):
         super().__init__()
 
+        self.zinb = zinb
+
         self.gnn = GraphLearning(layers=layers,
                                 num_node_features=num_node_features, 
                                 num_edge_features=num_edge_features,
@@ -227,7 +229,7 @@ class ROIExpression(torch.nn.Module):
                 mean = self.mean(x)
                 disp = self.disp(x)
                 drop = self.drop(x)
-                return self.pool(torch.abs(pred), batch=data.batch), mean, disp, drop
+                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp, drop#TODO
             else:
                 return self.pool(torch.abs(pred), batch=data.batch)
         
@@ -326,7 +328,7 @@ class ROIExpression_lin(torch.nn.Module):
                 mean = self.mean(x)
                 disp = self.disp(x)
                 drop = self.drop(x)
-                return self.pool(torch.abs(pred), batch=data.batch), mean, disp, drop
+                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp, drop
             else:
                 return self.pool(torch.abs(pred), batch=data.batch)
 
