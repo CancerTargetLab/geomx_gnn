@@ -52,7 +52,7 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
         plt.savefig(os.path.join(figure_dir, f'{name}_loss.png'))
         plt.close()
     
-    if 'train_ph_entropy_list' in model_stuff.keys():
+    if 'train_ph_entropy_list' in model_stuff.keys() and len(model_stuff['train_ph_entropy_list']) > 0:
         train_loss = model_stuff['train_ph_entropy_list']
         val_loss = model_stuff['val_ph_entropy_list']
 
@@ -64,4 +64,38 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
         plt.title(name)
         plt.legend()
         plt.savefig(os.path.join(figure_dir, f'{name}_entropy.png'))
+        plt.close()
+
+    if 'train_zinb_list' in model_stuff.keys() and len(model_stuff['train_zinb_list']) > 0:
+        train_loss = model_stuff['train_zinb_list']
+        val_loss = model_stuff['val_zinb_list']
+
+        plt.plot(train_loss, label="Train", color='red', marker='o')
+        plt.plot(val_loss, label='Val', color='blue', marker='o')
+
+        plt.ylabel('ZINB Loss')
+        plt.xlabel('Epochs')
+        plt.title(name)
+        plt.legend()
+        plt.savefig(os.path.join(figure_dir, f'{name}_zinbloss.png'))
+        plt.close()
+    
+    if 'val_pcc_statistic_list' in model_stuff.keys() and len(model_stuff['val_pcc_statistic_list']) > 0:
+        val_pcc = model_stuff['val_pcc_statistic_list']
+        val_pval = model_stuff['val_pcc_pval_list']
+
+        plt.plot(val_pcc, label="Val", color='red', marker='o')
+        plt.ylabel('PCC')
+        plt.xlabel('Epochs')
+        plt.title(name)
+        plt.legend()
+        plt.savefig(os.path.join(figure_dir, f'{name}_pcc.png'))
+        plt.close()
+
+        plt.plot(val_pval, label='Val', color='blue', marker='o')
+        plt.ylabel('PVAL')
+        plt.xlabel('Epochs')
+        plt.title(name)
+        plt.legend()
+        plt.savefig(os.path.join(figure_dir, f'{name}_pval.png'))
         plt.close()
