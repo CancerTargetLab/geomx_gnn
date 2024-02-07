@@ -105,34 +105,34 @@ def parse_args():
                         help="Dir in which to embed Cell Expressions")
 
     # Arguments for the TME model
-    parser.add_argument("--tme_dir", type=str, default="data/")
-    parser.add_argument("--tme_raw_subset_dir", type=str, default="TMA1_preprocessed")
-    parser.add_argument("--tme_label_data", type=str, default="OC1_all.csv")
-    parser.add_argument("--data_is_log_tme", action="store_true", default=False)
-    parser.add_argument("--batch_size_tme", type=int, default=4)
-    parser.add_argument("--subgraphs_per_batch_tme", type=int, default=64)
-    parser.add_argument("--epochs_tme", type=int, default=100)
-    parser.add_argument("--warmup_epochs_tme", type=int, default=10)
-    parser.add_argument("--num_workers_tme", type=int, default=1)
-    parser.add_argument("--lr_tme", type=float, default=0.0001)
-    parser.add_argument("--early_stopping_tme", type=int, default=10)
-    parser.add_argument("--train_ratio_tme", type=float, default=0.6)
-    parser.add_argument("--val_ratio_tme", type=float, default=0.2)
-    parser.add_argument("--node_dropout_tme", type=float, default=0.3)
-    parser.add_argument("--edge_dropout_tme", type=float, default=0.5)
-    parser.add_argument("--num_hops_tme", type=int, default=2)
-    parser.add_argument("--layers_tme", type=int, default=2)
-    parser.add_argument("--num_node_features_tme", type=int, default=256)
-    parser.add_argument("--num_edge_features_tme", type=int, default=1)
-    parser.add_argument("--num_embed_features_tme", type=int, default=128)
-    parser.add_argument("--num_out_features_tme", type=int, default=64)
-    parser.add_argument("--heads_tme", type=int, default=1)
-    parser.add_argument("--embed_dropout_tme", type=float, default=0.1)
-    parser.add_argument("--conv_dropout_tme", type=float, default=0.1)
-    parser.add_argument("--output_name_tme", type=str, default="out/test.pt")
-    parser.add_argument("--train_tme", action="store_true", default=False)
-    parser.add_argument("--embed_tme_data", action="store_true", default=False)
-    parser.add_argument("--output_tme_embed", type=str, default="out/")
+    # parser.add_argument("--tme_dir", type=str, default="data/")
+    # parser.add_argument("--tme_raw_subset_dir", type=str, default="TMA1_preprocessed")
+    # parser.add_argument("--tme_label_data", type=str, default="OC1_all.csv")
+    # parser.add_argument("--data_is_log_tme", action="store_true", default=False)
+    # parser.add_argument("--batch_size_tme", type=int, default=4)
+    # parser.add_argument("--subgraphs_per_batch_tme", type=int, default=64)
+    # parser.add_argument("--epochs_tme", type=int, default=100)
+    # parser.add_argument("--warmup_epochs_tme", type=int, default=10)
+    # parser.add_argument("--num_workers_tme", type=int, default=1)
+    # parser.add_argument("--lr_tme", type=float, default=0.0001)
+    # parser.add_argument("--early_stopping_tme", type=int, default=10)
+    # parser.add_argument("--train_ratio_tme", type=float, default=0.6)
+    # parser.add_argument("--val_ratio_tme", type=float, default=0.2)
+    # parser.add_argument("--node_dropout_tme", type=float, default=0.3)
+    # parser.add_argument("--edge_dropout_tme", type=float, default=0.5)
+    # parser.add_argument("--num_hops_tme", type=int, default=2)
+    # parser.add_argument("--layers_tme", type=int, default=2)
+    # parser.add_argument("--num_node_features_tme", type=int, default=256)
+    # parser.add_argument("--num_edge_features_tme", type=int, default=1)
+    # parser.add_argument("--num_embed_features_tme", type=int, default=128)
+    # parser.add_argument("--num_out_features_tme", type=int, default=64)
+    # parser.add_argument("--heads_tme", type=int, default=1)
+    # parser.add_argument("--embed_dropout_tme", type=float, default=0.1)
+    # parser.add_argument("--conv_dropout_tme", type=float, default=0.1)
+    # parser.add_argument("--output_name_tme", type=str, default="out/test.pt")
+    # parser.add_argument("--train_tme", action="store_true", default=False)
+    # parser.add_argument("--embed_tme_data", action="store_true", default=False)
+    # parser.add_argument("--output_tme_embed", type=str, default="out/")
 
     parser.add_argument("--deterministic", action="store_true", default=True,
                         help="Wether or not to run NNs deterministicly")
@@ -140,28 +140,46 @@ def parse_args():
                         help="Seed for random computations")
 
     # Visualize Expression 
-    parser.add_argument("--visualize_expression", action="store_true", default=False)
-    parser.add_argument("--vis_label_data", type=str, default="OC1_all.csv")
-    parser.add_argument("--processed_subset_dir", type=str, default="TMA1_preprocessed")
-    parser.add_argument("--figure_dir", type=str, default="figures/")
-    parser.add_argument("--embed_dir", type=str, default="out/")
-    parser.add_argument("--vis_name", type=str, default="_cells")   #alo for visualize image
+    parser.add_argument("--visualize_expression", action="store_true", default=False,
+                        help="Wether or not to visualize predicted sc expression")
+    parser.add_argument("--vis_label_data", type=str, default="OC1_all.csv",
+                        help="Count data of Images, linked with Patient IDs")
+    parser.add_argument("--processed_subset_dir", type=str, default="TMA1_preprocessed",
+                        help="Subset directory of processed/ and raw/ of data")
+    parser.add_argument("--figure_dir", type=str, default="figures/",
+                        help="Path to save images to")
+    parser.add_argument("--embed_dir", type=str, default="out/",
+                        help="Path to predicted single cell data per Graph/Image")
+    parser.add_argument("--vis_name", type=str, default="_cells",
+                        help="Name added to figures name, saves processed data as NAME.h5ad")   #alo for visualize image
 
     # Visualize Image
-    parser.add_argument("--visualize_image", action="store_true", default=False)
-    parser.add_argument("--vis_img_raw_subset_dir", type=str, default="TMA1_preprocessed")
-    parser.add_argument("--name_tiff", type=str, default="027-2B27.tiff")
-    parser.add_argument("--figure_img_dir", type=str, default="figures/")
-    parser.add_argument("--vis_protein", type=str, default="")
-    parser.add_argument("--vis_channel", type=int, default=0)
-    parser.add_argument("--vis_all_channels", action="store_true", default=False)
+    parser.add_argument("--visualize_image", action="store_true", default=False,
+                        help="Wether or not to Visualize an Image")
+    parser.add_argument("--vis_img_raw_subset_dir", type=str, default="TMA1_preprocessed",
+                        help="Name of raw/ subsetdir which contains .tiff Images to visualize")
+    parser.add_argument("--name_tiff", type=str, default="027-2B27.tiff",
+                        help="Name of .tiff Image to visualize")
+    parser.add_argument("--figure_img_dir", type=str, default="figures/",
+                        help="Path to output figures to")
+    parser.add_argument("--vis_protein", type=str, default="",
+                        help="Proteins to visualize Expression over Image of, seperated by ,; . converts to space")
+    parser.add_argument("--vis_channel", type=int, default=0,
+                        help="Image channel to visualize as background")
+    parser.add_argument("--vis_all_channels", action="store_true", default=False,
+                        help="Wether or not to visualize all Image channels on their own")
 
     # Visualize Model Run
-    parser.add_argument("--visualize_model_run", action="store_true", default=False)
-    parser.add_argument("--model_path", type=str, default="out/models/ROI.pt")
-    parser.add_argument("--output_model_name", type=str, default="ROI")
-    parser.add_argument("--figure_model_dir", type=str, default="figures/")
-    parser.add_argument("--is_cs", action="store_true", default=False)
+    parser.add_argument("--visualize_model_run", action="store_true", default=False,
+                        help="Wether or not to Visualize statistics of model run")
+    parser.add_argument("--model_path", type=str, default="out/models/ROI.pt",
+                        help="Path and name of model save")
+    parser.add_argument("--output_model_name", type=str, default="ROI",
+                        help="Name of model in figures")
+    parser.add_argument("--figure_model_dir", type=str, default="figures/",
+                        help="Path to output figures to")
+    parser.add_argument("--is_cs", action="store_true", default=False,
+                        help="Wether or not Cosine Similarity is used or Contrast Loss")
 
     return parser.parse_args()
 
