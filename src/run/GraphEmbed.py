@@ -29,14 +29,16 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
-                            heads=args['heads_graph']).to(device, dtype=torch.float32)
+                            heads=args['heads_graph'],
+                            zinb=model_type.endswith('_zinb')).to(device, dtype=torch.float32)
     elif 'LIN' in model_type:
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_embed_features=args['num_embed_features'],
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
-                            num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=torch.float32)
+                            num_out_features=dataset.get(0).y.shape[0],
+                            zinb=model_type.endswith('_zinb')).to(device, dtype=torch.float32)
     else:
         raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
     model.eval()
