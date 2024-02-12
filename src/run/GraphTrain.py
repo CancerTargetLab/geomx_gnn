@@ -17,7 +17,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     lr = args['lr_graph']
     num_workers = args['num_workers_graph']
     early_stopping = args['early_stopping_graph']
-    is_log = args['data_is_log_tme']
+    is_log = args['data_is_log_graph']
     alpha = args['graph_mse_mult']
     beta = args['graph_cos_sim_mult']
     theta = args['graph_entropy_mult']
@@ -81,7 +81,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     val_total_loss_list = []
     val_pcc_statistic_list = []
     val_pcc_pval_list = []
-    best_acc = -1.0
+    best_acc = 100000000.0
     best_run = 0
 
     for epoch in list(range(EPOCH)):
@@ -211,8 +211,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                     else:
                         print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
 
-                    if val_acc > best_acc:
-                        best_acc = val_acc
+                    if epoch_loss < best_acc:
+                        best_acc = epoch_loss
                         best_run = 0
                         torch.save({
                             "model": model.state_dict(),

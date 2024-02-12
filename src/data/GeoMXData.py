@@ -1,4 +1,5 @@
 from torch_geometric.data import Dataset, Data
+from torch_geometric.transforms import RandomJitter, KNNGraph, Distance
 import torch
 import torch_geometric
 import os
@@ -68,14 +69,20 @@ class GeoMXDataset(Dataset):
         return processed_filename
     
     def transform(self, data):
-        node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
-        data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
-        edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
-        data.edge_index, data.edge_attr = data.edge_index[:,edge_map], data.edge_attr[edge_map]
-        y = data.y
-        data = torch_geometric.transforms.RemoveIsolatedNodes()(data)
-        data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=1.0)(data)
-        data.y = y
+        if self.mode==self.train:
+            y = data.y
+            data.edge_index = torch.Tensor([])
+            data.edge_attr = torch.Tensor([])
+            data = RandomJitter(40)
+            data = KNNGraph(k=6, force_undirected=True)
+            data = Distance(norm=False, cat=False)
+            node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
+            data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
+            edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
+            data.edge_index, data.edge_attr = data.edge_index[:,edge_map], data.edge_attr[edge_map]
+            #data = torch_geometric.transforms.RemoveIsolatedNodes()(data)
+            data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
+            data.y = y
         return data   
     
     def download(self):
@@ -84,8 +91,8 @@ class GeoMXDataset(Dataset):
     def process(self):
         label = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
         df = pd.read_csv(self.cell_pos, header=0, sep=",")
-        df['Centroid.X.x'] = df['Centroid.X.px'].round().astype(np.float32)
-        df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(np.float32)
+        df['Centroid.X.px'] = df['Centroid.X.px'].astype(np.float32)
+        df['Centroid.Y.px'] = df['Centroid.Y.px'].astype(np.float32)
         with tqdm(self.raw_paths, total=len(self.raw_paths), desc='Preprocessing Graphs') as raw_paths:
             for file in raw_paths:
                 self._process_one_step(file, df, label)
@@ -116,13 +123,15 @@ class GeoMXDataset(Dataset):
                         edge_index=edge_index,
                         edge_attr=edge_attr.to(torch.float32),
                         y=label,
+                        pos=torch.from_numpy(coordinates).to(torch.float32),
                         Class=df['Class'].values)
             else:
                 data = Data(x=node_features,
                             edge_index=edge_index,
                             edge_attr=edge_attr,
+                            pos=torch.from_numpy(coordinates).to(torch.float32),
                             y=label)
-            data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=1.0)(data)
+            data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
             torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
         else: 
             print(f'File {file} has no Expression data in {self.label_data}!!!')
