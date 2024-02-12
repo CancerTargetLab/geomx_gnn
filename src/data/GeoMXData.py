@@ -72,10 +72,9 @@ class GeoMXDataset(Dataset):
         if self.mode==self.train:
             y = data.y
             data.edge_index = torch.Tensor([])
-            data.edge_attr = torch.Tensor([])
-            data = RandomJitter(40)
-            data = KNNGraph(k=6, force_undirected=True)
-            data = Distance(norm=False, cat=False)
+            data = RandomJitter(40)(data)
+            data = KNNGraph(k=6, force_undirected=True)(data)
+            data = Distance(norm=False, cat=False)(data)
             node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
             data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
             edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]

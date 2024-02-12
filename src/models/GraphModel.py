@@ -66,7 +66,7 @@ def create_GATv2_conv(num_layers=1,
                         (torch.nn.LeakyReLU(inplace=True)),
                         (torch.nn.Linear(heads*num_embed_features, num_embed_features)),
                         (torch.nn.LayerNorm(num_embed_features)),
-                        (torch.nn.Dropout(p=embed_dropout, inplace=True)),
+                        #(torch.nn.Dropout(p=embed_dropout, inplace=True)),
                         (torch.nn.LeakyReLU(inplace=True))
                         ])
                     layers.append(gat_layer)
@@ -129,9 +129,9 @@ class GraphLearning(torch.nn.Module):
         self.heads = heads
         # TODO: GraphNorm ?
         self.node_embed = torch.nn.Sequential(
+            torch.nn.Dropout(p=embed_dropout, inplace=True),
             torch.nn.Linear(num_node_features, num_embed_features),
             torch.nn.LayerNorm(num_embed_features),
-            torch.nn.Dropout(p=embed_dropout, inplace=True),
             torch.nn.LeakyReLU(inplace=True)
             )
 

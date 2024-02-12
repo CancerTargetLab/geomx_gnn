@@ -211,12 +211,12 @@ def main(**args):
                    model_name=args['output_name_graph'],
                    output_dir=args['output_graph_embed'],
                    args=args)
-    if args['train_tme']:
-        from src.run.TMETrain import train as TMETrain
-        TMETrain(raw_subset_dir=args['tme_raw_subset_dir'],
-                label_data=args['tme_label_data'],
-                output_name=args['output_name_tme'],
-                args=args)
+    # if args['train_tme']:
+    #     from src.run.TMETrain import train as TMETrain
+    #     TMETrain(raw_subset_dir=args['tme_raw_subset_dir'],
+    #             label_data=args['tme_label_data'],
+    #             output_name=args['output_name_tme'],
+    #             args=args)
     # if args['embed_tme_data']:
     #     from src.run.TMEEmbed import embed as TMEEmbed
     #     TMEEmbed(args)
