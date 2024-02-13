@@ -223,6 +223,8 @@ class ROIExpression(torch.nn.Module):
         x = self.gnn(data)#x, edge_index, edge_attr)
         pred = self.project(x)
         if return_cells:
+            if self.zinb:
+                return self.mean(x)
             return torch.abs(pred)
         else:
             if self.zinb:
