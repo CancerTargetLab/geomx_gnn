@@ -9,9 +9,11 @@ from tqdm import tqdm
 #Implemented through adapting NaroNets Image processing.
 #Original Implementation: https://github.com/djimenezsanchez/NaroNet/blob/main/src/NaroNet/Patch_Contrastive_Learning/preprocess_images.py#L145
 
-def load_img(path):
+def load_img(path, img_channels):
     if path.endswith(('.tiff', '.tif')):
         img = io.imread(path, plugin='tifffile')
+        if not type(img_channels) == str:
+            img = np.take(img, indices=img_channels, axis=2)
     else:
         file_end = path.split('/')[-1]
         print(f"Do not support opening of files of type {file_end}.")
@@ -19,23 +21,23 @@ def load_img(path):
     
     return img
 
-def calc_mean_std(image_paths, max_img=2**16):
+def calc_mean_std(image_paths, max_img=2**16, image_channels=''):
     global_hist = None
     for img_p in tqdm(image_paths, desc='Calculating mean and std for ROIs'):
-        img = load_img(img_p)
+        img = load_img(img_p, img_channels='')
         local_hist = [np.histogram(img[:,:,channel], bins=max_img+2, range=(0,max_img+2)) for channel in range(img.shape[2])]
         if global_hist:
             global_hist = [np.concatenate((global_hist[channel], local_hist[channel])) for channel in range(len(local_hist))]
         else:
             global_hist = local_hist
     
-    mean = np.array([np.mean(hist_chan[0]*hist_chan[1][:hist_chan[1].shape[0]-1]) for hist_chan in global_hist])
-    std = np.array([np.std(hist_chan[0]*hist_chan[1][:hist_chan[1].shape[0]-1]) for hist_chan in global_hist])
+    mean = np.array([np.mean(hist_chan[0]*hist_chan[1][:hist_chan[1].shape[0]-1]) for hist_chan in global_hist], dtype=np.float32)
+    std = np.array([np.std(hist_chan[0]*hist_chan[1][:hist_chan[1].shape[0]-1]) for hist_chan in global_hist], dtype=np.float32)
     return mean, std
 
-def zscore(image_paths, mean, std):
+def zscore(image_paths, mean, std, img_channels=''):
     for img_p in tqdm(image_paths, desc='ZScore normalisation of ROIs'):
-        img = load_img(img_p)
+        img = load_img(img_p, img_channels)
         # following 4 lines copied from naronet preprocess_imagrs.py line 107-110 commit 7c419bc
         x,y,chan = img.shape[0],img.shape[1],img.shape[2] 
         img = np.reshape(img,(x*y,chan))
@@ -70,12 +72,19 @@ def cell_seg(df_path, image_paths):
             print(e)
         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
 
-def image_preprocess(path, max_img=2**16):
+def image_preprocess(path, max_img=2**16, img_channels='', path_mean_std=''):
     df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
     img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.tiff', '.tif'))]
     preprocessed_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith('.pt')]
 
     if 2*len(img_paths) != len(preprocessed_paths):
-        mean, std = calc_mean_std(img_paths, max_img=max_img)
-        zscore(img_paths, mean, std)
+        img_channels = img_channels if len(img_channels) > 0 else np.array([int(channel) for channel in img_channels.split(',')])
+        if len(path_mean_std) == 0:
+            mean, std = calc_mean_std(img_paths, max_img=max_img, img_channels=img_channels)
+            np.save(os.path.join(path, 'mean.npy'), mean)
+            np.save(os.path.join(path, 'std.npy'), std)
+        else: 
+            mean = np.load(os.path.join(path_mean_std, 'mean.npy'))
+            std = np.load(os.path.join(path_mean_std, 'std.npy'))
+        zscore(img_paths, mean, std, img_channels=img_channels)
         cell_seg(df_path, img_paths)

@@ -7,6 +7,9 @@
 *.pth
 *.zip
 *.pdf
+*.png
+*.npy
+*.npz
 *.h5ad
 *.xlsx
 #data/

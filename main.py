@@ -6,6 +6,10 @@ def parse_args():
     # Arguments for Image preprocessing
     parser.add_argument("--preprocess_dir", type=str, default="data/raw/p2106",
                         help="Directory in which .tiff files are for preprocessing")
+    parser.add_argument("--preprocess_channels", type=str, default="",
+                        help="Indices of channels to preprocess, seperated by , and empty if all channels")
+    parser.add_argument("--preprocess_mean_std_dir", type=str, default="",
+                        help="Directory in which to find already calculated mean.npy and std.npy per channel, empty if not used")
     parser.add_argument("--image_preprocess", action="store_true", default=False,
                         help="Wether or not to preprocess images via ZScore normalisation")
 
@@ -187,7 +191,9 @@ def parse_args():
 def main(**args):
     if args['image_preprocess']:
         from src.utils.image_preprocess import image_preprocess as ImagePreprocess
-        ImagePreprocess(path=args['preprocess_dir'])
+        ImagePreprocess(path=args['preprocess_dir'], 
+                        img_channels=args['preprocess_channels'],
+                        path_mean_std=args['preprocess_mean_std_dir'])
     if args['train_image_model']:
         from src.run.CellContrastTrain import train as ImageTrain
         ImageTrain(image_dir=args['image_dir'],
