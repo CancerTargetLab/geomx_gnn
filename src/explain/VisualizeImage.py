@@ -19,7 +19,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
 
     img = io.imread(os.path.join('data/raw', raw_subset_dir, name_tiff), plugin='tifffile')
 
-    counts = np.random.default_rng(42).integers(0, 15, size=(df.shape[0], 100))
+    counts = np.random.default_rng(42).integers(0, 15, size=(df.shape[0], 1))
 
     coordinates = np.column_stack((df["Centroid.X.px"].to_numpy(), df["Centroid.Y.px"].to_numpy()))
 
