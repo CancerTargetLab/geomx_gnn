@@ -21,10 +21,10 @@ def load_img(path, img_channels):
     
     return img
 
-def calc_mean_std(image_paths, max_img=2**16, image_channels=''):
+def calc_mean_std(image_paths, max_img=2**16, img_channels=''):
     global_hist = None
     for img_p in tqdm(image_paths, desc='Calculating mean and std for ROIs'):
-        img = load_img(img_p, img_channels='')
+        img = load_img(img_p, img_channels=img_channels)
         local_hist = [np.histogram(img[:,:,channel], bins=max_img+2, range=(0,max_img+2)) for channel in range(img.shape[2])]
         if global_hist:
             global_hist = [np.concatenate((global_hist[channel], local_hist[channel])) for channel in range(len(local_hist))]
