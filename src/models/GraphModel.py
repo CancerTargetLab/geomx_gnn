@@ -219,11 +219,11 @@ class ROIExpression(torch.nn.Module):
             self.disp.apply(init_weights)
             self.drop.apply(init_weights)
 
-    def forward(self, data, return_cells=False):#x, edge_index, edge_attr, batch):
+    def forward(self, data, return_cells=False, return_mean=False):#x, edge_index, edge_attr, batch):
         x = self.gnn(data)#x, edge_index, edge_attr)
         pred = self.project(x)
         if return_cells:
-            if self.zinb:
+            if self.zinb and return_mean:
                 return self.mean(x)
             return torch.abs(pred)
         else:
@@ -320,10 +320,12 @@ class ROIExpression_lin(torch.nn.Module):
             self.disp.apply(init_weights)
             self.drop.apply(init_weights)
     
-    def forward(self, data, return_cells=False):
+    def forward(self, data, return_cells=False, return_mean=False):
         x = self.lin(self.node_embed(data.x))
         pred = self.project(x)
         if return_cells:
+            if self.zinb and return_mean:
+                return self.mean(x)
             return torch.abs(pred)
         else:
             if self.zinb:
