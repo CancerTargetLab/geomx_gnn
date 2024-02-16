@@ -25,10 +25,11 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
 
     adata = AnnData(counts, obsm={"spatial": coordinates})
 
-    sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
-    edge_matrix = adata.obsp["spatial_distances"]
-    edge_matrix[edge_matrix > 60] = 0.
-    adata.obsp["spatial_distances"] = edge_matrix
+    # sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True)
+    # edge_matrix = adata.obsp["spatial_distances"]
+    # edge_matrix[edge_matrix > 60] = 0.
+    # adata.obsp["spatial_distances"] = edge_matrix
+    sq.gr.spatial_neighbors(adata, coord_type="generic", n_neighs=6)
 
 
     spatial_key = "spatial"
@@ -36,10 +37,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     adata.uns[spatial_key] = {library_id: {}}
     adata.uns[spatial_key][library_id]["images"] = {}
     adata.uns[spatial_key][library_id]["images"] = {"hires": img}
-    adata.uns[spatial_key][library_id]["scalefactors"] = {
-        "tissue_hires_scalef": 1, # TODO:make adjustable
-        "spot_diameter_fullres": 0.5,
-    }
+    adata.uns[spatial_key][library_id]["scalefactors"] = {"tissue_hires_scalef": 1, "spot_diameter_fullres": 0.5,}
 
     cluster = sc.read_h5ad(os.path.join('out/', vis_name))
     cluster.obs['prefix'] = cluster.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
