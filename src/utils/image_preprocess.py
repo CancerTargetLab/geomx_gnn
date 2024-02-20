@@ -35,27 +35,29 @@ def calc_mean_std(image_paths, max_img=2**16, img_channels=''):
     std = np.array([np.std(hist_chan[0]*hist_chan[1][:hist_chan[1].shape[0]-1]) for hist_chan in global_hist], dtype=np.float32)
     return mean, std
 
-def zscore(image_paths, mean, std, img_channels=''):
+def zscore(image_paths, mean, std):
     for img_p in tqdm(image_paths, desc='ZScore normalisation of ROIs'):
-        img = load_img(img_p, img_channels)
-        # following 4 lines copied from naronet preprocess_imagrs.py line 107-110 commit 7c419bc
-        x,y,chan = img.shape[0],img.shape[1],img.shape[2] 
-        img = np.reshape(img,(x*y,chan))
+        img = torch.load(img_p.split('.')[0]+'_cells.pt')
+        img = torch.permute(img, (0, 2, 3, 1))
+        # following 4 lines copied and adapted from naronet preprocess_imagrs.py line 107-110 commit 7c419bc
+        cells,x,y,chan = img.shape[0],img.shape[1],img.shape[2],img.shape[3]
+        img = torch.reshape(img,(cells*x*y,chan))
         img = (img-mean)/(std+1e-16)
-        img = np.reshape(img,(x,y,chan))
+        img = torch.reshape(img,(cells,x,y,chan))
+        img = torch.permute(img, (0, 3, 1, 2))
 
-        torch.save(torch.from_numpy(img).to(torch.float32), img_p.split('.')[0]+'.pt')
+        torch.save(img.to(torch.float32), img_p.split('.')[0]+'_cells.pt')
 
-def cell_seg(df_path, image_paths):
+def cell_seg(df_path, image_paths, img_channels=''):
     df = pd.read_csv(df_path, header=0, sep=',')
     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
     for image in tqdm(image_paths, desc='Segmenting Cells'):
-        img = torch.load(image.split('.')[0]+'.pt')
+        img = torch.from_numpy(load_img(image, img_channels).astype(np.int16))
         df_img = df[df['Image']==image.split('/')[-1]]
         x = df_img['Centroid.X.px'].values
         y = df_img['Centroid.Y.px'].values
-        all_cells = torch.Tensor()
+        all_cells = torch.Tensor().to(torch.int16)
         if x.shape[0] < 1:
             raise Exception(f'No coordinates in {df_path} for {image}!!!') 
         try:
@@ -75,16 +77,14 @@ def cell_seg(df_path, image_paths):
 def image_preprocess(path, max_img=2**16, img_channels='', path_mean_std=''):
     df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
     img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.tiff', '.tif'))]
-    preprocessed_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith('.pt')]
 
-    if 2*len(img_paths) != len(preprocessed_paths):
-        img_channels = img_channels if len(img_channels) > 0 else np.array([int(channel) for channel in img_channels.split(',')])
-        if len(path_mean_std) == 0:
-            mean, std = calc_mean_std(img_paths, max_img=max_img, img_channels=img_channels)
-            np.save(os.path.join(path, 'mean.npy'), mean)
-            np.save(os.path.join(path, 'std.npy'), std)
-        else: 
-            mean = np.load(os.path.join(path_mean_std, 'mean.npy'))
-            std = np.load(os.path.join(path_mean_std, 'std.npy'))
-        zscore(img_paths, mean, std, img_channels=img_channels)
-        cell_seg(df_path, img_paths)
+    img_channels = img_channels if len(img_channels) == 0 else np.array([int(channel) for channel in img_channels.split(',')])
+    if len(path_mean_std) == 0:
+        mean, std = calc_mean_std(img_paths, max_img=max_img, img_channels=img_channels)
+        np.save(os.path.join(path, 'mean.npy'), mean)
+        np.save(os.path.join(path, 'std.npy'), std)
+    else: 
+        mean = np.load(os.path.join(path_mean_std, 'mean.npy'))
+        std = np.load(os.path.join(path_mean_std, 'std.npy'))
+    cell_seg(df_path, img_paths, img_channels=img_channels)
+    zscore(img_paths, torch.from_numpy(mean), torch.from_numpy(std))
