@@ -154,6 +154,8 @@ def parse_args():
                         help="Path to save images to")
     parser.add_argument("--embed_dir", type=str, default="out/",
                         help="Path to predicted single cell data per Graph/Image")
+    parser.add_argument("--vis_select_cells", type=int, default=50000,
+                        help="Number of cells to perform dim reduction on. If 0, then all cells get reduced")
     parser.add_argument("--vis_name", type=str, default="_cells",
                         help="Name added to figures name, saves processed data as NAME.h5ad")   #alo for visualize image
 
@@ -232,7 +234,8 @@ def main(**args):
                             embed_dir=args['embed_dir'],
                             label_data=args['vis_label_data'],
                             figure_dir=args['figure_dir'],
-                            name=args['vis_name'])
+                            name=args['vis_name'],
+                            select_cells=args['vis_select_cells'])
     if args['visualize_image']:
         from src.explain.VisualizeImage import visualizeImage
         visualizeImage(raw_subset_dir=args['vis_img_raw_subset_dir'],

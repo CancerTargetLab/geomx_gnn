@@ -75,7 +75,7 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
-def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir):
+def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_cells=50000):
     if os.path.exists('out/'+name+'.h5ad'):
         adata = sc.read_h5ad('out/'+name+'.h5ad')
     else:
@@ -112,7 +112,15 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir):
         adata.obs['ID'] = ids
         adata.obs['files'] = files
         adata.var_names = exps
-        adata.layers['counts'] = adata.X.copy() 
+        adata.layers['counts'] = adata.X.copy()
+        if select_cells and adata.X.shape[0] > select_cells:
+            cell_index = np.random.choice(np.arange(adata.X.shape[0]), size=select_cells, replace=False)
+            adata.X = adata.X[cell_index]
+            if cell_class is not None:
+                adata.obsm['all_cell_class'] = adata.obs['cell_class'].copy()
+            adata.obsm['all_ID'] = adata.obs['ID'].copy()
+            adata.obsm['all_files'] = adata.obs['files'].copy()
+            adata.obs = adata.obs.iloc[cell_index]
         sc.pp.log1p(adata)
         adata.layers['logs'] = adata.X.copy()
         adata.X = adata.layers['counts'].copy() 
@@ -243,7 +251,8 @@ def visualizeExpression(processed_dir='TMA1_processed',
                         embed_dir='out/',
                         label_data='label_data.csv',
                         figure_dir='figures/',
-                        name='_cells'):
+                        name='_cells',
+                        select_cells=50000):
     value_dict = get_true_graph_expression_dict(os.path.join('data/processed', processed_dir))
     value_dict = get_predicted_graph_expression(value_dict, embed_dir)
     value_dict = get_predicted_cell_expression(value_dict, embed_dir)
@@ -252,6 +261,6 @@ def visualizeExpression(processed_dir='TMA1_processed',
         os.makedirs(figure_dir)
     # visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
     # visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
-    visualize_cell_expression(value_dict, IDs, exps, name, figure_dir)
+    visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_cells)
     visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir)
 
