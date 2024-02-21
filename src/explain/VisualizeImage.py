@@ -41,7 +41,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
 
     cluster = sc.read_h5ad(os.path.join('out/', vis_name))
     cluster.obs['prefix'] = cluster.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
-    adata.obs['cluster'] = cluster.obs['leiden'][cluster.obs['prefix']==name_tiff.split('.')[0]]
+    adata.obs['cluster'] = cluster.obs['leiden'][cluster.obs['prefix']==name_tiff.split('.')[0]].values
 
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
       os.makedirs(figure_dir)
