@@ -48,7 +48,7 @@ def zscore(image_paths, mean, std):
 
         torch.save(img.to(torch.float32), img_p.split('.')[0]+'_cells.pt')
 
-def cell_seg(df_path, image_paths, img_channels=''):
+def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
     df = pd.read_csv(df_path, header=0, sep=',')
     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
@@ -62,19 +62,19 @@ def cell_seg(df_path, image_paths, img_channels=''):
             raise Exception(f'No coordinates in {df_path} for {image}!!!') 
         try:
             for cell in list(range(x.shape[0])):
-                delta_x1 = 10 if x[cell] >= 10 else x[cell]
-                delta_y1 = 10 if y[cell] >= 10 else y[cell]
-                delta_x2 = 10 if img.shape[1]-x[cell] >= 10 else img.shape[1]-x[cell]
-                delta_y2 = 10 if img.shape[0]-y[cell] >= 10 else img.shape[0]-y[cell]
+                delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
+                delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
+                delta_x2 = int(cell_cutout/2) if img.shape[1]-x[cell] >= int(cell_cutout/2) else img.shape[1]-x[cell]
+                delta_y2 = int(cell_cutout/2) if img.shape[0]-y[cell] >= int(cell_cutout/2) else img.shape[0]-y[cell]
                 cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
-                cell_img = T.Resize((20, 20), antialias=None)(torch.moveaxis(cell_img, 2, 0))
+                cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
                 all_cells = torch.cat((all_cells, torch.unsqueeze(cell_img, axis=0)), axis=0)
         except Exception as e:
             print(f'Something went wrong when segmenting cells for {image}')
             print(e)
         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
 
-def image_preprocess(path, max_img=2**16, img_channels='', path_mean_std=''):
+def image_preprocess(path, max_img=2**16, img_channels='', path_mean_std='', cell_cutout=20):
     df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
     img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.tiff', '.tif'))]
 
@@ -86,5 +86,5 @@ def image_preprocess(path, max_img=2**16, img_channels='', path_mean_std=''):
     else: 
         mean = np.load(os.path.join(path_mean_std, 'mean.npy'))
         std = np.load(os.path.join(path_mean_std, 'std.npy'))
-    cell_seg(df_path, img_paths, img_channels=img_channels)
+    cell_seg(df_path, img_paths, img_channels=img_channels, cell_cutout=cell_cutout)
     zscore(img_paths, torch.from_numpy(mean), torch.from_numpy(std))

@@ -10,6 +10,8 @@ def parse_args():
                         help="Indices of channels to preprocess, seperated by , and empty if all channels")
     parser.add_argument("--preprocess_mean_std_dir", type=str, default="",
                         help="Directory in which to find already calculated mean.npy and std.npy per channel, empty if not used")
+    parser.add_argument("--cell_cutout", type=int, default=20,
+                        help="Size*Size cutout of cell, centered on Centroid Cell position")
     parser.add_argument("--image_preprocess", action="store_true", default=False,
                         help="Wether or not to preprocess images via ZScore normalisation")
 
@@ -75,6 +77,10 @@ def parse_args():
                         help="Probability of Graph Node dropout during training")
     parser.add_argument("--edge_dropout", type=float, default=0.5,
                         help="Probability of Graph Edge dropout during training")
+    parser.add_argument("--cell_pos_jitter", type=int, default=40,
+                        help="Positional Jittering during training of cells in pixel dist")
+    parser.add_argument("--cell_n_knn", type=int, default=6,
+                        help="Number of Nearest Neighbours to calculate for each cell in graph")
     parser.add_argument("--graph_model_type", type=str, default="GAT",
                         help="Type of Model to train, one of GAT, GAT_ph, LIN, LIN_ph")
     parser.add_argument("--graph_mse_mult", type=float, default=1.0,
@@ -195,7 +201,8 @@ def main(**args):
         from src.utils.image_preprocess import image_preprocess as ImagePreprocess
         ImagePreprocess(path=args['preprocess_dir'], 
                         img_channels=args['preprocess_channels'],
-                        path_mean_std=args['preprocess_mean_std_dir'])
+                        path_mean_std=args['preprocess_mean_std_dir'],
+                        cell_cutout=args['cell_cutout'])
     if args['train_image_model']:
         from src.run.CellContrastTrain import train as ImageTrain
         ImageTrain(image_dir=args['image_dir'],

@@ -33,6 +33,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                            val_ratio=args['val_ratio_graph'],
                            node_dropout=args['node_dropout'],
                            edge_dropout=args['edge_dropout'],
+                           pixel_pos_jitter=args['cell_pos_jitter'],
+                           n_knn=args['cell_n_knn'],
                            label_data=label_data)
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)

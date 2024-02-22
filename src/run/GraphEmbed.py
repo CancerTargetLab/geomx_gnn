@@ -19,6 +19,8 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                            val_ratio=args['val_ratio_graph'],
                            node_dropout=args['node_dropout'],
                            edge_dropout=args['edge_dropout'],
+                           pixel_pos_jitter=args['cell_pos_jitter'],
+                           n_knn=args['cell_n_knn'],
                            label_data=label_data)
 
     if 'GAT' in model_type:

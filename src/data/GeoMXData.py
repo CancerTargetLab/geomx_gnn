@@ -10,9 +10,17 @@ from anndata import AnnData
 from tqdm import tqdm
 
 class GeoMXDataset(Dataset):
-    def __init__(self, root_dir='data/', raw_subset_dir='',
-                 train_ratio = 0.6, val_ratio = 0.2, node_dropout=0.2,
-                 edge_dropout=0.3, label_data='label_data.csv', transform=None):
+    def __init__(self,
+                 root_dir='data/',
+                 raw_subset_dir='',
+                 train_ratio=0.6,
+                 val_ratio=0.2,
+                 node_dropout=0.2,
+                 edge_dropout=0.3,
+                 pixel_pos_jitter=40,
+                 n_knn=6,
+                 label_data='label_data.csv',
+                 transform=None):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
         self.processed_path = os.path.join(self.root_dir, 'processed', raw_subset_dir)
@@ -21,6 +29,8 @@ class GeoMXDataset(Dataset):
 
         self.node_dropout = node_dropout
         self.edge_dropout = edge_dropout
+        self.pixel_pos_jitter = pixel_pos_jitter
+        self.n_knn = n_knn
 
         if not os.path.exists(self.raw_path):
             os.makedirs(self.processed_path)
@@ -80,8 +90,8 @@ class GeoMXDataset(Dataset):
         if self.mode==self.train:
             y = data.y
             data.edge_index = torch.Tensor([])
-            data = RandomJitter(40)(data)
-            data = KNNGraph(k=6, force_undirected=True)(data)
+            data = RandomJitter(self.pixel_pos_jitter)(data)
+            data = KNNGraph(k=self.n_knn, force_undirected=True)(data)
             data = Distance(norm=False, cat=False)(data)
             node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
             data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
@@ -114,7 +124,7 @@ class GeoMXDataset(Dataset):
         counts = np.zeros((df.shape[0], 1))
         coordinates = np.column_stack((df["Centroid.X.px"].to_numpy(), df["Centroid.Y.px"].to_numpy()))
         adata = AnnData(counts, obsm={"spatial": coordinates})
-        sq.gr.spatial_neighbors(adata, coord_type="generic", n_neighs=6)
+        sq.gr.spatial_neighbors(adata, coord_type="generic", n_neighs=self.n_knn)
         edge_matrix = adata.obsp["spatial_distances"]
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
