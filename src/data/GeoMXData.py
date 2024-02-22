@@ -22,10 +22,15 @@ class GeoMXDataset(Dataset):
         self.node_dropout = node_dropout
         self.edge_dropout = edge_dropout
 
+        if not os.path.exists(self.raw_path):
+            os.makedirs(self.processed_path)
+
         if os.path.exists(self.raw_path) and os.path.isdir(self.raw_path):
-            self.raw_files = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('_embed.pt')]
-            self.raw_files.sort()
+            # self.raw_files = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('_embed.pt')]
+            # self.raw_files.sort()
             self.cell_pos = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('.csv')][0]
+            self.raw_files = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].unique().apply(lambda x: x.split('.')[0]+'_cells_embed.pt')
+            self.raw_files.sort()
         
         self.string_labels_map = {}
 
@@ -89,7 +94,7 @@ class GeoMXDataset(Dataset):
 
     def process(self):
         label = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
-        df = pd.read_csv(self.cell_pos, header=0, sep=",")
+        df = pd.read_csv(self.cell_pos, header=0, sep=',')
         df['Centroid.X.px'] = df['Centroid.X.px'].astype(np.float32)
         df['Centroid.Y.px'] = df['Centroid.Y.px'].astype(np.float32)
         with tqdm(self.raw_paths, total=len(self.raw_paths), desc='Preprocessing Graphs') as raw_paths:
@@ -106,15 +111,13 @@ class GeoMXDataset(Dataset):
         counts = np.zeros((df.shape[0], 1))
         coordinates = np.column_stack((df["Centroid.X.px"].to_numpy(), df["Centroid.Y.px"].to_numpy()))
         adata = AnnData(counts, obsm={"spatial": coordinates})
-        #sq.gr.spatial_neighbors(adata, coord_type="generic", delaunay=True) # TODO: test diff graph constr
         sq.gr.spatial_neighbors(adata, coord_type="generic", n_neighs=6)
         edge_matrix = adata.obsp["spatial_distances"]
-        #edge_matrix[edge_matrix > 60] = 0.
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
         node_features =torch.load(file)[torch.from_numpy(mask.values)]
 
-        label = label[label['ROI']==file_prefix]   #label[label['ROI']==int(file_prefix.lstrip('0'))]
+        label = label[label['ROI']==file_prefix]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
         if torch.sum(label) > 0:
             if 'Class' in df.columns:
@@ -133,13 +136,7 @@ class GeoMXDataset(Dataset):
             data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
             torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
         else: 
-            print(f'File {file} has no Expression data in {self.label_data}!!!')
-            print(f'Trying to remove {file}')
-            try:
-                os.remove(file)
-                print(f'Removed {file}')
-            except Exception as e:
-                print(e)
+            raise Exception(f'File {file} has no Expression data in {self.label_data}!!!')
 
     def setMode(self, mode):
         if mode.upper() in [self.train, self.val, self.test]:
