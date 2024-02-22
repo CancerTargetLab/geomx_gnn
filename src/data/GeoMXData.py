@@ -32,7 +32,10 @@ class GeoMXDataset(Dataset):
             self.raw_files = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].unique().apply(lambda x: x.split('.')[0]+'_cells_embed.pt')
             self.raw_files.sort()
         
-        self.string_labels_map = {}
+        image_name_split = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].iloc[0].split('.')
+        self.image_ending = ''
+        for i in range(len(image_name_split)-1):
+            self.image_ending = self.image_ending + '.' + image_name_split[i+1]
 
         super().__init__(self.root_dir, self.transform if transform is None else transform, None, None)
 
@@ -103,7 +106,7 @@ class GeoMXDataset(Dataset):
 
     def _process_one_step(self, file, df, label):
         file_prefix = file.split('/')[-1].split('_')[0]
-        df = df[df['Image']==file_prefix+'.tiff']
+        df = df[df['Image']==file_prefix+self.image_ending]
         # Deduplicate identical cell position: ~ is not op, first selects duplicates, second selects non first duplicates, | is or op
         mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
         df = df[mask]
