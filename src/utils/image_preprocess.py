@@ -32,8 +32,9 @@ def calc_mean_std(image_paths, max_img=2**16, img_channels=''):
             global_hist = [global_hist[channel][0]+local_hist[channel][0] for channel in range(len(local_hist))]
         else:
             global_hist = local_hist
+            bins = local_hist[0][1]
     
-    mean = np.array([np.sum(hist_chan[0]*hist_chan[1][:hist_chan[1].shape[0]-1])/np.sum(hist_chan[0]) for hist_chan in global_hist], dtype=np.float32)
+    mean = np.array([np.sum(hist_chan[0]*bins[:bins.shape[0]-1])/np.sum(hist_chan[0]) for hist_chan in global_hist], dtype=np.float32)
     std = np.array([np.sqrt(np.sum((global_hist[chan][0]-mean[chan])**2)/np.sum(global_hist[chan][0])) for chan in range(len(global_hist))], dtype=np.float32)
     return mean, std
 
