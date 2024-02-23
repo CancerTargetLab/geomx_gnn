@@ -12,8 +12,10 @@ from tqdm import tqdm
 def load_img(path, img_channels):
     if path.endswith(('.tiff', '.tif')):
         img = io.imread(path, plugin='tifffile')
+        if img.shape[0] < img.shape[1] and img.shape[0] < img.shape[2]:
+            img = np.transpose(img, (1,2,0))
         if not type(img_channels) == str:
-            img = np.take(img, indices=img_channels, axis=2)
+            img = img[:, :, img_channels]
     else:
         file_end = path.split('/')[-1]
         print(f"Do not support opening of files of type {file_end}.")
