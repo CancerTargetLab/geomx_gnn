@@ -64,7 +64,6 @@ def process_cells(img,
                   all_results,
                   process_idx,
                   event):
-    print(img.shape)
     for cell in list(range(x.shape[0])):
         delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
         delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
