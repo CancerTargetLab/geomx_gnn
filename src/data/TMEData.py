@@ -45,7 +45,7 @@ class TMEDataset(GeoMXDataset):
         sub = torch.randint(0, data.num_nodes, (int(torch.min(torch.Tensor([data.num_nodes, self.subgraphs_per_graph]))),), device=data.edge_index.device)
         new_data = None
         for node_i in list(range(sub.shape[0])):
-            subset, edge_index, mapping, edge_mask = k_hop_subgraph(sub[node_i].item(), self.num_hops, data.edge_index, relabel_nodes=True)
+            subset, edge_index, mapping, edge_mask = k_hop_subgraph(sub[node_i].item(), self.num_hops, data.edge_index, relabel_nodes=True, directed=False)
             subgraph = Data(x=data.x[subset], edge_index=edge_index, edge_attr=data.edge_attr[edge_mask])
 
             valid_dropout = True
