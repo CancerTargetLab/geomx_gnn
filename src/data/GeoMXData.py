@@ -1,5 +1,5 @@
 from torch_geometric.data import Dataset, Data
-from torch_geometric.transforms import RandomJitter, KNNGraph, Distance
+from torch_geometric.transforms import RandomJitter, KNNGraph, Distance, LocalCartesian
 import torch
 import torch_geometric
 import os
@@ -31,6 +31,11 @@ class GeoMXDataset(Dataset):
         self.edge_dropout = edge_dropout
         self.pixel_pos_jitter = pixel_pos_jitter
         self.n_knn = n_knn
+
+        self.RandomJitter = RandomJitter(self.pixel_pos_jitter)
+        self.KNNGraph = KNNGraph(k=self.n_knn, force_undirected=True)
+        self.Distance = Distance(norm=False, cat=False)
+        self.LocalCartesian = LocalCartesian()
 
         if not os.path.exists(self.raw_path):
             os.makedirs(self.processed_path)
@@ -90,9 +95,9 @@ class GeoMXDataset(Dataset):
         if self.mode==self.train:
             y = data.y
             data.edge_index = torch.Tensor([])
-            data = RandomJitter(self.pixel_pos_jitter)(data)
-            data = KNNGraph(k=self.n_knn, force_undirected=True)(data)
-            data = Distance(norm=False, cat=False)(data)
+            data = self.RandomJitter(data)
+            data = self.KNNGraph(data)
+            data = self.Distance(data)
             node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
             data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
             edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
@@ -100,6 +105,7 @@ class GeoMXDataset(Dataset):
             #data = torch_geometric.transforms.RemoveIsolatedNodes()(data)
             data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
             data.y = y
+        #data = self.LocalCartesian(data)
         return data   
     
     def download(self):
