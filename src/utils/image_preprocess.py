@@ -39,7 +39,7 @@ def calc_mean_std(image_paths,
             bins = local_hist[0][1]
     
     mean = np.array([np.sum(hist_chan*bins[:bins.shape[0]-1])/np.sum(hist_chan) for hist_chan in global_hist], dtype=np.float32)
-    std = np.array([np.sqrt(np.sum((global_hist[chan][0]-mean[chan])**2)/np.sum(global_hist[chan][0])) for chan in range(len(global_hist))], dtype=np.float32)
+    std = np.array([np.sqrt(np.sum((global_hist[chan][0]-mean[chan])**2)/np.sum(global_hist[chan])) for chan in range(len(global_hist))], dtype=np.float32)
     return mean, std
 
 def zscore(image_paths,
@@ -64,18 +64,18 @@ def process_cells(img,
                   all_results,
                   process_idx,
                   event):
-    for cell in range(len(x)):
+    print(img.shape)
+    for cell in list(range(x.shape[0])):
         delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
         delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
         delta_x2 = int(cell_cutout/2) if img.shape[1]-x[cell] >= int(cell_cutout/2) else img.shape[1]-x[cell]
         delta_y2 = int(cell_cutout/2) if img.shape[0]-y[cell] >= int(cell_cutout/2) else img.shape[0]-y[cell]
-        
         cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
-    
         cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
-        all_results[process_idx][cell]
 
+        all_results[process_idx][cell] = cell_img
     event.set()
+    
 
 def cell_seg(df_path,
              image_paths,
@@ -85,14 +85,12 @@ def cell_seg(df_path,
     df = pd.read_csv(df_path, header=0, sep=',')
     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
-
     for image in tqdm(image_paths, desc='Segmenting Cells'):
-        img = torch.from_numpy(load_img(image_paths[0], img_channels).astype(np.int32))
-        img.share_memory_()
-
+        img = torch.from_numpy(load_img(image, img_channels).astype(np.int32)) # Needed to set to int32, as torch does not support uint16
         df_img = df[df['Image']==image.split('/')[-1]]
         x = df_img['Centroid.X.px'].values
         y = df_img['Centroid.Y.px'].values
+        img.share_memory_()
         
         if x.shape[0] < 1:
             raise Exception(f'No coordinates in {df_path} for {image}!!!')
@@ -153,10 +151,10 @@ def cell_seg(df_path,
 #                 cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
 #                 cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
 #                 all_cells = torch.cat((all_cells, torch.unsqueeze(cell_img, axis=0)), axis=0)
-#         except Exception as e:
-#             print(f'Something went wrong when segmenting cells for {image}')
-#             print(e)
-#         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
+# #         except Exception as e:
+# #             print(f'Something went wrong when segmenting cells for {image}')
+# #             print(e)
+# #         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
 
 def image_preprocess(path,
                      max_img=2**16,
