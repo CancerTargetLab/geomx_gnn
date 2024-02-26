@@ -107,33 +107,34 @@ def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
         for result in all_results:
             all_cells.extend(result)
         
-    return torch.stack(all_cells)
-
-def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
-    df = pd.read_csv(df_path, header=0, sep=',')
-    df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
-    df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
-    for image in tqdm(image_paths, desc='Segmenting Cells'):
-        img = torch.from_numpy(load_img(image, img_channels).astype(np.int32)) # Needed to set to int32, as torch does not support uint16
-        df_img = df[df['Image']==image.split('/')[-1]]
-        x = df_img['Centroid.X.px'].values
-        y = df_img['Centroid.Y.px'].values
-        all_cells = torch.Tensor().to(torch.int32)
-        if x.shape[0] < 1:
-            raise Exception(f'No coordinates in {df_path} for {image}!!!') 
-        try:
-            for cell in list(range(x.shape[0])):
-                delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
-                delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
-                delta_x2 = int(cell_cutout/2) if img.shape[1]-x[cell] >= int(cell_cutout/2) else img.shape[1]-x[cell]
-                delta_y2 = int(cell_cutout/2) if img.shape[0]-y[cell] >= int(cell_cutout/2) else img.shape[0]-y[cell]
-                cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
-                cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
-                all_cells = torch.cat((all_cells, torch.unsqueeze(cell_img, axis=0)), axis=0)
-        except Exception as e:
-            print(f'Something went wrong when segmenting cells for {image}')
-            print(e)
+        all_cells = torch.stack(all_cells)
         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
+
+# def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
+#     df = pd.read_csv(df_path, header=0, sep=',')
+#     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
+#     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
+#     for image in tqdm(image_paths, desc='Segmenting Cells'):
+#         img = torch.from_numpy(load_img(image, img_channels).astype(np.int32)) # Needed to set to int32, as torch does not support uint16
+#         df_img = df[df['Image']==image.split('/')[-1]]
+#         x = df_img['Centroid.X.px'].values
+#         y = df_img['Centroid.Y.px'].values
+#         all_cells = torch.Tensor().to(torch.int32)
+#         if x.shape[0] < 1:
+#             raise Exception(f'No coordinates in {df_path} for {image}!!!') 
+#         try:
+#             for cell in list(range(x.shape[0])):
+#                 delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
+#                 delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
+#                 delta_x2 = int(cell_cutout/2) if img.shape[1]-x[cell] >= int(cell_cutout/2) else img.shape[1]-x[cell]
+#                 delta_y2 = int(cell_cutout/2) if img.shape[0]-y[cell] >= int(cell_cutout/2) else img.shape[0]-y[cell]
+#                 cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
+#                 cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
+#                 all_cells = torch.cat((all_cells, torch.unsqueeze(cell_img, axis=0)), axis=0)
+#         except Exception as e:
+#             print(f'Something went wrong when segmenting cells for {image}')
+#             print(e)
+#         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
 
 def image_preprocess(path, max_img=2**16, img_channels='', path_mean_std='', cell_cutout=20):
     df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
