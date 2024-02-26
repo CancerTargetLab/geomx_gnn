@@ -29,12 +29,12 @@ def calc_mean_std(image_paths, max_img=2**16, img_channels=''):
         img = load_img(img_p, img_channels=img_channels)
         local_hist = [np.histogram(img[:,:,channel], bins=max_img+2, range=(0,max_img+2)) for channel in range(img.shape[2])]
         if global_hist:
-            global_hist = [global_hist[channel][0]+local_hist[channel][0] for channel in range(len(local_hist))]
+            global_hist = [global_hist[channel]+local_hist[channel][0] for channel in range(len(local_hist))]
         else:
-            global_hist = local_hist
+            global_hist = [local_hist[channel][0] for channel in range(len(local_hist))]
             bins = local_hist[0][1]
     
-    mean = np.array([np.sum(hist_chan[0]*bins[:bins.shape[0]-1])/np.sum(hist_chan[0]) for hist_chan in global_hist], dtype=np.float32)
+    mean = np.array([np.sum(hist_chan*bins[:bins.shape[0]-1])/np.sum(hist_chan) for hist_chan in global_hist], dtype=np.float32)
     std = np.array([np.sqrt(np.sum((global_hist[chan][0]-mean[chan])**2)/np.sum(global_hist[chan][0])) for chan in range(len(global_hist))], dtype=np.float32)
     return mean, std
 
@@ -56,11 +56,11 @@ def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
     for image in tqdm(image_paths, desc='Segmenting Cells'):
-        img = torch.from_numpy(load_img(image, img_channels).astype(np.int16))
+        img = torch.from_numpy(load_img(image, img_channels))
         df_img = df[df['Image']==image.split('/')[-1]]
         x = df_img['Centroid.X.px'].values
         y = df_img['Centroid.Y.px'].values
-        all_cells = torch.Tensor().to(torch.int16)
+        all_cells = torch.Tensor().to(torch.int32)
         if x.shape[0] < 1:
             raise Exception(f'No coordinates in {df_path} for {image}!!!') 
         try:
