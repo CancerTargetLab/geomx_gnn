@@ -56,7 +56,7 @@ def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
     for image in tqdm(image_paths, desc='Segmenting Cells'):
-        img = torch.from_numpy(load_img(image, img_channels))
+        img = torch.from_numpy(load_img(image, img_channels).astype(np.int32)) # Needed to set to int32, as torch does not support uint16
         df_img = df[df['Image']==image.split('/')[-1]]
         x = df_img['Centroid.X.px'].values
         y = df_img['Centroid.Y.px'].values
