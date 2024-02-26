@@ -2,6 +2,7 @@ import numpy as np
 import os
 from skimage import io
 import torch
+import torch.multiprocessing as mp
 import torchvision.transforms as T
 import pandas as pd
 from tqdm import tqdm
@@ -50,6 +51,63 @@ def zscore(image_paths, mean, std):
         img = torch.permute(img, (0, 3, 1, 2))
 
         torch.save(img.to(torch.float32), img_p.split('.')[0]+'_cells.pt')
+
+def process_cells(image, x, y, cell_cutout, result_queue, process_idx):
+    cells = []
+    for i in range(len(x)):
+        delta_x1 = max(x[i] - cell_cutout // 2, 0)
+        delta_y1 = max(y[i] - cell_cutout // 2, 0)
+        delta_x2 = min(x[i] + cell_cutout // 2, image.shape[1])
+        delta_y2 = min(y[i] + cell_cutout // 2, image.shape[0])
+        
+        cell_img = image[delta_y1:delta_y2, delta_x1:delta_x2, :]
+        cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
+        cells.append(cell_img)
+    result_queue.put((process_idx, cells))
+
+def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
+    df = pd.read_csv(df_path, header=0, sep=',')
+    df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
+    df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
+
+    for image in tqdm(image_paths, desc='Segmenting Cells'):
+        img = torch.from_numpy(load_img(image_paths[0], img_channels).astype(np.int32))
+        img.share_memory_()
+
+        df_img = df[df['Image']==image.split('/')[-1]]
+        x = df_img['Centroid.X.px'].values
+        y = df_img['Centroid.Y.px'].values
+        
+        all_cells = []
+        if x.shape[0] < 1:
+            raise Exception(f'No coordinates in {df_path} for {image}!!!')
+        
+        result_queue = mp.Queue()
+        num_processes = mp.cpu_count()
+        processes = []
+        
+        # Split coordinates into chunks for parallel processing
+        chunk_size = (len(x) + num_processes - 1) // num_processes
+        chunks = [list(range(i, min(i + chunk_size, len(x)))) for i in range(0, len(x), chunk_size)]
+
+        all_results = [None] * len(chunks)
+        
+        for process_idx, chunk in enumerate(chunks):
+            process = mp.Process(target=process_cells, args=(img, x[chunk], y[chunk], cell_cutout, result_queue, process_idx))
+            process.start()
+            processes.append(process)
+        
+        for _ in range(len(chunks)):
+            process_idx, cells = result_queue.get()
+            all_results[process_idx] = cells
+        
+        for process in processes:
+            process.join()
+        
+        for result in all_results:
+            all_cells.extend(result)
+        
+    return torch.stack(all_cells)
 
 def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
     df = pd.read_csv(df_path, header=0, sep=',')
