@@ -12,6 +12,8 @@ def parse_args():
                         help="Directory in which to find already calculated mean.npy and std.npy per channel, empty if not used")
     parser.add_argument("--cell_cutout", type=int, default=20,
                         help="Size*Size cutout of cell, centered on Centroid Cell position")
+    parser.add_argument("--preprocess_workers", type=int, default=1,
+                        help="Number of Workers to use for cell cutout")
     parser.add_argument("--image_preprocess", action="store_true", default=False,
                         help="Wether or not to preprocess images via ZScore normalisation")
 
@@ -202,7 +204,8 @@ def main(**args):
         ImagePreprocess(path=args['preprocess_dir'], 
                         img_channels=args['preprocess_channels'],
                         path_mean_std=args['preprocess_mean_std_dir'],
-                        cell_cutout=args['cell_cutout'])
+                        cell_cutout=args['cell_cutout'],
+                        num_processes=args['preprocess_workers'])
     if args['train_image_model']:
         from src.run.CellContrastTrain import train as ImageTrain
         ImageTrain(image_dir=args['image_dir'],

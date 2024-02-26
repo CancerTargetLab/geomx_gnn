@@ -10,7 +10,8 @@ from tqdm import tqdm
 #Implemented through adapting NaroNets Image processing.
 #Original Implementation: https://github.com/djimenezsanchez/NaroNet/blob/main/src/NaroNet/Patch_Contrastive_Learning/preprocess_images.py#L145
 
-def load_img(path, img_channels):
+def load_img(path,
+             img_channels):
     if path.endswith(('.tiff', '.tif')):
         img = io.imread(path, plugin='tifffile')
         if img.shape[0] < img.shape[1] and img.shape[0] < img.shape[2]:
@@ -24,7 +25,9 @@ def load_img(path, img_channels):
     
     return img
 
-def calc_mean_std(image_paths, max_img=2**16, img_channels=''):
+def calc_mean_std(image_paths,
+                  max_img=2**16,
+                  img_channels=''):
     global_hist = None
     for img_p in tqdm(image_paths, desc='Calculating mean and std for ROIs'):
         img = load_img(img_p, img_channels=img_channels)
@@ -39,7 +42,9 @@ def calc_mean_std(image_paths, max_img=2**16, img_channels=''):
     std = np.array([np.sqrt(np.sum((global_hist[chan][0]-mean[chan])**2)/np.sum(global_hist[chan][0])) for chan in range(len(global_hist))], dtype=np.float32)
     return mean, std
 
-def zscore(image_paths, mean, std):
+def zscore(image_paths,
+           mean,
+           std):
     for img_p in tqdm(image_paths, desc='ZScore normalisation of ROIs'):
         img = torch.load(img_p.split('.')[0]+'_cells.pt')
         img = torch.permute(img, (0, 2, 3, 1))
@@ -52,20 +57,31 @@ def zscore(image_paths, mean, std):
 
         torch.save(img.to(torch.float32), img_p.split('.')[0]+'_cells.pt')
 
-def process_cells(image, x, y, cell_cutout, result_queue, process_idx):
-    cells = []
-    for i in range(len(x)):
-        delta_x1 = max(x[i] - cell_cutout // 2, 0)
-        delta_y1 = max(y[i] - cell_cutout // 2, 0)
-        delta_x2 = min(x[i] + cell_cutout // 2, image.shape[1])
-        delta_y2 = min(y[i] + cell_cutout // 2, image.shape[0])
+def process_cells(img,
+                  x,
+                  y,
+                  cell_cutout,
+                  all_results,
+                  process_idx,
+                  event):
+    for cell in range(len(x)):
+        delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
+        delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
+        delta_x2 = int(cell_cutout/2) if img.shape[1]-x[cell] >= int(cell_cutout/2) else img.shape[1]-x[cell]
+        delta_y2 = int(cell_cutout/2) if img.shape[0]-y[cell] >= int(cell_cutout/2) else img.shape[0]-y[cell]
         
-        cell_img = image[delta_y1:delta_y2, delta_x1:delta_x2, :]
+        cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
+    
         cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
-        cells.append(cell_img)
-    result_queue.put((process_idx, cells))
+        all_results[process_idx][cell]
 
-def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
+    event.set()
+
+def cell_seg(df_path,
+             image_paths,
+             img_channels='',
+             cell_cutout=20,
+             num_processes=1):
     df = pd.read_csv(df_path, header=0, sep=',')
     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
@@ -78,28 +94,34 @@ def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
         x = df_img['Centroid.X.px'].values
         y = df_img['Centroid.Y.px'].values
         
-        all_cells = []
         if x.shape[0] < 1:
             raise Exception(f'No coordinates in {df_path} for {image}!!!')
-        
-        result_queue = mp.Queue()
-        num_processes = mp.cpu_count()
-        processes = []
         
         # Split coordinates into chunks for parallel processing
         chunk_size = (len(x) + num_processes - 1) // num_processes
         chunks = [list(range(i, min(i + chunk_size, len(x)))) for i in range(0, len(x), chunk_size)]
 
-        all_results = [None] * len(chunks)
+        all_results = [torch.zeros((len(chunk),img.shape[-1],cell_cutout,cell_cutout)) for chunk in (chunks)]
+        for result in all_results:
+            result.share_memory_()
+        all_cells = []
+        num_processes = num_processes - 1 if num_processes >= 2 else 1
+        processes = []
+        events = [mp.Event() for _ in range(len(chunks))]
         
         for process_idx, chunk in enumerate(chunks):
-            process = mp.Process(target=process_cells, args=(img, x[chunk], y[chunk], cell_cutout, result_queue, process_idx))
+            process = mp.Process(target=process_cells, args=(img,
+                                                             x[chunk],
+                                                             y[chunk],
+                                                             cell_cutout,
+                                                             all_results,
+                                                             process_idx,
+                                                             events[process_idx]))
             process.start()
             processes.append(process)
         
-        for _ in range(len(chunks)):
-            process_idx, cells = result_queue.get()
-            all_results[process_idx] = cells
+        for event in events:
+            event.wait()
         
         for process in processes:
             process.join()
@@ -110,7 +132,7 @@ def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
         all_cells = torch.stack(all_cells)
         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
 
-# def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
+# def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20, num_processes=1):
 #     df = pd.read_csv(df_path, header=0, sep=',')
 #     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
 #     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
@@ -136,7 +158,12 @@ def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20):
 #             print(e)
 #         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
 
-def image_preprocess(path, max_img=2**16, img_channels='', path_mean_std='', cell_cutout=20):
+def image_preprocess(path,
+                     max_img=2**16,
+                     img_channels='',
+                     path_mean_std='',
+                     cell_cutout=20,
+                     num_processes=1):
     df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
     img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.tiff', '.tif'))]
 
@@ -148,5 +175,5 @@ def image_preprocess(path, max_img=2**16, img_channels='', path_mean_std='', cel
     else: 
         mean = np.load(os.path.join(path_mean_std, 'mean.npy'))
         std = np.load(os.path.join(path_mean_std, 'std.npy'))
-    cell_seg(df_path, img_paths, img_channels=img_channels, cell_cutout=cell_cutout)
+    cell_seg(df_path, img_paths, img_channels=img_channels, cell_cutout=cell_cutout, num_processes=num_processes)
     zscore(img_paths, torch.from_numpy(mean), torch.from_numpy(std))
