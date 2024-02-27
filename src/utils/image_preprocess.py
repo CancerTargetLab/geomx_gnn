@@ -3,6 +3,7 @@ import os
 from skimage import io
 import torch
 import torch.multiprocessing as mp
+from concurrent.futures import ThreadPoolExecutor
 import torchvision.transforms as T
 import pandas as pd
 from tqdm import tqdm
@@ -62,8 +63,7 @@ def process_cells(img,
                   y,
                   cell_cutout,
                   all_results,
-                  process_idx,
-                  event):
+                  process_idx):
     for cell in list(range(x.shape[0])):
         delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
         delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
@@ -71,10 +71,23 @@ def process_cells(img,
         delta_y2 = int(cell_cutout/2) if img.shape[0]-y[cell] >= int(cell_cutout/2) else img.shape[0]-y[cell]
         cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
         cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
-
         all_results[process_idx][cell] = cell_img
-    event.set()
-    
+
+#https://github.com/pytorch/pytorch/issues/17199#issuecomment-833226969
+# sometimes issues arise were processes deadlock when using fork instead of spawn, as more threads are used then available
+def process_cells_wrapped(img,
+                  x,
+                  y,
+                  cell_cutout,
+                  all_results,
+                  process_idx):
+    return ThreadPoolExecutor().submit(process_cells,
+                                       img=img,
+                                       x=x,
+                                       y=y,
+                                       cell_cutout=cell_cutout,
+                                       all_results=all_results,
+                                       process_idx=process_idx).result()
 
 def cell_seg(df_path,
              image_paths,
@@ -104,21 +117,16 @@ def cell_seg(df_path,
         all_cells = []
         num_processes = num_processes - 1 if num_processes >= 2 else 1
         processes = []
-        events = [mp.Event() for _ in range(len(chunks))]
         
         for process_idx, chunk in enumerate(chunks):
-            process = mp.Process(target=process_cells, args=(img,
+            process = mp.Process(target=process_cells_wrapped, args=(img,
                                                              x[chunk],
                                                              y[chunk],
                                                              cell_cutout,
                                                              all_results,
-                                                             process_idx,
-                                                             events[process_idx]))
+                                                             process_idx))
             process.start()
             processes.append(process)
-        
-        for event in events:
-            event.wait()
         
         for process in processes:
             process.join()
@@ -128,32 +136,9 @@ def cell_seg(df_path,
         
         all_cells = torch.stack(all_cells)
         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
-
-# def cell_seg(df_path, image_paths, img_channels='', cell_cutout=20, num_processes=1):
-#     df = pd.read_csv(df_path, header=0, sep=',')
-#     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
-#     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
-#     for image in tqdm(image_paths, desc='Segmenting Cells'):
-#         img = torch.from_numpy(load_img(image, img_channels).astype(np.int32)) # Needed to set to int32, as torch does not support uint16
-#         df_img = df[df['Image']==image.split('/')[-1]]
-#         x = df_img['Centroid.X.px'].values
-#         y = df_img['Centroid.Y.px'].values
-#         all_cells = torch.Tensor().to(torch.int32)
-#         if x.shape[0] < 1:
-#             raise Exception(f'No coordinates in {df_path} for {image}!!!') 
-#         try:
-#             for cell in list(range(x.shape[0])):
-#                 delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
-#                 delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
-#                 delta_x2 = int(cell_cutout/2) if img.shape[1]-x[cell] >= int(cell_cutout/2) else img.shape[1]-x[cell]
-#                 delta_y2 = int(cell_cutout/2) if img.shape[0]-y[cell] >= int(cell_cutout/2) else img.shape[0]-y[cell]
-#                 cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
-#                 cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
-#                 all_cells = torch.cat((all_cells, torch.unsqueeze(cell_img, axis=0)), axis=0)
-# #         except Exception as e:
-# #             print(f'Something went wrong when segmenting cells for {image}')
-# #             print(e)
-# #         torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
+        del img
+        del all_cells
+        del df_img
 
 def image_preprocess(path,
                      max_img=2**16,
