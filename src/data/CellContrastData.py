@@ -1,4 +1,5 @@
 from torch.utils.data import Dataset
+import pandas as pd
 import torch
 import os
 import torchvision.transforms as T
@@ -19,11 +20,16 @@ class EmbedDataset(Dataset):
         self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.pt')]
         self.cells_path.sort()
 
-        self.data = torch.Tensor()
+        csv_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('.csv')][0]
+        self.cell_number = pd.read_csv(csv_path, header=0, sep=',').shape[0]
+        img_shape = torch.load(self.cells_path[0]).shape
+        self.data = torch.zeros((self.cell_number, img_shape[1], img_shape[2], img_shape[3]), dtype=torch.float16)
 
+        last_idx = 0
         for cells in self.cells_path:
             data = torch.load(cells)
-            self.data = torch.cat((self.data, data))
+            self.data[last_idx:data.shape[0]+last_idx] = data
+            last_idx += data.shape[0]
         
         self.data = torch.Tensor(self.data)
         
