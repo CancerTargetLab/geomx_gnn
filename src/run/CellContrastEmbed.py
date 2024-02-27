@@ -21,7 +21,6 @@ def embed(image_dir, model_name, args):
                            train_ratio=args['train_ratio_image'],
                            val_ratio=args['val_ratio_image'])
     dataset.setMode(dataset.embed)
-    embed_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=False)
 
     model = ContrastiveLearning(channels=dataset.__getitem__(0).shape[0],
                                 embed=args['embedding_size_image'],
@@ -31,11 +30,4 @@ def embed(image_dir, model_name, args):
     model.eval()
     model.mode = 'embed'
 
-    # with torch.no_grad():
-    #     with tqdm(embed_loader, total=len(embed_loader), desc='Embeding Cell Images') as embed_loader:
-    #         embed = torch.Tensor()
-    #         for idx, batch in enumerate(embed_loader):
-    #             out = model(batch.to(device))
-    #             embed = torch.cat((embed, out.to('cpu', torch.float32)), dim=0)
-    #         dataset.save_embed_data(embed)
     dataset.save_embed_data(model, device=device)

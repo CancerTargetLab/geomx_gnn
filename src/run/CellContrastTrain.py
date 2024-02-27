@@ -29,7 +29,7 @@ def train(image_dir, output_name, args):
     model = ContrastiveLearning(channels=dataset.__getitem__(0)[0].shape[0],
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
-                                resnet=args['resnet_model']).to(device, dtype=float)
+                                resnet=args['resnet_model']).to(device, dtype=torch.float32)
 
     #TODO: https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets
     # -> more mem eff

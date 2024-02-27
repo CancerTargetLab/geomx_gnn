@@ -74,7 +74,7 @@ class EmbedDataset(Dataset):
             T.RandomRotation(degrees=90),
             #T.GaussianBlur(kernel_size=(3,3), sigma=(0.0, 5.))
         ])
-        x1, x2 = compose(data).to(torch.float32), compose(data).to(torch.float32)
+        x1, x2 = compose(data.to(torch.float32)), compose(data.to(torch.float32))
         return x1, x2
 
     def __len__(self):
