@@ -20,11 +20,9 @@ class EmbedDataset(Dataset):
         self.cells_path.sort()
 
         self.data = torch.Tensor()
-        self.data_index_list = [0]
 
         for cells in self.cells_path:
             data = torch.load(cells)
-            self.data_index_list.append(data.shape[0])
             self.data = torch.cat((self.data, data))
         
         self.data = torch.Tensor(self.data)
@@ -70,7 +68,7 @@ class EmbedDataset(Dataset):
             T.RandomRotation(degrees=90),
             #T.GaussianBlur(kernel_size=(3,3), sigma=(0.0, 5.))
         ])
-        x1, x2 = compose(data), compose(data)
+        x1, x2 = compose(data).to(torch.float32), compose(data).to(torch.float32)
         return x1, x2
 
     def __len__(self):

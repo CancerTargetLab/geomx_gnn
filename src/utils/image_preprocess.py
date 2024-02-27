@@ -56,7 +56,7 @@ def zscore(image_paths,
         img = torch.reshape(img,(cells,x,y,chan))
         img = torch.permute(img, (0, 3, 1, 2))
 
-        torch.save(img.to(torch.float32), img_p.split('.')[0]+'_cells.pt')
+        torch.save(img.to(torch.float16), img_p.split('.')[0]+'_cells.pt')
 
 def process_cells(img,
                   x,
