@@ -37,7 +37,7 @@ class GeoMXDataset(Dataset):
         self.Distance = Distance(norm=False, cat=False)
         self.LocalCartesian = LocalCartesian()
 
-        if not (os.path.exists(self.raw_path) and os.path.isdir(self.raw_path)):
+        if not (os.path.exists(self.processed_path) and os.path.isdir(self.processed_path)):
             os.makedirs(self.processed_path)
 
         if os.path.exists(self.raw_path) and os.path.isdir(self.raw_path):
