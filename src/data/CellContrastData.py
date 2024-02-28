@@ -103,6 +103,11 @@ class EmbedDataset(Dataset):
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 for path in cells_path:
                     data = torch.load(os.path.join(path))
-                    data = model(data.to(device, torch.float32))
+                    num_batches = (data.shape[0] // 256) + 1
+                    for batch_idx in range(num_batches):
+                        if batch_idx < num_batches - 1:
+                            data[batch_idx*256:batch_idx*256+256] = model(data[batch_idx*256:batch_idx*256+256].to(device, torch.float32))
+                        else:
+                            data[batch_idx*256:] = model(data[batch_idx*256:].to(device, torch.float32))
                     torch.save(data, os.path.join(path, path.split('.')[0]+'_embed.pt'))
 
