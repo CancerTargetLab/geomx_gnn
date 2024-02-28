@@ -83,6 +83,10 @@ def parse_args():
                         help="Positional Jittering during training of cells in pixel dist")
     parser.add_argument("--cell_n_knn", type=int, default=6,
                         help="Number of Nearest Neighbours to calculate for each cell in graph")
+    parser.add_argument("--subgraphs_per_graph", type=int, default=0,
+                        help="Number of Subgraphs per Graph to use for training. If 0, train with entire graph")
+    parser.add_argument("--num_hops_subgraph", type=int, default=10,
+                        help="Number of hops to create subgraph neighborhoods")
     parser.add_argument("--graph_model_type", type=str, default="GAT",
                         help="Type of Model to train, one of GAT, GAT_ph, LIN, LIN_ph")
     parser.add_argument("--graph_mse_mult", type=float, default=1.0,
@@ -91,8 +95,6 @@ def parse_args():
                         help="Multiplier for Cosine Similarity Loss")
     parser.add_argument("--graph_entropy_mult", type=float, default=1.0,
                         help="Multiplier for Entropy Loss")
-    #parser.add_argument("--num_phenotypes_graph", type=int, default=15)
-    #parser.add_argument("--num_phenotypes_layers_graph", type=int, default=2)
     parser.add_argument("--layers_graph", type=int, default=1,
                         help="Number of Layers in Graph")
     parser.add_argument("--num_node_features", type=int, default=256,

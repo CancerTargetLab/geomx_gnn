@@ -20,6 +20,7 @@ for csv in csvs:
         tmp_df['Centroid.X.px'] = df['Xt']
         tmp_df['Centroid.Y.px'] = df['Yt']
         tmp_df['Class'] = ''
+        tmp_df[gene_names] = df[gene_names].values
         pos_df = pd.concat([pos_df, tmp_df], ignore_index=True)
 
         tmp_df = pd.DataFrame()
@@ -32,6 +33,7 @@ for csv in csvs:
         pos_df['Centroid.X.px'] = df['Xt']
         pos_df['Centroid.Y.px'] = df['Yt']
         pos_df['Class'] = ''
+        pos_df[gene_names] = df[gene_names].values
 
         label_df['ROI'] = [csv.split('.')[0].split('/')[-1]]
         label_df['Patient_ID'] = [csv.split('.')[0][-2:]]

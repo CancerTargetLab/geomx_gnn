@@ -35,6 +35,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                            edge_dropout=args['edge_dropout'],
                            pixel_pos_jitter=args['cell_pos_jitter'],
                            n_knn=args['cell_n_knn'],
+                           subgraphs_per_graph=args['subgraphs_per_graph'],
+                           num_hops=args['num_hops_subgraph'],
                            label_data=label_data)
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)

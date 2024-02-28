@@ -1,5 +1,5 @@
 from torch_geometric.data import Dataset, Data
-from torch_geometric.transforms import RandomJitter, KNNGraph, Distance, LocalCartesian
+from torch_geometric.transforms import RandomJitter, KNNGraph, Distance, LocalCartesian, RootedEgoNets
 import torch
 import torch_geometric
 import os
@@ -19,6 +19,8 @@ class GeoMXDataset(Dataset):
                  edge_dropout=0.3,
                  pixel_pos_jitter=40,
                  n_knn=6,
+                 subgraphs_per_graph=0,
+                 num_hops=10,
                  label_data='label_data.csv',
                  transform=None):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
@@ -31,6 +33,8 @@ class GeoMXDataset(Dataset):
         self.edge_dropout = edge_dropout
         self.pixel_pos_jitter = pixel_pos_jitter
         self.n_knn = n_knn
+        self.subgraphs_per_graph = subgraphs_per_graph
+        self.num_hops = num_hops
 
         self.RandomJitter = RandomJitter(self.pixel_pos_jitter)
         self.KNNGraph = KNNGraph(k=self.n_knn, force_undirected=True)
@@ -91,6 +95,10 @@ class GeoMXDataset(Dataset):
         return processed_filename
     
     def transform(self, data):
+        if self.subgraphs_per_graph > 0:
+            sub = torch.randint(0, data.num_nodes, (int(torch.min(torch.Tensor([data.num_nodes, self.subgraphs_per_graph]))),), device=data.edge_index.device)
+            subset, edge_index, mapping, edge_mask = torch_geometric.utils.k_hop_subgraph(sub, self.num_hops, data.edge_index, relabel_nodes=True, directed=False)
+            data = Data(x=data.x[subset], edge_index=edge_index, edge_attr=data.edge_attr[edge_mask], pos=data.pos[subset], y=torch.sum(data.cellexpr[subset], axis=0))
         if self.mode==self.train:
             y = data.y
             data.edge_index = torch.Tensor([])
@@ -136,6 +144,9 @@ class GeoMXDataset(Dataset):
 
         label = label[label['ROI']==file_prefix]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
+        cellexpr = label.clone()
+        if df.columns.shape > 4:
+            cellexpr = torch.from_numpy(df[df.columns[4:].values].values).to(torch.float32)
         if torch.sum(label) > 0:
             if 'Class' in df.columns:
                 data = Data(x=node_features,
@@ -143,13 +154,15 @@ class GeoMXDataset(Dataset):
                         edge_attr=edge_attr.to(torch.float32),
                         y=label,
                         pos=torch.from_numpy(coordinates).to(torch.float32),
-                        Class=df['Class'].values)
+                        Class=df['Class'].values,
+                        cellexpr=cellexpr)
             else:
                 data = Data(x=node_features,
                             edge_index=edge_index,
                             edge_attr=edge_attr,
                             pos=torch.from_numpy(coordinates).to(torch.float32),
-                            y=label)
+                            y=label,
+                            cellexpr=cellexpr)
             data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
             torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
         else: 
