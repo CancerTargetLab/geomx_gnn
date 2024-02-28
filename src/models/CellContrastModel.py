@@ -44,6 +44,9 @@ class ContrastiveLearning(torch.nn.Module):
     def __init__(self, channels, embed=256, contrast=124, mode='train', resnet='101'):
         super().__init__()
         self.mode = mode
+        self.embed_size = embed
+        self.contrast_size = contrast
+        self.resnet_model = resnet
         if resnet == '101':
             from torchvision.models import resnet101
             self.res = resnet101()

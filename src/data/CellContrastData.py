@@ -9,8 +9,11 @@ from tqdm import tqdm
 class EmbedDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, root_dir="data/raw", crop_factor=0.5, train_ratio = 0.6,
-                 val_ratio = 0.2):
+    def __init__(self,
+                 root_dir="data/raw",
+                 crop_factor=0.5,
+                 train_ratio=0.6,
+                 val_ratio=0.2):
         """
         Arguments:
         """
@@ -99,15 +102,17 @@ class EmbedDataset(Dataset):
     
     
     def save_embed_data(self, model, device='cpu'):
+        del self.data
         with torch.no_grad():
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 for path in cells_path:
                     data = torch.load(os.path.join(path))
+                    embed = torch.zeros((data.shape[0], model.embed_size), dtype=torch.float32)
                     num_batches = (data.shape[0] // 256) + 1
                     for batch_idx in range(num_batches):
                         if batch_idx < num_batches - 1:
-                            data[batch_idx*256:batch_idx*256+256] = model(data[batch_idx*256:batch_idx*256+256].to(device, torch.float32))
+                            embed[batch_idx*256:batch_idx*256+256] = model(data[batch_idx*256:batch_idx*256+256].to(device, torch.float32))
                         else:
                             data[batch_idx*256:] = model(data[batch_idx*256:].to(device, torch.float32))
-                    torch.save(data, os.path.join(path, path.split('.')[0]+'_embed.pt'))
+                    torch.save(embed, os.path.join(path, path.split('.')[0]+'_embed.pt'))
 
