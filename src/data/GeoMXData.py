@@ -37,14 +37,13 @@ class GeoMXDataset(Dataset):
         self.Distance = Distance(norm=False, cat=False)
         self.LocalCartesian = LocalCartesian()
 
-        if not os.path.exists(self.raw_path):
+        if not (os.path.exists(self.raw_path) and os.path.isdir(self.raw_path)):
             os.makedirs(self.processed_path)
 
         if os.path.exists(self.raw_path) and os.path.isdir(self.raw_path):
-            # self.raw_files = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('_embed.pt')]
-            # self.raw_files.sort()
             self.cell_pos = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('.csv')][0]
-            self.raw_files = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].unique().apply(lambda x: x.split('.')[0]+'_cells_embed.pt')
+            self.raw_files = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].apply(lambda x: x.split('.')[0]+'_cells_embed.pt').unique().tolist()
+            self.raw_files = [os.path.join(self.raw_path, p) for p in self.raw_files]
             self.raw_files.sort()
         
         image_name_split = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].iloc[0].split('.')
@@ -102,7 +101,6 @@ class GeoMXDataset(Dataset):
             data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
             edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
             data.edge_index, data.edge_attr = data.edge_index[:,edge_map], data.edge_attr[edge_map]
-            #data = torch_geometric.transforms.RemoveIsolatedNodes()(data)
             data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
             data.y = y
         #data = self.LocalCartesian(data)
