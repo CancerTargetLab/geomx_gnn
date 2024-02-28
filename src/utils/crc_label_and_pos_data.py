@@ -24,7 +24,7 @@ for csv in csvs:
 
         tmp_df = pd.DataFrame()
         tmp_df['ROI'] = [csv.split('.')[0].split('/')[-1]]
-        tmp_df['Patiend_ID'] = [csv.split('.')[0][-2:]]
+        tmp_df['Patient_ID'] = [csv.split('.')[0][-2:]]
         tmp_df[gene_names] = [genes_sum]
         label_df = pd.concat([label_df, tmp_df], ignore_index=True)
     else:
@@ -34,7 +34,7 @@ for csv in csvs:
         pos_df['Class'] = ''
 
         label_df['ROI'] = [csv.split('.')[0].split('/')[-1]]
-        label_df['Patiend_ID'] = [csv.split('.')[0][-2:]]
+        label_df['Patient_ID'] = [csv.split('.')[0][-2:]]
         label_df[gene_names] = [genes_sum]
 
 pos_df.to_csv('data/raw/CRC/CRC_measurements.csv', sep=',', header=True, index=False,)
