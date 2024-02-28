@@ -31,8 +31,6 @@ class EmbedDataset(Dataset):
             self.data[last_idx:data.shape[0]+last_idx] = data
             last_idx += data.shape[0]
         
-        self.data = torch.Tensor(self.data)
-        
         total_samples = self.data.shape[0]
         train_size = int(train_ratio * total_samples)
         val_size = int(val_ratio * total_samples)
