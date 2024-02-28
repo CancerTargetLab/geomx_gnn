@@ -9,7 +9,6 @@ from src.utils.setSeed import set_seed
 def embed(image_dir, model_name, args):
 
     batch_size = args['batch_size_image']
-    num_workers = args['num_workers_image']
     seed = args['seed']
 
     # move to GPU (if available)
@@ -30,4 +29,4 @@ def embed(image_dir, model_name, args):
     model.eval()
     model.mode = 'embed'
 
-    dataset.save_embed_data(model, device=device)
+    dataset.save_embed_data(model, device=device, batch_size=batch_size)

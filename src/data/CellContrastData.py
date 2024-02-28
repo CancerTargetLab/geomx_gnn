@@ -101,18 +101,18 @@ class EmbedDataset(Dataset):
             return self.transform(self.data[idx])
     
     
-    def save_embed_data(self, model, device='cpu'):
+    def save_embed_data(self, model, device='cpu', batch_size=256):
         del self.data
         with torch.no_grad():
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 for path in cells_path:
                     data = torch.load(os.path.join(path))
                     embed = torch.zeros((data.shape[0], model.embed_size), dtype=torch.float32)
-                    num_batches = (data.shape[0] // 256) + 1
+                    num_batches = (data.shape[0] // batch_size) + 1
                     for batch_idx in range(num_batches):
                         if batch_idx < num_batches - 1:
-                            embed[batch_idx*256:batch_idx*256+256] = model(data[batch_idx*256:batch_idx*256+256].to(device, torch.float32))
+                            embed[batch_idx*batch_size:batch_idx*batch_size+batch_size] = model(data[batch_idx*batch_size:batch_idx*batch_size+batch_size].to(device, torch.float32)).to('cpu')
                         else:
-                            data[batch_idx*256:] = model(data[batch_idx*256:].to(device, torch.float32))
+                            data[batch_idx*batch_size:] = model(data[batch_idx*batch_size:].to(device, torch.float32)).to('cpu')
                     torch.save(embed, os.path.join(path, path.split('.')[0]+'_embed.pt'))
 
