@@ -113,6 +113,6 @@ class EmbedDataset(Dataset):
                         if batch_idx < num_batches - 1:
                             embed[batch_idx*batch_size:batch_idx*batch_size+batch_size] = model(data[batch_idx*batch_size:batch_idx*batch_size+batch_size].to(device, torch.float32)).to('cpu')
                         else:
-                            data[batch_idx*batch_size:] = model(data[batch_idx*batch_size:].to(device, torch.float32)).to('cpu')
+                            embed[batch_idx*batch_size:] = model(data[batch_idx*batch_size:].to(device, torch.float32)).to('cpu')
                     torch.save(embed, os.path.join(path, path.split('.')[0]+'_embed.pt'))
 
