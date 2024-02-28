@@ -145,7 +145,7 @@ class GeoMXDataset(Dataset):
         label = label[label['ROI']==file_prefix]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
         cellexpr = label.clone()
-        if df.columns.shape > 4:
+        if df.columns.shape[0] > 4:
             cellexpr = torch.from_numpy(df[df.columns[4:].values].values).to(torch.float32)
         if torch.sum(label) > 0:
             if 'Class' in df.columns:
