@@ -196,6 +196,7 @@ class GeoMXDataset(Dataset):
     
     def embed(self, model, path, device='cpu', return_mean=False):
         with torch.no_grad():
+            model = model.to(device)
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
                 for graph_path in data:
                     graph = torch.load(os.path.join(self.processed_dir, graph_path))

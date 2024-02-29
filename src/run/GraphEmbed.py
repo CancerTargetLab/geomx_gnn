@@ -47,4 +47,4 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     model.load_state_dict(torch.load(model_name)['model'])
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-    dataset.embed(model, output_dir, device=device, return_mean=model_type.endswith('_zinb') and 'mean' in model_type)
+    dataset.embed(model, output_dir, device='cpu', return_mean=model_type.endswith('_zinb') and 'mean' in model_type)
