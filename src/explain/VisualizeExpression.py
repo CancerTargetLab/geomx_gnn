@@ -105,22 +105,20 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_ce
                 files = np.concatenate((files, np.array([id_key]*value_dict[id_key][key].shape[0])))
                 i += 1
         counts = np.array(counts)
-        adata = sc.AnnData(counts)
+
+        cell_index = np.arange(counts.shape[0])
+        if select_cells and counts.shape[0] > select_cells:
+            cell_index = np.random.choice(np.arange(counts.shape[0]), size=select_cells, replace=False)
+
+        adata = sc.AnnData(counts[cell_index])
         if cell_class is not None:
             cell_class = np.array(cell_class)
-            adata.obs['cell_class'] = cell_class
-        adata.obs['ID'] = ids
-        adata.obs['files'] = files
+            adata.obs['cell_class'] = cell_class[cell_index]
+        adata.obs['ID'] = ids[cell_index]
+        adata.obs['files'] = files[cell_index]
         adata.var_names = exps
+        
         adata.layers['counts'] = adata.X.copy()
-        if select_cells and adata.X.shape[0] > select_cells:
-            cell_index = np.random.choice(np.arange(adata.X.shape[0]), size=select_cells, replace=False)
-            adata.X = adata.X[cell_index]
-            if cell_class is not None:
-                adata.obsm['all_cell_class'] = adata.obs['cell_class'].copy()
-            adata.obsm['all_ID'] = adata.obs['ID'].copy()
-            adata.obsm['all_files'] = adata.obs['files'].copy()
-            adata.obs = adata.obs.iloc[cell_index]
         sc.pp.log1p(adata)
         adata.layers['logs'] = adata.X.copy()
         adata.X = adata.layers['counts'].copy() 
@@ -129,7 +127,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_ce
         sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
         
         sc.pp.scale(adata)
-        sc.tl.pca(adata, svd_solver='arpack', chunked=True, chunk_size=50000)
+        sc.tl.pca(adata, svd_solver='arpack', n_comps=adata.X.shape[1]-1, chunked=True, chunk_size=50000)
         sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
         sc.tl.umap(adata)
         sc.tl.leiden(adata, resolution=0.5)
