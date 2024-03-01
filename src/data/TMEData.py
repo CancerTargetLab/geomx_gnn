@@ -71,8 +71,8 @@ class TMEDataset(GeoMXDataset):
                 valid_dropout =  0 == subs2.x.shape[0]
 
             if new_data is not None:
-                new_data.edge_index_s = torch.cat((new_data.edge_index_s, subs1.edge_index+new_data.x_s.shape[0]+1), dim=1)
-                new_data.edge_index_t = torch.cat((new_data.edge_index_t, subs2.edge_index+new_data.x_t.shape[0]+1), dim=1)
+                new_data.edge_index_s = torch.cat((new_data.edge_index_s, subs1.edge_index+new_data.x_s.shape[0]), dim=1)
+                new_data.edge_index_t = torch.cat((new_data.edge_index_t, subs2.edge_index+new_data.x_t.shape[0]), dim=1)
                 new_data.x_s, new_data.x_t = torch.cat((new_data.x_s, subs1.x)), torch.cat((new_data.x_t, subs2.x))
                 new_data.edge_attr_s = torch.cat((new_data.edge_attr_s, subs1.edge_attr))
                 new_data.edge_attr_t = torch.cat((new_data.edge_attr_t, subs2.edge_attr))
