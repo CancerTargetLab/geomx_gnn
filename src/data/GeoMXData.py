@@ -93,27 +93,65 @@ class GeoMXDataset(Dataset):
                 processed_filename.append(f'graph_{appendix}.pt')
         processed_filename.sort()
         return processed_filename
-    
+
+    def _transform(self, data):
+        y = data.y
+        data.edge_index = torch.Tensor([])
+        data = self.RandomJitter(data)
+        data = self.KNNGraph(data)
+        data = self.Distance(data)
+        node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
+        data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
+        edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
+        data.edge_index, data.edge_attr = data.edge_index[:,edge_map], data.edge_attr[edge_map]
+        data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
+        data.y = y
+        return data
+
     def transform(self, data):
         if self.subgraphs_per_graph > 0:
+            new_data = None
             sub = torch.randint(0, data.num_nodes, (int(torch.min(torch.Tensor([data.num_nodes, self.subgraphs_per_graph]))),), device=data.edge_index.device)
-            subset, edge_index, mapping, edge_mask = torch_geometric.utils.k_hop_subgraph(sub, self.num_hops, data.edge_index, relabel_nodes=True, directed=False)
-            data = Data(x=data.x[subset], edge_index=edge_index, edge_attr=data.edge_attr[edge_mask], pos=data.pos[subset], y=torch.sum(data.cellexpr[subset], axis=0))
+            for node_i in list(range(sub.shape[0])):
+                subset, edge_index, mapping, edge_mask = torch_geometric.utils.k_hop_subgraph(sub, self.num_hops, data.edge_index, relabel_nodes=True, directed=False)
+                subset = Data(x=data.x[subset],
+                            edge_index=edge_index,
+                            edge_attr=data.edge_attr[edge_mask],
+                            pos=data.pos[subset],
+                            y=data.y,
+                            cellexpr=data.cellexpr[subset],
+                            sub_batch=torch.tensor([node_i]*subset.shape[0], dtype=int))
+                if self.mode == self.train:
+                    subset = self._transform(subset)
+                if new_data is not None:
+                    new_data.edge_index = torch.cat((new_data.edge_index, subset.edge_index+new_data.x.shape[0]+1), dim=1)
+                    new_data.x = torch.cat((new_data.x, subset.x))
+                    new_data.edge_attr = torch.cat((new_data.edge_attr_s, subset.edge_attr))
+                    new_data.pos = torch.cat((new_data.pos, subset.pos))
+                    new_data.cellexpr = torch.cat((new_data.cellexpr, subset.y))
+                    new_data.sub_batch = torch.cat((new_data.sub_batch, torch.tensor([node_i]*subset.num_nodes, dtype=int)))
+                else:
+                    new_data = subset
+            data = new_data
         if self.mode==self.train:
-            y = data.y
-            data.edge_index = torch.Tensor([])
-            data = self.RandomJitter(data)
-            data = self.KNNGraph(data)
-            data = self.Distance(data)
-            node_map = torch_geometric.utils.dropout_node(data.edge_index, p=self.node_dropout, training=self.mode==self.train)[1]
-            data.edge_index, data.edge_attr = data.edge_index[:,node_map], data.edge_attr[node_map]
-            edge_map = torch_geometric.utils.dropout_edge(data.edge_index, p=self.edge_dropout, training=self.mode==self.train)[1]
-            data.edge_index, data.edge_attr = data.edge_index[:,edge_map], data.edge_attr[edge_map]
-            data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
-            data.y = y
+            data = self._transform(data)
         #data = self.LocalCartesian(data)
-        return data   
-    
+        return data 
+
+    def subgraph_batching(self, batch):
+        max_val = 0
+        for n_batch in torch.unique(batch.batch):
+            batch.sub_batch[batch.batch==n_batch] += max_val
+            max_val = torch.max(batch.sub_batch[batch.batch==n_batch]) + 1
+        batch.batch = batch.sub_batch
+        all_batches = torch.unique(batch.batch)
+        y = torch.zeros((all_batches.shape[0], batch.y.shape[0]))
+        for i, n_batch in enumerate(all_batches):
+            y[i] = torch.sum(batch.cellexpr[batch.batch==n_batch], axis=0)
+        batch.y = y
+        batch.cellexpr = torch.tensor([0])
+        return batch
+
     def download(self):
         pass
 

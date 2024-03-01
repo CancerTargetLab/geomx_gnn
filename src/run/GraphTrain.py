@@ -21,6 +21,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     alpha = args['graph_mse_mult']
     beta = args['graph_cos_sim_mult']
     theta = args['graph_entropy_mult']
+    use_subgraphs = args['subgraphs_per_graph'] > 0
 
     # move to GPU (if available)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -102,6 +103,8 @@ def train(raw_subset_dir, label_data, output_name, args):
         if best_run < early_stopping:
             with tqdm(train_loader, total=len(train_loader), desc=f"Training epoch {epoch}") as train_loader:
                 for idx, batch in enumerate(train_loader):
+                    if use_subgraphs:
+                        dataset.subgraph_batching(batch)
                     batch = batch.to(device)
                     optimizer.zero_grad()
                     if model_type.endswith('_ph'):
@@ -164,6 +167,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                     running_y = torch.Tensor().to(device)
                     running_out = torch.Tensor().to(device)
                     for idx, batch in enumerate(val_loader):
+                        if use_subgraphs:
+                            dataset.subgraph_batching(batch)
                         batch = batch.to(device)
                         if model_type.endswith('_ph'):
                             out = model(batch)
@@ -252,6 +257,8 @@ def train(raw_subset_dir, label_data, output_name, args):
             running_y = torch.Tensor().to(device)
             running_out = torch.Tensor().to(device)
             for idx, batch in enumerate(test_loader):
+                if use_subgraphs:
+                    dataset.subgraph_batching(batch)
                 batch = batch.to(device)
                 if model_type.endswith('_ph'):
                     out = model(batch)
