@@ -139,16 +139,16 @@ class GeoMXDataset(Dataset):
                                                 'subgraphs',
                                                 f'{p:03d}'+graph_path.split('/')[-1]))
                     if g in train_map:
-                        new_train_map.append(len(new_data))
+                        new_train_map.append(len(new_data)-1)
                     elif g in val_map:
-                        new_val_map.append(len(new_data))
+                        new_val_map.append(len(new_data)-1)
                     elif g in test_map:
-                        new_test_map.append(len(new_data))
+                        new_test_map.append(len(new_data)-1)
                     else:
                         raise Exception(f'Index of {graph_path} not in train/val/test map')
         
         data = np.array(new_data)
-        return data, train_map, val_map, test_map
+        return data, new_train_map, new_val_map, new_test_map
 
     def transform(self, data):
         if self.mode==self.train:
