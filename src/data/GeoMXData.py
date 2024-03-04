@@ -99,44 +99,53 @@ class GeoMXDataset(Dataset):
         return processed_filename
 
     def _create_subgraphs(self, data, train_map, val_map, test_map):
-        if not (os.path.exists(self.processed_path, 'subgraphs') and os.path.isdir(self.processed_path, 'subgraphs')):
-            os.makedirs(self.processed_path, 'subgraphs')
+        if not (os.path.exists(os.path.join(self.processed_path, 'subgraphs')) and os.path.isdir(os.path.join(self.processed_path, 'subgraphs'))):
+            os.makedirs(os.path.join(self.processed_path, 'subgraphs'))
 
         new_data, new_train_map, new_val_map, new_test_map = [], [], [], []
-        for g, graph in enumerate(data):
-            graph = torch.load(os.path.join(self.processed_dir, graph))
-            xmax, xmin, ymax, ymin = torch.max(graph.pos[:,0]), torch.min(graph.pos[:,0]), torch.max(graph.pos[:,1]), torch.min(graph.pos[:,1])
-            # Calculate the step sizes for x and y dimensions
-            step_x = (xmax - xmin) / (self.subgraphs_per_graph ** 0.5 + 1)
-            step_y = (ymax - ymin) / (self.subgraphs_per_graph ** 0.5 + 1)
+        with tqdm(data, total=data.shape[0], desc='Creating Subgraphs...') as data:
+            for g, graph_path in enumerate(data):
+                graph = torch.load(os.path.join(self.processed_dir, graph_path))
+                xmax, xmin, ymax, ymin = torch.max(graph.pos[:,0]), torch.min(graph.pos[:,0]), torch.max(graph.pos[:,1]), torch.min(graph.pos[:,1])
+                # Calculate the step sizes for x and y dimensions
+                step_x = (xmax - xmin) / (self.subgraphs_per_graph ** 0.5 + 1)
+                step_y = (ymax - ymin) / (self.subgraphs_per_graph ** 0.5 + 1)
 
-            # Generate points
-            points = []
-            for i in range(int(self.subgraphs_per_graph ** 0.5)):
-                for j in range(int(self.subgraphs_per_graph ** 0.5)):
-                    x = xmin + i * step_x + step_x / 2
-                    y = ymin + j * step_y + step_y / 2
-                    points.append((x, y))
-            
-            for p, point in enumerate(points):
-                idx = torch.argmin(torch.abs(graph.pos[:0]-point[0]) + torch.abs(graph.pos[:1]-point[1]))
-                subset, edge_index, mapping, edge_mask = torch_geometric.utils.k_hop_subgraph(idx,
-                                                                                              self.num_hops,
-                                                                                              graph.edge_index,
-                                                                                              relabel_nodes=True, 
-                                                                                              directed=False)
-                subgraph = Data(x=data.x[subset],
-                            edge_index=edge_index,
-                            edge_attr=graph.edge_attr[edge_mask],
-                            pos=graph.pos[subset],
-                            cellexpr=graph.cellexpr[subset],
-                            y=torch.sum(graph.cellexpr[subset], axis=0))
-                torch.save(subgraph, os.path.join(self.processed_path, 'subgraph', f'{p:03d}'+graph))
-                new_data.append(os.path.join('subgraph', f'{p:03d}'+graph))
-            
-            new_train_map.extend(train_map[g]*len(points))
-            new_val_map.extend(val_map[g]*len(points))
-            new_test_map.extend(test_map[g]*len(points))
+                # Generate points
+                points = []
+                for i in range(int(self.subgraphs_per_graph ** 0.5)):
+                    for j in range(int(self.subgraphs_per_graph ** 0.5)):
+                        x = xmin + i * step_x + step_x / 2
+                        y = ymin + j * step_y + step_y / 2
+                        points.append((x, y))
+                
+                for p, point in enumerate(points):
+                    idx = torch.argmin(torch.abs(graph.pos[:,0]-point[0]) + torch.abs(graph.pos[:,1]-point[1]))
+                    subset, edge_index, mapping, edge_mask = torch_geometric.utils.k_hop_subgraph(idx.item(),
+                                                                                                self.num_hops,
+                                                                                                graph.edge_index,
+                                                                                                relabel_nodes=True, 
+                                                                                                directed=False)
+                    subgraph = Data(x=graph.x[subset],
+                                edge_index=edge_index,
+                                edge_attr=graph.edge_attr[edge_mask],
+                                pos=graph.pos[subset],
+                                cellexpr=graph.cellexpr[subset],
+                                y=torch.sum(graph.cellexpr[subset], axis=0))
+                    torch.save(subgraph, os.path.join(self.processed_path,
+                                                    'subgraphs',
+                                                    f'{p:03d}'+graph_path.split('/')[-1]))
+                    new_data.append(os.path.join(graph_path.split('/')[0],
+                                                'subgraphs',
+                                                f'{p:03d}'+graph_path.split('/')[-1]))
+                    if g in train_map:
+                        new_train_map.append(len(new_data))
+                    elif g in val_map:
+                        new_val_map.append(len(new_data))
+                    elif g in test_map:
+                        new_test_map.append(len(new_data))
+                    else:
+                        raise Exception(f'Index of {graph_path} not in train/val/test map')
         
         data = np.array(new_data)
         return data, train_map, val_map, test_map
