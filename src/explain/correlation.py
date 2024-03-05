@@ -34,6 +34,6 @@ correlation_data = {
 corr_df = pd.DataFrame(correlation_data)
 
 plt.figure(figsize=(10, 5))
-plt.table(cellText=df.values, colLabels=df.columns, loc='center')
+plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
 plt.axis('off')
 plt.savefig(os.path.join(out, 'corr'+adata_name+'.png'))
