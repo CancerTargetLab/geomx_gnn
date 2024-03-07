@@ -113,9 +113,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                     else:
                         out = model(batch)
                     if is_log:
-                        l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
+                        l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
                     else:
-                        l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
+                        l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
                     l = alpha * l
                     sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))) * beta
                     running_loss += l.item() * out.shape[0]
@@ -176,9 +176,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                         running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
                         running_out = torch.concatenate((running_out, out))
                         if is_log:
-                            l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
+                            l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
                         else:
-                            l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
+                            l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
                         l = alpha * l
                         sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))) * beta
                         running_loss += l.item() * out.shape[0]
@@ -264,9 +264,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                 running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
                 running_out = torch.concatenate((running_out, out))
                 if is_log:
-                    l = loss(torch.log(out), batch.y.view(out.shape[0], out.shape[1]))
+                    l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
                 else:
-                    l = loss(torch.log(out), torch.log(batch.y.view(out.shape[0], out.shape[1])))
+                    l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
                 l = alpha * l
                 sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))) * beta
                 running_loss += l.item() * out.shape[0]
@@ -291,6 +291,6 @@ def train(raw_subset_dir, label_data, output_name, args):
                 print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
             elif model_type.endswith('_zinb'):
                 zinb_loss = running_zinb / num_graphs
-                print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {val_acc:.4f}, Test ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
             else:
                 print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
