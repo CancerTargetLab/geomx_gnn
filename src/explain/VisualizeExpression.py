@@ -121,7 +121,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_ce
         adata.layers['counts'] = adata.X.copy()
         sc.pp.log1p(adata)
         adata.layers['logs'] = adata.X.copy()
-        adata.X = adata.layers['counts'].copy() 
+        adata.X = adata.layers['counts'].copy()
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
