@@ -139,7 +139,6 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_ce
     #with plt.rc_context():
     sc.pl.highly_variable_genes(adata, show=False)
     plt.savefig(os.path.join(figure_dir, f'highly_varible_genes{name}.png'))
-    #plt.save('figures/')
     plt.close()
 
     categories = np.unique(adata.obs['ID'])
