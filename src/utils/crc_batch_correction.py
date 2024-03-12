@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 og_df_name = 'CRC_measurements.csv'
 save = 'figures/crc_og/'
+name = ''
 csv_out = 'data/raw/'
 
 df = pd.read_csv(os.path.join('data/raw/CRC', og_df_name), header=0, sep=',')
@@ -16,13 +17,13 @@ adata.obs['files'] = df['Image'].values
 adata.obs['Centroid.X.px'] = df['Centroid.X.px'].values
 adata.obs['Centroid.Y.px'] = df['Centroid.Y.px'].values
 
-cell_index = np.random.default_rng(42).choice(np.arange(adata.shape[0]), size=50000, replace=False)
-
 sc.pp.calculate_qc_metrics(adata, percent_top=None, log1p=False, inplace=True)
 sc.pl.violin(adata, ['total_counts'], show=False)
 plt.savefig(os.path.join(save, f'total_counts.png'))
 plt.close()
-#adata = adata[adata.obs.total_counts < 200 and adata.obs.total_counts > 135,:]
+#adata = adata[adata.obs.total_counts < 130000,:]# and adata.obs.total_counts > 16000,:]
+
+cell_index = np.random.default_rng(42).choice(np.arange(adata.shape[0]), size=50000, replace=False)
 
 sc.pp.normalize_total(adata)
 sc.pp.log1p(adata)
@@ -44,7 +45,7 @@ sc.pp.pca(adata,
           n_comps=adata.X.shape[1]-1 if adata.X.shape[1]-1 < 30 else 30,
           chunked=True,
           chunk_size=20000,
-          use_highly_variable=True)
+          use_highly_variable=False)
 sc.pl.pca_variance_ratio(adata,
                          log=True,
                          n_pcs=adata.X.shape[1]-1 if adata.X.shape[1]-1 < 30 else 30,
@@ -81,12 +82,12 @@ sc.pp.pca(adata_combat,
           n_comps=adata.X.shape[1]-1 if adata.X.shape[1]-1 < 30 else 30,
           chunked=True,
           chunk_size=20000,
-          use_highly_variable=True)
+          use_highly_variable=False)
 sc.pl.pca_variance_ratio(adata_combat,
                          log=True,
                          n_pcs=adata.X.shape[1]-1 if adata.X.shape[1]-1 < 30 else 30,
                          show=False)
-plt.savefig(os.path.join(save, f'crc_combat_pca_variance.png'))
+plt.savefig(os.path.join(save, f'crc_combat_pca_variance_{name}.png'))
 plt.close()
 s_adata_combat = sc.AnnData(adata_combat.X[cell_index],
                      obs=adata_combat.obs.iloc[cell_index],
@@ -107,8 +108,8 @@ sc.pl.umap(s_adata, color=adata.var_names.values, show=False)
 plt.savefig(os.path.join(save, f'crc_og_subset_umap_expr.png'))
 plt.close()
 sc.pl.umap(s_adata_combat, color='files', show=False)
-plt.savefig(os.path.join(save, f'crc_combat_subset_umap_id.png'))
+plt.savefig(os.path.join(save, f'crc_combat_subset_umap_id_{name}.png'))
 plt.close()
 sc.pl.umap(s_adata_combat, color=adata.var_names.values, show=False)
-plt.savefig(os.path.join(save, f'crc_combat_subset_umap_expr.png'))
+plt.savefig(os.path.join(save, f'crc_combat_subset_umap_expr_{name}.png'))
 plt.close()
