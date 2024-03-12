@@ -49,7 +49,7 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
         plt.xlabel('Epochs')
         plt.title(name)
         plt.legend()
-        plt.savefig(os.path.join(figure_dir, f'{name}_loss.png'))
+        plt.savefig(os.path.join(figure_dir, f'{name}_total_loss.png'))
         plt.close()
     
     if 'train_ph_entropy_list' in model_stuff.keys() and len(model_stuff['train_ph_entropy_list']) > 0:

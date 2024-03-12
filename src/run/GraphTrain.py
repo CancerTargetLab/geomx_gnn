@@ -142,13 +142,13 @@ def train(raw_subset_dir, label_data, output_name, args):
                 if model_type.endswith('_ph'):
                     ph_entropy = running_ph_entropy / num_graphs
                     train_ph_entropy_list.append(ph_entropy)
-                    print(f"Train Loss: {epoch_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train Phenotype Entropy: {ph_entropy:.4f}")
+                    print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train Phenotype Entropy: {ph_entropy:.4f}")
                 elif model_type.endswith('_zinb'):
                     zinb_loss = running_zinb / num_graphs
                     train_zinb_list.append(zinb_loss)
-                    print(f"Train Loss: {epoch_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train ZINB Loss: {zinb_loss:.4f}")
+                    print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train ZINB Loss: {zinb_loss:.4f}")
                 else: 
-                    print(f"Train Loss: {epoch_loss:.4f}, Train Cosine Sim: {train_acc:.4f}")
+                    print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}")
 
             with torch.no_grad():
                 running_loss = 0
@@ -207,13 +207,13 @@ def train(raw_subset_dir, label_data, output_name, args):
                     if model_type.endswith('_ph'):
                         ph_entropy = running_ph_entropy / num_graphs
                         val_ph_entropy_list.append(ph_entropy)                           
-                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                        print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
                     elif model_type.endswith('_zinb'):
                         zinb_loss = running_zinb / num_graphs
                         val_zinb_list.append(zinb_loss)
-                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                        print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
                     else:
-                        print(f"Val Loss: {epoch_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                        print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
 
                     if epoch_loss < best_acc:
                         best_acc = epoch_loss
@@ -288,9 +288,9 @@ def train(raw_subset_dir, label_data, output_name, args):
             statistic, pval = per_gene_pcc(running_out.to('cpu').numpy(), running_y.to('cpu').numpy(), mean=True)
             if model_type.endswith('_ph'):
                 ph_entropy = running_ph_entropy / num_graphs
-                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
             elif model_type.endswith('_zinb'):
                 zinb_loss = running_zinb / num_graphs
-                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {val_acc:.4f}, Test ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {val_acc:.4f}, Test ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
             else:
-                print(f"Test Loss: {epoch_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
