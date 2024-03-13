@@ -109,6 +109,15 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_ce
         cell_index = np.arange(counts.shape[0])
         if select_cells and counts.shape[0] > select_cells:
             cell_index = np.random.default_rng(42).choice(np.arange(counts.shape[0]), size=select_cells, replace=False)
+        
+        adata = sc.AnnData(counts)
+        if cell_class is not None:
+            cell_class = np.array(cell_class)
+            adata.obs['cell_class'] = cell_class
+        adata.obs['ID'] = ids
+        adata.obs['files'] = files
+        adata.var_names = exps
+        adata.write('out/'+name+'_all.h5ad')
 
         adata = sc.AnnData(counts[cell_index])
         if cell_class is not None:

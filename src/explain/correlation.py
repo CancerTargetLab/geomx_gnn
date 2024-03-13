@@ -9,7 +9,7 @@ adata_name = '_crc_lin_sub'
 og_df_name = 'CRC_measurements.csv'
 out = 'figrues/crc_lin_sub'
 
-df = pd.read_csv(os.path.join('data/raw/CRC', adata_name, header=0, sep=','))
+df = pd.read_csv(os.path.join('data/raw/CRC', og_df_name), header=0, sep=',')
 df['Image'] = df['Image'].apply(lambda x: x.split('.')[0])
 df = df.sort_values(by='Image').reset_index(drop=True)
 
