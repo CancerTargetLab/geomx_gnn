@@ -76,7 +76,10 @@ class ContrastiveLearning(torch.nn.Module):
         data = self.res.layer3(data)
         data = self.res.layer4(data)
         data = self.res.avgpool(data)
-        embed = self.embed(data.squeeze())    #TODO: make this a projection head as well?
+        data = data.squeeze()
+        if len(data.shape) == 1:
+            data = data.unsqueeze(0)
+        embed = self.embed(data)    #TODO: make this a projection head as well?
         if self.mode == 'train':
             out = self.head(embed)
             return out
