@@ -46,7 +46,9 @@ class GeoMXDataset(Dataset):
 
         if os.path.exists(self.raw_path) and os.path.isdir(self.raw_path):
             self.cell_pos = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('.csv')][0]
-            self.raw_files = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].apply(lambda x: x.split('.')[0]+'_cells_embed.pt').unique().tolist()
+            self.raw_files = pd.read_csv(os.path.join(self.root_dir, 'raw', self.label_data),
+                                                      header=0,
+                                                      sep=',')['ROI'].apply(lambda x: x.split('.')[0]+'_cells_embed.pt').unique().tolist()
             self.raw_files = [os.path.join(self.raw_path, p) for p in self.raw_files]
             self.raw_files.sort()
         
