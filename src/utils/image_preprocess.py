@@ -34,15 +34,15 @@ def calc_mean_std(image_paths,
     for img_p in tqdm(image_paths, desc='Calculating mean and std for ROIs'):
         img = load_img(img_p, img_channels=img_channels)
         if global_hist is None:
-            global_hist = np.zeros((img.shape[2], max_img+1), dtype=np.uint64)
+            global_hist = np.zeros((img.shape[2], max_img+1))
         for channel in range(img.shape[2]):
             hist, _ = np.histogram(img[:,:,channel], bins=max_img+1, range=(0,max_img))
             global_hist[channel] += hist
 
     pixel_count = np.sum(global_hist[0])
     mean = np.sum(np.arange(max_img+1) * global_hist, axis=1) / pixel_count
-    mean_sq = np.sum((np.arange(max_img+1) * global_hist - mean)**2, axis=1) / pixel_count
-    std = np.sqrt(mean_sq - mean**2)
+    std_sq = np.sum(((np.arange(max_img+1) - mean[:, np.newaxis])**2) * global_hist, axis=1) / pixel_count
+    std = np.sqrt(std_sq)
     
     return mean.astype(np.float32), std.astype(np.float32)
 
