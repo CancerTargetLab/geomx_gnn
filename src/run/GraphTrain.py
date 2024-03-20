@@ -1,7 +1,7 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.models.GraphModel import ROIExpression, ROIExpression_lin
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
-from src.loss.zinb import ZINBLoss
+from src.loss.zinb import ZINBLoss, NBLoss
 from src.utils.setSeed import set_seed
 from src.utils.stats import per_gene_pcc
 from torch_geometric.loader import DataLoader
@@ -54,7 +54,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
                             heads=args['heads_graph'],
-                            zinb=model_type.endswith('_zinb')).to(device, dtype=torch.float32)
+                            mtype=model_type).to(device, dtype=torch.float32)
     elif 'LIN' in model_type:
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
@@ -62,7 +62,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
-                            zinb=model_type.endswith('_zinb')).to(device, dtype=torch.float32)
+                            mtype=model_type).to(device, dtype=torch.float32)
     else:
         raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
@@ -71,6 +71,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     loss = torch.nn.MSELoss()
     similarity = torch.nn.CosineSimilarity()
     zinb = ZINBLoss(ridge_lambda=0.0, device=device)
+    nb = NBLoss(device=device)
 
 
     train_acc_list = []
@@ -110,6 +111,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                     elif model_type.endswith('_zinb'):
                         out, pred, mean, disp, drop = model(batch)
                         loss_zinb = zinb(pred, mean, disp, drop)  * theta
+                    elif model_type.endswith('_nb'):
+                        out, pred, mean, disp = model(batch)
+                        loss_zinb = nb(pred, mean, disp)  * theta
                     else:
                         out = model(batch)
                     if is_log:
@@ -143,7 +147,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                     ph_entropy = running_ph_entropy / num_graphs
                     train_ph_entropy_list.append(ph_entropy)
                     print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train Phenotype Entropy: {ph_entropy:.4f}")
-                elif model_type.endswith('_zinb'):
+                elif model_type.endswith('_zinb') or model_type.endswith('_nb'):
                     zinb_loss = running_zinb / num_graphs
                     train_zinb_list.append(zinb_loss)
                     print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train ZINB Loss: {zinb_loss:.4f}")
@@ -171,6 +175,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                         elif model_type.endswith('_zinb'):
                             out, pred, mean, disp, drop = model(batch)
                             loss_zinb = zinb(pred, mean, disp, drop)  * theta
+                        elif model_type.endswith('_nb'):
+                            out, pred, mean, disp = model(batch)
+                            loss_zinb = nb(pred, mean, disp)  * theta
                         else: 
                             out = model(batch)
                         running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
@@ -208,7 +215,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                         ph_entropy = running_ph_entropy / num_graphs
                         val_ph_entropy_list.append(ph_entropy)                           
                         print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
-                    elif model_type.endswith('_zinb'):
+                    elif model_type.endswith('_zinb') or model_type.endswith('_nb'):
                         zinb_loss = running_zinb / num_graphs
                         val_zinb_list.append(zinb_loss)
                         print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
@@ -221,6 +228,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                         torch.save({
                             "model": model.state_dict(),
                             "opt": optimizer.state_dict(),
+                            "mtype": model_type,
                             "train_acc": train_acc_list,
                             "train_list": train_loss_list,
                             "train_ph_entropy": train_ph_entropy_list,
@@ -259,6 +267,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                 elif model_type.endswith('_zinb'):
                     out, pred, mean, disp, drop = model(batch)
                     loss_zinb = zinb(pred, mean, disp, drop)  * theta
+                elif model_type.endswith('_nb'):
+                    out, pred, mean, disp = model(batch)
+                    loss_zinb = nb(pred, mean, disp)  * theta
                 else:
                     out = model(batch)
                 running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
@@ -289,7 +300,7 @@ def train(raw_subset_dir, label_data, output_name, args):
             if model_type.endswith('_ph'):
                 ph_entropy = running_ph_entropy / num_graphs
                 print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
-            elif model_type.endswith('_zinb'):
+            elif model_type.endswith('_zinb') or model_type.endswith('_nb'):
                 zinb_loss = running_zinb / num_graphs
                 print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {val_acc:.4f}, Test ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
             else:

@@ -178,10 +178,17 @@ class ROIExpression(torch.nn.Module):
                  heads=1,
                  embed_dropout=0.1,
                  conv_dropout=0.1,
-                 zinb=False):
+                 mtype=False):
         super().__init__()
 
-        self.zinb = zinb
+        self.mtype = mtype
+        self.nb = False
+        self.zinb = False
+        if mtype.endswith('_zinb'):
+            self.zinb = True
+            self.nb = True
+        if mtype.endswith('_nb'):
+            self.nb = True
 
         self.gnn = GraphLearning(layers=layers,
                                 num_node_features=num_node_features, 
@@ -197,7 +204,7 @@ class ROIExpression(torch.nn.Module):
                                       output_dim=num_out_features,
                                       num_layers=2)
         
-        if zinb:
+        if self.nb:
             self.mean = torch.nn.Sequential(
                 OrderedDict([
                 ('linear_m', torch.nn.Linear(num_embed_features, num_out_features)),
@@ -209,29 +216,37 @@ class ROIExpression(torch.nn.Module):
                 ('linear_di', torch.nn.Linear(num_embed_features, num_out_features)),
                 ('dispact', DispAct())
                 ]))
-                
+            
+            self.mean.apply(init_weights)
+            self.disp.apply(init_weights)
+
+        if self.zinb: 
             self.drop = torch.nn.Sequential(
                 OrderedDict([
                 ('linear_dr', torch.nn.Linear(num_embed_features, num_out_features)),
                 ('sigmoid', torch.nn.Sigmoid())
                 ]))
-            self.mean.apply(init_weights)
-            self.disp.apply(init_weights)
+            
             self.drop.apply(init_weights)
 
     def forward(self, data, return_cells=False, return_mean=False):#x, edge_index, edge_attr, batch):
         x = self.gnn(data)#x, edge_index, edge_attr)
         pred = self.project(x)
         if return_cells:
-            if self.zinb and return_mean:
+            if self.nb and return_mean:
                 return self.mean(x)
             return torch.abs(pred)
         else:
-            if self.zinb:
+            if self.nb:
                 mean = self.mean(x)
                 disp = self.disp(x)
+            if self.zinb:
                 drop = self.drop(x)
-                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp, drop#TODO
+            
+            if self.nb and not self.zinb:
+                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp
+            elif self.zinb and self.nb:
+                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp, drop
             else:
                 return self.pool(torch.abs(pred), batch=data.batch)
         
@@ -279,9 +294,17 @@ class ROIExpression_lin(torch.nn.Module):
                 num_out_features=128,
                 embed_dropout=0.1,
                 conv_dropout=0.1,
-                zinb=False):
+                mtype=False):
         super().__init__()
-        self.zinb = zinb
+
+        self.mtype = mtype
+        self.nb = False
+        self.zinb = False
+        if mtype.endswith('_zinb'):
+            self.zinb = True
+            self.nb = True
+        if mtype.endswith('_nb'):
+            self.nb = True
 
         self.node_embed = torch.nn.Sequential(
             torch.nn.Linear(num_node_features, num_embed_features),
@@ -298,7 +321,7 @@ class ROIExpression_lin(torch.nn.Module):
         
         self.pool = torch_geometric.nn.pool.global_add_pool
 
-        if zinb:
+        if self.nb:
             self.mean = torch.nn.Sequential(
                 OrderedDict([
                 ('linear_m', torch.nn.Linear(num_embed_features, num_out_features)),
@@ -310,28 +333,36 @@ class ROIExpression_lin(torch.nn.Module):
                 ('linear_di', torch.nn.Linear(num_embed_features, num_out_features)),
                 ('dispact', DispAct())
                 ]))
-                
+            
+            self.mean.apply(init_weights)
+            self.disp.apply(init_weights)
+
+        if self.zinb: 
             self.drop = torch.nn.Sequential(
                 OrderedDict([
                 ('linear_dr', torch.nn.Linear(num_embed_features, num_out_features)),
                 ('sigmoid', torch.nn.Sigmoid())
                 ]))
-            self.mean.apply(init_weights)
-            self.disp.apply(init_weights)
+            
             self.drop.apply(init_weights)
     
     def forward(self, data, return_cells=False, return_mean=False):
         x = self.lin(self.node_embed(data.x))
         pred = self.project(x)
         if return_cells:
-            if self.zinb and return_mean:
+            if self.nb and return_mean:
                 return self.mean(x)
             return torch.abs(pred)
         else:
-            if self.zinb:
+            if self.nb:
                 mean = self.mean(x)
                 disp = self.disp(x)
+            if self.zinb:
                 drop = self.drop(x)
+            
+            if self.nb and not self.zinb:
+                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp
+            elif self.zinb and self.nb:
                 return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp, drop
             else:
                 return self.pool(torch.abs(pred), batch=data.batch)
