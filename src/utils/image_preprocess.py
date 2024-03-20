@@ -30,17 +30,21 @@ def calc_mean_std(image_paths,
                   max_img=2**16,
                   img_channels=''):
     global_hist = None
+    
     for img_p in tqdm(image_paths, desc='Calculating mean and std for ROIs'):
-        img = load_img(img_p, img_channels='')
-        local_hist = [np.histogram(img[:,:,channel], bins=max_img+2, range=(0,max_img+2)) for channel in range(img.shape[2])]
-        if global_hist:
-            global_hist = [np.concatenate((global_hist[channel], local_hist[channel])) for channel in range(len(local_hist))]
-        else:
-            global_hist = local_hist
+        img = load_img(img_p, img_channels=img_channels)
+        if global_hist is None:
+            global_hist = np.zeros((img.shape[2], max_img+1), dtype=np.uint64)
+        for channel in range(img.shape[2]):
+            hist, _ = np.histogram(img[:,:,channel], bins=max_img+1, range=(0,max_img))
+            global_hist[channel] += hist
 
-    mean = np.array([np.mean(hist_chan[0]*hist_chan[1][:hist_chan[1].shape[0]-1]) for hist_chan in global_hist], dtype=np.float32)
-    std = np.array([np.std(hist_chan[0]*hist_chan[1][:hist_chan[1].shape[0]-1]) for hist_chan in global_hist], dtype=np.float32)
-    return mean, std
+    pixel_count = np.sum(global_hist[0])
+    mean = np.sum(np.arange(max_img+1) * global_hist, axis=1) / pixel_count
+    mean_sq = np.sum((np.arange(max_img+1) * global_hist - mean)**2, axis=1) / pixel_count
+    std = np.sqrt(mean_sq - mean**2)
+    
+    return mean.astype(np.float32), std.astype(np.float32)
 
 def zscore(image_paths,
            mean,
