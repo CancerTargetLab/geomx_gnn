@@ -7,7 +7,7 @@ from src.utils.stats import per_gene_corr
 
 adata_name = '_crc_lin_sub'
 og_df_name = 'CRC_measurements.csv'
-out = 'figrues/crc_lin_sub'
+out = 'figures/crc_lin_sub'
 
 df = pd.read_csv(os.path.join('data/raw/CRC', og_df_name), header=0, sep=',')
 df['Image'] = df['Image'].apply(lambda x: x.split('.')[0])
