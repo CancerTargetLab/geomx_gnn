@@ -17,8 +17,8 @@ for csv in csvs:
     if pos_df.shape[0]>0:
         tmp_df = pd.DataFrame()
         tmp_df['Image'] = df['Image']
-        tmp_df['Centroid.X.px'] = df['Xt']
-        tmp_df['Centroid.Y.px'] = df['Yt']
+        tmp_df['Centroid.X.px'] = df['Xt'] / 0.65
+        tmp_df['Centroid.Y.px'] = df['Yt'] / 0.65
         tmp_df['Class'] = ''
         tmp_df[gene_names] = df[gene_names].values
         pos_df = pd.concat([pos_df, tmp_df], ignore_index=True)
@@ -30,8 +30,8 @@ for csv in csvs:
         label_df = pd.concat([label_df, tmp_df], ignore_index=True)
     else:
         pos_df['Image'] = df['Image']
-        pos_df['Centroid.X.px'] = df['Xt']
-        pos_df['Centroid.Y.px'] = df['Yt']
+        pos_df['Centroid.X.px'] = df['Xt'] / 0.65
+        pos_df['Centroid.Y.px'] = df['Yt'] / 0.65
         pos_df['Class'] = ''
         pos_df[gene_names] = df[gene_names].values
 
