@@ -86,7 +86,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     val_total_loss_list = []
     val_pcc_statistic_list = []
     val_pcc_pval_list = []
-    best_acc = 100000000.0
+    best_acc = float('inf')
     best_run = 0
 
     for epoch in list(range(EPOCH)):
