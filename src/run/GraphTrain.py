@@ -68,7 +68,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
     dataset.setMode(dataset.train)
 
-    loss = torch.nn.MSELoss()
+    loss = torch.nn.L1Loss()
     similarity = torch.nn.CosineSimilarity()
     zinb = ZINBLoss(ridge_lambda=0.0, device=device)
     nb = NBLoss(device=device)
@@ -119,7 +119,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                     if is_log:
                         l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
                     else:
-                        l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
+                        l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
                     l = alpha * l
                     sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))) * beta
                     running_loss += l.item() * out.shape[0]
@@ -185,7 +185,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                         if is_log:
                             l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
                         else:
-                            l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
+                            l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
                         l = alpha * l
                         sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))) * beta
                         running_loss += l.item() * out.shape[0]
@@ -277,7 +277,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                 if is_log:
                     l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
                 else:
-                    l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
+                    l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
                 l = alpha * l
                 sim = torch.mean(similarity(out, batch.y.view(out.shape[0], out.shape[1]))) * beta
                 running_loss += l.item() * out.shape[0]
