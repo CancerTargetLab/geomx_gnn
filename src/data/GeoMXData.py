@@ -22,7 +22,8 @@ class GeoMXDataset(Dataset):
                  subgraphs_per_graph=0,
                  num_hops=10,
                  label_data='label_data.csv',
-                 transform=None):
+                 transform=None,
+                 use_embed_image=True):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
         self.processed_path = os.path.join(self.root_dir, 'processed', raw_subset_dir)
@@ -35,6 +36,7 @@ class GeoMXDataset(Dataset):
         self.n_knn = n_knn
         self.subgraphs_per_graph = subgraphs_per_graph
         self.num_hops = num_hops
+        self.use_embed_image = use_embed_image
 
         self.RandomJitter = RandomJitter(self.pixel_pos_jitter)
         self.KNNGraph = KNNGraph(k=self.n_knn, force_undirected=True)
@@ -198,7 +200,10 @@ class GeoMXDataset(Dataset):
         edge_matrix = adata.obsp["spatial_distances"]
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
-        node_features =torch.load(file)[torch.from_numpy(mask.values)]
+        if self.use_embed_image:
+            node_features =torch.load(file)[torch.from_numpy(mask.values)]
+        else: 
+            node_features =torch.load(file.split('_embed')[0]+'pt')[torch.from_numpy(mask.values)]
 
         label = label[label['ROI']==file_prefix]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
