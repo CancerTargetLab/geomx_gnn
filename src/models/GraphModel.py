@@ -2,6 +2,7 @@ import torch
 from torch_geometric.nn import GATv2Conv, Sequential
 import torch_geometric
 from collections import OrderedDict
+from src.models.CellContrastModel import ContrastiveLearning
 
 
 class MeanAct(torch.nn.Module):
@@ -249,41 +250,6 @@ class ROIExpression(torch.nn.Module):
                 return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp, drop
             else:
                 return self.pool(torch.abs(pred), batch=data.batch)
-        
-
-class ROIExpression_ph(ROIExpression):
-    def __init__(self,
-                 layers=1,
-                 num_node_features=256, 
-                 num_edge_features=1,
-                 num_embed_features=128,
-                 num_out_features=128,
-                 heads=1,
-                 embed_dropout=0.1,
-                 conv_dropout=0.1,
-                 num_phenotypes=15,
-                 num_phenotype_layers=2):
-        super().__init__(layers=layers,
-                        num_node_features=num_node_features, 
-                        num_edge_features=num_edge_features,
-                        num_embed_features=num_embed_features,
-                        num_out_features=num_out_features,
-                        heads=heads,
-                        embed_dropout=embed_dropout,
-                        conv_dropout=conv_dropout,)
-
-        
-        self.phenotype = ProjectionHead(input_dim=num_out_features, 
-                                      output_dim=num_phenotypes,
-                                      num_layers=num_phenotype_layers)
-
-    def forward(self, data, return_cells=False):
-        x = self.gnn(data)
-        x = self.project(x)
-        if return_cells:
-            return torch.abs(x)
-        else:
-            return self.pool(torch.abs(x), batch=data.batch), self.phenotype(torch.abs(x))
 
 
 class ROIExpression_lin(torch.nn.Module):
@@ -368,33 +334,6 @@ class ROIExpression_lin(torch.nn.Module):
                 return self.pool(torch.abs(pred), batch=data.batch)
 
 
-class ROIExpression_lin_ph(ROIExpression_lin):
-    def __init__(self,
-                layers=1,
-                num_node_features=256,
-                num_embed_features=128,
-                num_out_features=128,
-                embed_dropout=0.1,
-                conv_dropout=0.1,
-                num_phenotypes=15,
-                num_phenotype_layers=2):
-        super().__init__(layers=layers,
-                num_node_features=num_node_features,
-                num_embed_features=num_embed_features,
-                num_out_features=num_out_features,
-                embed_dropout=embed_dropout,
-                conv_dropout=conv_dropout)
-        
-        self.phenotype = ProjectionHead(input_dim=num_out_features, 
-                                      output_dim=num_phenotypes,
-                                      num_layers=num_phenotype_layers)
-    
-    def forward(self, data):
-        x = self.node_embed(data.x)
-        x = torch.abs(self.project(x))
-        return x, self.phenotype(x)
-
-
 class kTME(torch.nn.Module):
     def __init__(self,
                  k=1,
@@ -439,3 +378,34 @@ class kTME(torch.nn.Module):
             return self.project(x)
         
 
+class ROIExpression_Image_lin(ContrastiveLearning, ROIExpression_lin):
+    def __init__(self,
+                 channels,
+                 embed=256,
+                 contrast=124,
+                 mode='train_combined',
+                 resnet='101',
+                 layers=1,
+                 num_node_features=256,
+                 num_embed_features=128,
+                 num_out_features=128,
+                 embed_dropout=0.1,
+                 conv_dropout=0.1,
+                 mtype=False) -> None:
+        super(ContrastiveLearning, self).__init__(channels=channels,
+                                                embed=embed,
+                                                contrast=contrast,
+                                                mode=mode,
+                                                resnet=resnet)
+        super(ContrastiveLearning, self).__init__(layers=layers,
+                                                num_node_features=num_node_features,
+                                                num_embed_features=num_embed_features,
+                                                num_out_features=num_out_features,
+                                                embed_dropout=embed_dropout,
+                                                conv_dropout=conv_dropout,
+                                                mtype=mtype)
+        
+    def forward(self, data, return_cells=False, return_mean=False):
+        data.x = super(ContrastiveLearning, self).forward(data.x)
+        return super(ROIExpression_lin, self).forward(data, return_cells=return_cells, return_mean=return_mean)
+        
