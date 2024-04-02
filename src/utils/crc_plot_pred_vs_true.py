@@ -30,8 +30,10 @@ colors = np.linspace(0, 1, len(categories))
 colordict = dict(zip(categories, colors))
 adata['Color'] = df['Image'].apply(lambda x: colordict[x])
 
+cell_index = np.random.default_rng(42).choice(np.arange(adata.shape[0]), size=50000, replace=False)
+
 for name in var_names:
-    plt.scatter(df[name].values, adata[name].values, c=adata['Color'].values, cmap='gist_ncar')
+    plt.scatter(df[name].values[cell_index], adata[name].values[cell_index], c=adata['Color'].values[cell_index], cmap='gist_ncar')
     plt.legend()
     plt.xlabel('True value')
     plt.ylabel('Pred value')
