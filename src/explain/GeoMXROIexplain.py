@@ -39,22 +39,27 @@ loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
 def _visualize_graph_via_networkx(
     edge_index: Tensor,
     edge_weight: Tensor,
+    pos: Tensor,
     path: Optional[str] = None,
 ) -> Any:
     import matplotlib.pyplot as plt
     import networkx as nx
 
+    pos = pos.numpy()
     g = nx.DiGraph()
     node_size = 1
 
     for node in edge_index.view(-1).unique().tolist():
         g.add_node(node)
 
-    for (src, dst), w in zip(edge_index.t().tolist(), edge_weight.tolist()):
+    for (src, dst), w in zip(edge_index.tolist(), edge_weight.tolist()):
         g.add_edge(src, dst, alpha=w)
 
     ax = plt.gca()
-    pos = nx.spring_layout(g, )
+    new_pos = {}
+    for i in list(range(pos.shape[0])):
+        new_pos[i] = pos[i]
+    new_pos = pos
     for src, dst, data in g.edges(data=True):
         ax.annotate(
             '',
@@ -93,6 +98,6 @@ with tqdm(loader, total=len(loader), desc=f"Explaining haha") as train_loader:
         #print(f"Feature importance plot has been saved to '{path}'")
 
         path = 'subgraph.pdf'
-        _visualize_graph_via_networkx(explanation.edge_index, explanation.edge_mask, path)
+        _visualize_graph_via_networkx(explanation.edge_index, explanation.edge_mask, batch.pos, path)
         #explanation.visualize_graph(path)
         print(f"Subgraph visualization plot has been saved to '{path}'")
