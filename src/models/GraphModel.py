@@ -378,6 +378,48 @@ class kTME(torch.nn.Module):
             return self.project(x)
         
 
+class ROIExpression_Image_gat(torch.nn.Module):
+    def __init__(self,
+                 channels,
+                 embed=256,
+                 contrast=124,
+                 mode='train_combined',
+                 resnet='101',
+                 layers=1,
+                 num_edge_features=1,
+                 num_embed_features=128,
+                 num_out_features=128,
+                 heads=1,
+                 embed_dropout=0.1,
+                 conv_dropout=0.1,
+                 mtype=False,
+                 path_image_model='',
+                 path_graph_model='') -> None:
+        super().__init()
+        self.image = ContrastiveLearning(channels=channels,
+                                        embed=embed,
+                                        contrast=contrast,
+                                        mode=mode,
+                                        resnet=resnet)
+        self.graph = ROIExpression(layers=layers,
+                                num_node_features=embed,
+                                num_edge_features=num_edge_features,
+                                num_embed_features=num_embed_features,
+                                num_out_features=num_out_features,
+                                heads=heads,
+                                embed_dropout=embed_dropout,
+                                conv_dropout=conv_dropout,
+                                mtype=mtype)
+        if path_image_model:
+            self.image.load_state_dict(torch.load(path_image_model)['model'])
+        if path_graph_model:
+            self.graph.load_state_dict(torch.load(path_graph_model)['model'])
+        
+    def forward(self, data, return_cells=False, return_mean=False):
+        data.x = self.image.forward(data.x)
+        return self.graph.forward(data, return_cells=return_cells, return_mean=return_mean)
+
+
 class ROIExpression_Image_lin(torch.nn.Module):
     def __init__(self,
                  channels,

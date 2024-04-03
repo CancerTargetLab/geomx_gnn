@@ -111,12 +111,16 @@ def parse_args():
                         help="Percentage of dropout chance between layers")
     parser.add_argument("--output_name_graph", type=str, default="out/ROI.pt",
                         help="Name of model")
+    parser.add_argument("--output_graph_embed", type=str, default="out/",
+                        help="Dir in which to embed Cell Expressions")
+    parser.add_argument("--init_image_model", type=str, default="",
+                        help="Dir in which to embed Cell Expressions")
+    parser.add_argument("--init_graph_model", type=str, default="",
+                        help="Dir in which to embed Cell Expressions")
     parser.add_argument("--train_gnn", action="store_true", default=False,
                         help="Wther or not to train the Graph Model")
     parser.add_argument("--embed_gnn_data", action="store_true", default=False,
                         help="Wether or not to embed predicted Cell Expression")
-    parser.add_argument("--output_graph_embed", type=str, default="out/",
-                        help="Dir in which to embed Cell Expressions")
 
     # Arguments for the TME model
     # parser.add_argument("--tme_dir", type=str, default="data/")

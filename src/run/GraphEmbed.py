@@ -1,6 +1,6 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.data.ImageGraphData import ImageGraphDataset
-from src.models.GraphModel import ROIExpression, ROIExpression_lin, ROIExpression_Image_lin
+from src.models.GraphModel import ROIExpression, ROIExpression_lin, ROIExpression_Image_gat, ROIExpression_Image_lin
 from src.utils.setSeed import set_seed
 import torch
 import os
@@ -40,7 +40,23 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                             num_hops=args['num_hops_subgraph'],
                             label_data=label_data)
 
-    if 'GAT' in model_type:
+    if 'IMAGEGAT' in model_type:
+        model = ROIExpression_Image_gat(channels=dataset.get(0).x.shape[0],
+                                        embed=args['embedding_size_image'],
+                                        contrast=args['contrast_size_image'], 
+                                        resnet=args['resnet_model'],
+                                        layers=args['layers_graph'],
+                                        num_node_features=args['num_node_features'],
+                                        num_edge_features=args['num_edge_features'],
+                                        num_embed_features=args['num_embed_features'],
+                                        num_out_features=dataset.get(0).y.shape[0],
+                                        heads=args['heads_graph'],
+                                        embed_dropout=args['embed_dropout_graph'],
+                                        conv_dropout=args['conv_dropout_graph'],
+                                        mtype=model_type,
+                                        path_image_model=args['init_image_model'],
+                                        path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
+    elif 'GAT' in model_type:
         model = ROIExpression(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_edge_features=args['num_edge_features'],
@@ -58,10 +74,12 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                         layers=args['layers_graph'],
                                         num_node_features=args['num_node_features'],
                                         num_embed_features=args['num_embed_features'],
+                                        num_out_features=dataset.get(0).y.shape[0],
                                         embed_dropout=args['embed_dropout_graph'],
                                         conv_dropout=args['conv_dropout_graph'],
-                                        num_out_features=dataset.get(0).y.shape[0],
-                                        mtype=model_type).to(device, dtype=torch.float32)
+                                        mtype=model_type,
+                                        path_image_model=args['init_image_model'],
+                                        path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
     elif 'LIN' in model_type:
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
