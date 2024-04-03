@@ -18,6 +18,8 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     df = df[mask]
 
     img = io.imread(os.path.join('data/raw', raw_subset_dir, name_tiff), plugin='tifffile')
+    if img.shape[0] < img.shape[1] and img.shape[0] < img.shape[2]:
+        img = np.transpose(img, (1,2,0))
 
     counts = np.random.default_rng(42).integers(0, 15, size=(df.shape[0], 1))
 
@@ -44,39 +46,39 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     adata.obs['cluster'] = cluster.obs['leiden'][cluster.obs['prefix']==name_tiff.split('.')[0]].values
 
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
-      os.makedirs(figure_dir)
+        os.makedirs(figure_dir)
 
-    sq.pl.spatial_scatter(adata, 
-                          color="cluster",
-                          size=25,
-                          img_channel=args['vis_channel'])
+    sq.pl.spatial_scatter(adata,
+                            color="cluster",
+                            size=25,
+                            img_channel=args['vis_channel'])
     plt.savefig(os.path.join(figure_dir, f'cluster_{vis_name}_{name_tiff}.png'))
     plt.close()
 
     if len(args['vis_protein']) > 0:
-      proteins = args['vis_protein'].replace('.', ' ').split(',')
-      for prt in proteins:
-        adata.obs[prt] = cluster.X[:,np.argmax(cluster.var_names.values==prt)][cluster.obs['prefix']==name_tiff.split('.')[0]]
-      sq.pl.spatial_scatter(adata, 
+        proteins = args['vis_protein'].replace('.', ' ').split(',')
+        for prt in proteins:
+            adata.obs[prt] = cluster.X[:,np.argmax(cluster.var_names.values==prt)][cluster.obs['prefix']==name_tiff.split('.')[0]]
+        sq.pl.spatial_scatter(adata,
                             color=proteins,
                             size=25,
                             img_channel=args['vis_channel'])
-      plt.savefig(os.path.join(figure_dir, f'cell_expression_pred_{vis_name}_{name_tiff}.png'))
-      plt.close()
+        plt.savefig(os.path.join(figure_dir, f'cell_expression_pred_{vis_name}_{name_tiff}.png'))
+        plt.close()
 
-    sq.pl.spatial_scatter(adata, 
-                          color="cluster",
-                          connectivity_key="spatial_connectivities",
-                          edges_color="grey",
-                          edges_width=1,
-                          size=25,
-                          img_channel=args['vis_channel'])
+    sq.pl.spatial_scatter(adata,
+                            color="cluster",
+                            connectivity_key="spatial_connectivities",
+                            edges_color="grey",
+                            edges_width=1,
+                            size=25,
+                            img_channel=args['vis_channel'])
     plt.savefig(os.path.join(figure_dir, f'cluster_graph_{vis_name}_{name_tiff}.png'))
     plt.close()
 
     if args['vis_all_channels']:
-      for channel in range(img.shape[2]):
-        sq.pl.spatial_scatter(adata,
-                            img_channel=channel)
+        for channel in range(img.shape[2]):
+            sq.pl.spatial_scatter(adata,
+                                img_channel=channel)
         plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}_{name_tiff}.png'))
         plt.close()
