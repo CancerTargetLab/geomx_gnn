@@ -1,5 +1,6 @@
 from src.data.GeoMXData import GeoMXDataset
-from src.models.GraphModel import ROIExpression, ROIExpression_lin
+from src.data.ImageGraphData import ImageGraphDataset
+from src.models.GraphModel import ROIExpression, ROIExpression_lin, ROIExpression_Image_lin
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
 from src.loss.zinb import ZINBLoss, NBLoss
 from src.utils.setSeed import set_seed
@@ -27,17 +28,31 @@ def train(raw_subset_dir, label_data, output_name, args):
     if args['deterministic']:
         set_seed(SEED)
 
-    dataset = GeoMXDataset(root_dir=args['graph_dir'],
-                           raw_subset_dir=raw_subset_dir,
-                           train_ratio=args['train_ratio_graph'],
-                           val_ratio=args['val_ratio_graph'],
-                           node_dropout=args['node_dropout'],
-                           edge_dropout=args['edge_dropout'],
-                           pixel_pos_jitter=args['cell_pos_jitter'],
-                           n_knn=args['cell_n_knn'],
-                           subgraphs_per_graph=args['subgraphs_per_graph'],
-                           num_hops=args['num_hops_subgraph'],
-                           label_data=label_data)
+    if 'IMAGE' in model_type:
+        dataset = ImageGraphDataset(root_dir=args['graph_dir'],
+                                    raw_subset_dir=raw_subset_dir,
+                                    train_ratio=args['train_ratio_graph'],
+                                    val_ratio=args['val_ratio_graph'],
+                                    node_dropout=args['node_dropout'],
+                                    edge_dropout=args['edge_dropout'],
+                                    pixel_pos_jitter=args['cell_pos_jitter'],
+                                    n_knn=args['cell_n_knn'],
+                                    subgraphs_per_graph=args['subgraphs_per_graph'],
+                                    num_hops=args['num_hops_subgraph'],
+                                    label_data=label_data,
+                                    crop_factor=args['crop_factor'])
+    else:
+        dataset = GeoMXDataset(root_dir=args['graph_dir'],
+                            raw_subset_dir=raw_subset_dir,
+                            train_ratio=args['train_ratio_graph'],
+                            val_ratio=args['val_ratio_graph'],
+                            node_dropout=args['node_dropout'],
+                            edge_dropout=args['edge_dropout'],
+                            pixel_pos_jitter=args['cell_pos_jitter'],
+                            n_knn=args['cell_n_knn'],
+                            subgraphs_per_graph=args['subgraphs_per_graph'],
+                            num_hops=args['num_hops_subgraph'],
+                            label_data=label_data)
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     dataset.setMode(dataset.val)
@@ -55,6 +70,18 @@ def train(raw_subset_dir, label_data, output_name, args):
                             num_out_features=dataset.get(0).y.shape[0],
                             heads=args['heads_graph'],
                             mtype=model_type).to(device, dtype=torch.float32)
+    elif 'IMAGELIN' in model_type:
+        model = ROIExpression_Image_lin(channels=dataset.get(0).x.shape[0],
+                                        embed=args['embedding_size_image'],
+                                        contrast=args['contrast_size_image'], 
+                                        resnet=args['resnet_model'],
+                                        layers=args['layers_graph'],
+                                        num_node_features=args['num_node_features'],
+                                        num_embed_features=args['num_embed_features'],
+                                        embed_dropout=args['embed_dropout_graph'],
+                                        conv_dropout=args['conv_dropout_graph'],
+                                        num_out_features=dataset.get(0).y.shape[0],
+                                        mtype=model_type).to(device, dtype=torch.float32)
     elif 'LIN' in model_type:
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],

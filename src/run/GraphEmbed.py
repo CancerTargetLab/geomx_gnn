@@ -1,5 +1,6 @@
 from src.data.GeoMXData import GeoMXDataset
-from src.models.GraphModel import ROIExpression, ROIExpression_lin
+from src.data.ImageGraphData import ImageGraphDataset
+from src.models.GraphModel import ROIExpression, ROIExpression_lin, ROIExpression_Image_lin
 from src.utils.setSeed import set_seed
 import torch
 import os
@@ -13,15 +14,31 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     model_type = args['graph_model_type']
     set_seed(SEED)
 
-    dataset = GeoMXDataset(root_dir=args['graph_dir'],
-                           raw_subset_dir=raw_subset_dir,
-                           train_ratio=args['train_ratio_graph'],
-                           val_ratio=args['val_ratio_graph'],
-                           node_dropout=args['node_dropout'],
-                           edge_dropout=args['edge_dropout'],
-                           pixel_pos_jitter=args['cell_pos_jitter'],
-                           n_knn=args['cell_n_knn'],
-                           label_data=label_data)
+    if 'IMAGE' in model_type:
+        dataset = ImageGraphDataset(root_dir=args['graph_dir'],
+                                    raw_subset_dir=raw_subset_dir,
+                                    train_ratio=args['train_ratio_graph'],
+                                    val_ratio=args['val_ratio_graph'],
+                                    node_dropout=args['node_dropout'],
+                                    edge_dropout=args['edge_dropout'],
+                                    pixel_pos_jitter=args['cell_pos_jitter'],
+                                    n_knn=args['cell_n_knn'],
+                                    subgraphs_per_graph=args['subgraphs_per_graph'],
+                                    num_hops=args['num_hops_subgraph'],
+                                    label_data=label_data,
+                                    crop_factor=args['crop_factor'])
+    else:
+        dataset = GeoMXDataset(root_dir=args['graph_dir'],
+                            raw_subset_dir=raw_subset_dir,
+                            train_ratio=args['train_ratio_graph'],
+                            val_ratio=args['val_ratio_graph'],
+                            node_dropout=args['node_dropout'],
+                            edge_dropout=args['edge_dropout'],
+                            pixel_pos_jitter=args['cell_pos_jitter'],
+                            n_knn=args['cell_n_knn'],
+                            subgraphs_per_graph=args['subgraphs_per_graph'],
+                            num_hops=args['num_hops_subgraph'],
+                            label_data=label_data)
 
     if 'GAT' in model_type:
         model = ROIExpression(layers=args['layers_graph'],
@@ -33,6 +50,18 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                             num_out_features=dataset.get(0).y.shape[0],
                             heads=args['heads_graph'],
                             mtype=model_type).to(device, dtype=torch.float32)
+    elif 'IMAGELIN' in model_type:
+        model = ROIExpression_Image_lin(channels=dataset.get(0).x.shape[0],
+                                        embed=args['embedding_size_image'],
+                                        contrast=args['contrast_size_image'], 
+                                        resnet=args['resnet_model'],
+                                        layers=args['layers_graph'],
+                                        num_node_features=args['num_node_features'],
+                                        num_embed_features=args['num_embed_features'],
+                                        embed_dropout=args['embed_dropout_graph'],
+                                        conv_dropout=args['conv_dropout_graph'],
+                                        num_out_features=dataset.get(0).y.shape[0],
+                                        mtype=model_type).to(device, dtype=torch.float32)
     elif 'LIN' in model_type:
         model = ROIExpression_lin(layers=args['layers_graph'],
                             num_node_features=args['num_node_features'],
@@ -47,4 +76,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     model.load_state_dict(torch.load(model_name)['model'])
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-    dataset.embed(model, output_dir, device='cpu', return_mean=model_type.endswith('_zinb') and 'mean' in model_type)
+    if 'IMAGE' in model_type:
+        dataset.embed(model, output_dir, device='cpu', batch_size=args['batch_size_image'], return_mean='mean' in model_type)
+    else:
+        dataset.embed(model, output_dir, device='cpu', return_mean='mean' in model_type)
