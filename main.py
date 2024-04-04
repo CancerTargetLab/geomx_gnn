@@ -122,35 +122,6 @@ def parse_args():
     parser.add_argument("--embed_gnn_data", action="store_true", default=False,
                         help="Wether or not to embed predicted Cell Expression")
 
-    # Arguments for the TME model
-    # parser.add_argument("--tme_dir", type=str, default="data/")
-    # parser.add_argument("--tme_raw_subset_dir", type=str, default="TMA1_preprocessed")
-    # parser.add_argument("--tme_label_data", type=str, default="OC1_all.csv")
-    # parser.add_argument("--data_is_log_tme", action="store_true", default=False)
-    # parser.add_argument("--batch_size_tme", type=int, default=4)
-    # parser.add_argument("--subgraphs_per_batch_tme", type=int, default=64)
-    # parser.add_argument("--epochs_tme", type=int, default=100)
-    # parser.add_argument("--warmup_epochs_tme", type=int, default=10)
-    # parser.add_argument("--num_workers_tme", type=int, default=1)
-    # parser.add_argument("--lr_tme", type=float, default=0.0001)
-    # parser.add_argument("--early_stopping_tme", type=int, default=10)
-    # parser.add_argument("--train_ratio_tme", type=float, default=0.6)
-    # parser.add_argument("--val_ratio_tme", type=float, default=0.2)
-    # parser.add_argument("--node_dropout_tme", type=float, default=0.3)
-    # parser.add_argument("--edge_dropout_tme", type=float, default=0.5)
-    # parser.add_argument("--num_hops_tme", type=int, default=2)
-    # parser.add_argument("--layers_tme", type=int, default=2)
-    # parser.add_argument("--num_node_features_tme", type=int, default=256)
-    # parser.add_argument("--num_edge_features_tme", type=int, default=1)
-    # parser.add_argument("--num_embed_features_tme", type=int, default=128)
-    # parser.add_argument("--num_out_features_tme", type=int, default=64)
-    # parser.add_argument("--heads_tme", type=int, default=1)
-    # parser.add_argument("--embed_dropout_tme", type=float, default=0.1)
-    # parser.add_argument("--conv_dropout_tme", type=float, default=0.1)
-    # parser.add_argument("--output_name_tme", type=str, default="out/test.pt")
-    # parser.add_argument("--train_tme", action="store_true", default=False)
-    # parser.add_argument("--embed_tme_data", action="store_true", default=False)
-    # parser.add_argument("--output_tme_embed", type=str, default="out/")
 
     parser.add_argument("--deterministic", action="store_true", default=True,
                         help="Wether or not to run NNs deterministicly")
@@ -239,15 +210,6 @@ def main(**args):
                    model_name=args['output_name_graph'],
                    output_dir=args['output_graph_embed'],
                    args=args)
-    # if args['train_tme']:
-    #     from src.run.TMETrain import train as TMETrain
-    #     TMETrain(raw_subset_dir=args['tme_raw_subset_dir'],
-    #             label_data=args['tme_label_data'],
-    #             output_name=args['output_name_tme'],
-    #             args=args)
-    # if args['embed_tme_data']:
-    #     from src.run.TMEEmbed import embed as TMEEmbed
-    #     TMEEmbed(args)
     if args['visualize_expression']:
         from src.explain.VisualizeExpression import visualizeExpression
         visualizeExpression(processed_dir=args['processed_subset_dir'],
