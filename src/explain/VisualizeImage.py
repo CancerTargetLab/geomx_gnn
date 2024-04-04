@@ -20,6 +20,10 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     img = io.imread(os.path.join('data/raw', raw_subset_dir, name_tiff), plugin='tifffile')
     if img.shape[0] < img.shape[1] and img.shape[0] < img.shape[2]:
         img = np.transpose(img, (1,2,0))
+    crop_coord = [(args['vis_img_xcoords'][0], args['vis_img_ycoords'][0],
+                   args['vis_img_xcoords'][1], args['vis_img_ycoords'][1])]
+    if sum(crop_coord[0]) == 0:
+        crop_coord = [(0, 0, img.shape[0], img.shape[1])]
 
     counts = np.random.default_rng(42).integers(0, 15, size=(df.shape[0], 1))
 
@@ -51,7 +55,8 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     sq.pl.spatial_scatter(adata,
                             color="cluster",
                             size=25,
-                            img_channel=args['vis_channel'])
+                            img_channel=args['vis_channel'],
+                            crop_coord=crop_coord)
     plt.savefig(os.path.join(figure_dir, f'cluster_{vis_name}_{name_tiff}.png'))
     plt.close()
 
@@ -62,7 +67,8 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
         sq.pl.spatial_scatter(adata,
                             color=proteins,
                             size=25,
-                            img_channel=args['vis_channel'])
+                            img_channel=args['vis_channel'],
+                            crop_coord=crop_coord)
         plt.savefig(os.path.join(figure_dir, f'cell_expression_pred_{vis_name}_{name_tiff}.png'))
         plt.close()
 
@@ -72,13 +78,15 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                             edges_color="grey",
                             edges_width=1,
                             size=25,
-                            img_channel=args['vis_channel'])
+                            img_channel=args['vis_channel'],
+                            crop_coord=crop_coord)
     plt.savefig(os.path.join(figure_dir, f'cluster_graph_{vis_name}_{name_tiff}.png'))
     plt.close()
 
     if args['vis_all_channels']:
         for channel in range(img.shape[2]):
             sq.pl.spatial_scatter(adata,
-                                img_channel=channel)
+                                img_channel=channel,
+                                crop_coord=crop_coord)
         plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}_{name_tiff}.png'))
         plt.close()

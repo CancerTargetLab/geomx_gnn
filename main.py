@@ -184,6 +184,10 @@ def parse_args():
                         help="Path to output figures to")
     parser.add_argument("--vis_protein", type=str, default="",
                         help="Proteins to visualize Expression over Image of, seperated by ,; . converts to space")
+    parser.add_argument("--vis_img_xcoords", type=tuple, default=(0,0),
+                        help="Image x coords, smaller first")
+    parser.add_argument("--vis_img_ycoords", type=tuple, default=(0,0),
+                        help="Image y coords, smaller first")
     parser.add_argument("--vis_channel", type=int, default=0,
                         help="Image channel to visualize as background")
     parser.add_argument("--vis_all_channels", action="store_true", default=False,
