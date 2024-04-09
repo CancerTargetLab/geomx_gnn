@@ -203,7 +203,7 @@ class GeoMXDataset(Dataset):
         if self.use_embed_image:
             node_features =torch.load(file)[torch.from_numpy(mask.values)]
         else: 
-            node_features =torch.load(file.split('_embed')[0]+'pt')[torch.from_numpy(mask.values)]
+            node_features =torch.load(file.split('_embed')[0]+'.pt')[torch.from_numpy(mask.values)]
 
         label = label[label['ROI']==file_prefix]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
