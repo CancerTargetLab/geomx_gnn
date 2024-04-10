@@ -26,7 +26,8 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                     subgraphs_per_graph=args['subgraphs_per_graph'],
                                     num_hops=args['num_hops_subgraph'],
                                     label_data=label_data,
-                                    crop_factor=args['crop_factor'])
+                                    crop_factor=args['crop_factor'],
+                                    embed=True)
     else:
         dataset = GeoMXDataset(root_dir=args['graph_dir'],
                             raw_subset_dir=raw_subset_dir,
@@ -93,6 +94,6 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     if 'IMAGE' in model_type:
-        dataset.embed(model, output_dir, device='cpu', batch_size=args['batch_size_image'], return_mean='mean' in model_type)
+        dataset.embed(model, output_dir, device=device, batch_size=args['batch_size_image'], return_mean='mean' in model_type)
     else:
         dataset.embed(model, output_dir, device='cpu', return_mean='mean' in model_type)

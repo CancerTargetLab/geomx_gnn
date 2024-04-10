@@ -20,7 +20,8 @@ class ImageGraphDataset(GeoMXDataset):
                  num_hops=10,
                  label_data='label_data.csv',
                  transform=None,
-                 crop_factor=0.5):
+                 crop_factor=0.5,
+                 embed=False):
         super().__init__(root_dir=root_dir,
                         raw_subset_dir=raw_subset_dir,
                         train_ratio=train_ratio,
@@ -37,7 +38,8 @@ class ImageGraphDataset(GeoMXDataset):
         self.crop_factor = crop_factor
         self.data_path = self.data
         self.data_idx = np.array(list(range(self.data.shape[0])))
-        self.data = [torch.load(os.path.join(self.processed_dir, graph)) for graph in self.data]
+        if not embed:
+            self.data = [torch.load(os.path.join(self.processed_dir, graph)) for graph in self.data]
     
     def transform(self, data):
         def img_transform(data):
@@ -75,7 +77,7 @@ class ImageGraphDataset(GeoMXDataset):
     
     def embed(self, model, path, device='cpu', batch_size=256, return_mean=False):
         del self.data
-        self.data = np.ndarray((len(self.data_path)), dtype=str)  #Needed as parent class uses self.data np array of str paths to load data
+        path_list = []  #Needed as parent class uses self.data np array of str paths to load data
 
         self.graph_embed_path = os.path.join(self.processed_path, 'embed')
         if not (os.path.exists(self.graph_embed_path) and os.path.isdir(self.graph_embed_path)):
@@ -95,7 +97,8 @@ class ImageGraphDataset(GeoMXDataset):
                         else:
                             embed[batch_idx*batch_size:] = model.image.forward(data.x[batch_idx*batch_size:].to(device, torch.float32)).to('cpu')
                     data.x = embed
-                    torch.save(data, os.path.join(self.graph_embed_path, dpath.split('/')[-1].split('.')[0]+'_embed.pt'))
-                    self.data[i] = os.path.join(self.graph_embed_path, dpath.split('/')[-1].split('.')[0]+'_embed.pt')
-        super().embed(model=model.graph, path=path, device=device, return_mean=return_mean)
+                    torch.save(data, os.path.join(self.graph_embed_path, dpath.split('/')[-1]))
+                    path_list.append(os.path.join(self.graph_embed_path, dpath.split('/')[-1]))
+                self.data = np.array(path_list)
+        super().embed(model=model.graph, path=path, device='cpu', return_mean=return_mean)
 
