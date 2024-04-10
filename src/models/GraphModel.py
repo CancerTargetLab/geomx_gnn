@@ -351,7 +351,7 @@ class ROIExpression_Image_gat(torch.nn.Module):
                  mtype=False,
                  path_image_model='',
                  path_graph_model='') -> None:
-        super().__init()
+        super().__init__()
         self.image = ContrastiveLearning(channels=channels,
                                         embed=embed,
                                         contrast=contrast,
@@ -391,7 +391,7 @@ class ROIExpression_Image_lin(torch.nn.Module):
                  mtype=False,
                  path_image_model='',
                  path_graph_model='') -> None:
-        super().__init()
+        super().__init__()
         self.image = ContrastiveLearning(channels=channels,
                                         embed=embed,
                                         contrast=contrast,

@@ -61,12 +61,11 @@ def train(raw_subset_dir, label_data, output_name, args):
     test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     if 'IMAGEGAT' in model_type:
-        model = ROIExpression_Image_gat(channels=dataset.get(0).x.shape[0],
+        model = ROIExpression_Image_gat(channels=dataset.get(0).x.shape[1],
                                         embed=args['embedding_size_image'],
                                         contrast=args['contrast_size_image'], 
                                         resnet=args['resnet_model'],
                                         layers=args['layers_graph'],
-                                        num_node_features=args['num_node_features'],
                                         num_edge_features=args['num_edge_features'],
                                         num_embed_features=args['num_embed_features'],
                                         num_out_features=dataset.get(0).y.shape[0],
@@ -87,12 +86,11 @@ def train(raw_subset_dir, label_data, output_name, args):
                             heads=args['heads_graph'],
                             mtype=model_type).to(device, dtype=torch.float32)
     elif 'IMAGELIN' in model_type:
-        model = ROIExpression_Image_lin(channels=dataset.get(0).x.shape[0],
+        model = ROIExpression_Image_lin(channels=dataset.get(0).x.shape[1],
                                         embed=args['embedding_size_image'],
                                         contrast=args['contrast_size_image'], 
                                         resnet=args['resnet_model'],
                                         layers=args['layers_graph'],
-                                        num_node_features=args['num_node_features'],
                                         num_embed_features=args['num_embed_features'],
                                         num_out_features=dataset.get(0).y.shape[0],
                                         embed_dropout=args['embed_dropout_graph'],

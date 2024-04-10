@@ -36,7 +36,8 @@ class ImageGraphDataset(GeoMXDataset):
                         use_embed_image=False)
         self.crop_factor = crop_factor
         self.data_path = self.data
-        self.data = [torch.load(os.path.join(self.processed_dir, self.data[graph])) for graph in self.data]
+        self.data_idx = np.array(list(range(self.data.shape[0])))
+        self.data = [torch.load(os.path.join(self.processed_dir, graph)) for graph in self.data]
     
     def transform(self, data):
         x_lower = int(self.crop_factor * data.shape[-1])
@@ -60,13 +61,13 @@ class ImageGraphDataset(GeoMXDataset):
 
     def get(self, idx):
         if self.mode == self.train:
-            return self.data[self.train_map][idx]
+            return self.data[self.data_idx[self.train_map][idx]]
         elif self.mode == self.val:
-            return self.processed_dir, self.data[self.val_map][idx]
+            return self.data[self.data_idx[self.val_map][idx]]
         elif self.mode == self.test:
-            return self.processed_dir, self.data[self.test_map][idx]
+            return self.data[self.data_idx[self.test_map][idx]]
         else:
-            return self.processed_dir, self.data[idx]
+            return self.data[idx]
     
     def embed(self, model, path, device='cpu', batch_size=256, return_mean=False):
         del self.data
