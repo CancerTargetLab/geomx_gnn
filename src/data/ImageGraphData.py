@@ -81,17 +81,19 @@ class ImageGraphDataset(GeoMXDataset):
         if not (os.path.exists(self.graph_embed_path) and os.path.isdir(self.graph_embed_path)):
             os.makedirs(self.graph_embed_path)
 
+        model = model.to(device)
+
         with torch.no_grad():
             with tqdm(self.data_path, total=len(self.data_path), desc='Save Image embedings') as data_path:
                 for i, dpath in enumerate(data_path):
-                    data = torch.load(os.path.join(dpath))
-                    embed = torch.zeros((data.x.shape[0], model.embed_size), dtype=torch.float32)
-                    num_batches = (data.shape[0] // batch_size) + 1
+                    data = torch.load(os.path.join(self.processed_dir, dpath))
+                    embed = torch.zeros((data.x.shape[0], model.image.embed_size), dtype=torch.float32)
+                    num_batches = (data.x.shape[0] // batch_size) + 1
                     for batch_idx in range(num_batches):
                         if batch_idx < num_batches - 1:
                             embed[batch_idx*batch_size:batch_idx*batch_size+batch_size] = model.image.forward(data.x[batch_idx*batch_size:batch_idx*batch_size+batch_size].to(device, torch.float32)).to('cpu')
                         else:
-                            embed[batch_idx*batch_size:] = model(data.x[batch_idx*batch_size:].to(device, torch.float32)).to('cpu')
+                            embed[batch_idx*batch_size:] = model.image.forward(data.x[batch_idx*batch_size:].to(device, torch.float32)).to('cpu')
                     data.x = embed
                     torch.save(data, os.path.join(self.graph_embed_path, dpath.split('/')[-1].split('.')[0]+'_embed.pt'))
                     self.data[i] = os.path.join(self.graph_embed_path, dpath.split('/')[-1].split('.')[0]+'_embed.pt')
