@@ -97,8 +97,8 @@ class ImageGraphDataset(GeoMXDataset):
                         else:
                             embed[batch_idx*batch_size:] = model.image.forward(data.x[batch_idx*batch_size:].to(device, torch.float32)).to('cpu')
                     data.x = embed
-                    torch.save(data, os.path.join(self.graph_embed_path, dpath.split('/')[-1]))
-                    path_list.append(os.path.join(self.graph_embed_path, dpath.split('/')[-1]))
+                    torch.save(data, os.path.join(self.graph_embed_path, dpath.split('/')[-1].split('.')[0]+'_embed.pt'))
+                    path_list.append(os.path.join(self.graph_embed_path, dpath.split('/')[-1].split('.')[0]+'_embed.pt'))
                 self.data = np.array(path_list)
         super().embed(model=model.graph, path=path, device='cpu', return_mean=return_mean)
 
