@@ -133,7 +133,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_ce
         adata.X = adata.layers['counts'].copy()
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
-        sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+        sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=10, min_disp=0.5)
         
         sc.pp.scale(adata)
         sc.tl.pca(adata, svd_solver='arpack', n_comps=adata.X.shape[1]-1, chunked=True, chunk_size=50000, use_highly_variable=False)
