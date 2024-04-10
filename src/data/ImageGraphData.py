@@ -40,22 +40,26 @@ class ImageGraphDataset(GeoMXDataset):
         self.data = [torch.load(os.path.join(self.processed_dir, graph)) for graph in self.data]
     
     def transform(self, data):
-        x_lower = int(self.crop_factor * data.shape[-1])
-        y_lower = int(self.crop_factor * data.shape[-2])
-        # Generate random integers for x and y within the specified range
-        random_x = random.randint(x_lower, data.shape[-1])
-        random_y = random.randint(y_lower, data.shape[-2])
-        
-        compose = T.Compose([
-            T.RandomCrop((random_y, random_x)),
-            T.Resize((data.shape[-1], data.shape[-2]), antialias=True),
-            T.RandomHorizontalFlip(),
-            T.RandomVerticalFlip(),
-            T.RandomRotation(degrees=90),
-            #T.GaussianBlur(kernel_size=(3,3), sigma=(0.0, 5.))
-        ])
+        def img_transform(data):
+            for img in range(data.shape[0]):
+                x_lower = int(self.crop_factor * data.shape[-1])
+                y_lower = int(self.crop_factor * data.shape[-2])
+                # Generate random integers for x and y within the specified range
+                random_x = random.randint(x_lower, data.shape[-1])
+                random_y = random.randint(y_lower, data.shape[-2])
+                compose = T.Compose([
+                    T.RandomCrop((random_y, random_x)),
+                    T.Resize((data.shape[-1], data.shape[-2]), antialias=True),
+                    T.RandomHorizontalFlip(),
+                    T.RandomVerticalFlip(),
+                    T.RandomRotation(degrees=90),
+                    #T.GaussianBlur(kernel_size=(3,3), sigma=(0.0, 5.))
+                ])
+                data[img] = compose(data[img])
+            return data
+        data.x = data.x.to(torch.float32)
         if self.mode == self.train:
-            data.x = compose(data.x.to(torch.float32))
+            data.x = img_transform(data.x)
         
         return super().transform(data)
 
