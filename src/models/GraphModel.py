@@ -81,8 +81,13 @@ class ProjectionHead(torch.nn.Module):
     https://github.com/google-research/simclr/blob/master/model_util.py#L141
     TODO: graph batch data
     """
-    def __init__(self, input_dim, output_dim, num_layers=2, use_bn=True, use_relu=True):
-        super(ProjectionHead, self).__init__()
+    def __init__(self,
+                 input_dim,
+                 output_dim,
+                 num_layers=2,
+                 use_bn=True,
+                 use_relu=True):
+        super().__init__()
         self.layers = torch.nn.ModuleList()
         dim = input_dim
         for j in range(num_layers):
@@ -102,7 +107,7 @@ class ProjectionHead(torch.nn.Module):
                 self.layers.append(bn_layer)
             
             if bias_relu and use_relu:
-                relu_layer = torch.nn.ReLU()
+                relu_layer = torch.nn.ReLU(inplace=True)
                 self.layers.append(relu_layer)
 
             dim = next_dim
@@ -115,6 +120,23 @@ class ProjectionHead(torch.nn.Module):
         
         return hiddens
 
+
+class LinearBlock(torch.nn.Module):
+    def __init__(self,
+                 input_dim):
+        super().__init__()
+        self.lin = torch.nn.Linear(input_dim,
+                                   input_dim)
+        self.norm = torch.nn.LayerNorm(input_dim)
+        self.relu = torch.nn.ReLU(inplace=True)
+    
+    def forward(self, x):
+        identity = x
+        x = self.lin(x)
+        x = self.norm(x)
+        x += identity
+        x = self.relu(x)
+        return x
 
 class GraphLearning(torch.nn.Module):
     def __init__(self,
@@ -236,7 +258,7 @@ class ROIExpression(torch.nn.Module):
         if return_cells:
             if self.nb and return_mean:
                 return self.mean(x)
-            return torch.abs(pred)
+            return torch.clamp(pred, 0)
         else:
             if self.nb:
                 mean = self.mean(x)
@@ -245,11 +267,11 @@ class ROIExpression(torch.nn.Module):
                 drop = self.drop(x)
             
             if self.nb and not self.zinb:
-                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp
+                return self.pool(torch.clamp(pred, 0), batch=data.batch), torch.clamp(pred, 0), mean, disp
             elif self.zinb and self.nb:
-                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp, drop
+                return self.pool(torch.clamp(pred, 0), batch=data.batch), torch.clamp(pred, 0), mean, disp, drop
             else:
-                return self.pool(torch.abs(pred), batch=data.batch)
+                return self.pool(torch.clamp(pred, 0), batch=data.batch)
 
 
 class ROIExpression_lin(torch.nn.Module):
@@ -279,11 +301,14 @@ class ROIExpression_lin(torch.nn.Module):
             torch.nn.ReLU(inplace=True)
             )
         
-        self.lin = ProjectionHead(input_dim=num_embed_features, 
-                                    output_dim=num_embed_features,
-                                    num_layers=layers)
+        blocks = []
+        for _ in range(layers):
+            blocks.append(LinearBlock(input_dim=num_embed_features))
+        self.lin = torch.nn.Sequential(*blocks)
         
-        self.project = torch.nn.Linear(num_embed_features, num_out_features)
+        self.project = ProjectionHead(input_dim=num_embed_features, 
+                                      output_dim=num_out_features,
+                                      num_layers=2)
         
         self.pool = torch_geometric.nn.pool.global_add_pool
 
@@ -318,7 +343,7 @@ class ROIExpression_lin(torch.nn.Module):
         if return_cells:
             if self.nb and return_mean:
                 return self.mean(x)
-            return torch.abs(pred)
+            return torch.clamp(pred, 0)
         else:
             if self.nb:
                 mean = self.mean(x)
@@ -327,11 +352,11 @@ class ROIExpression_lin(torch.nn.Module):
                 drop = self.drop(x)
             
             if self.nb and not self.zinb:
-                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp
+                return self.pool(torch.clamp(pred, 0), batch=data.batch), torch.clamp(pred, 0), mean, disp
             elif self.zinb and self.nb:
-                return self.pool(torch.abs(pred), batch=data.batch), torch.abs(pred), mean, disp, drop
+                return self.pool(torch.clamp(pred, 0), batch=data.batch), torch.clamp(pred, 0), mean, disp, drop
             else:
-                return self.pool(torch.abs(pred), batch=data.batch)
+                return self.pool(torch.clamp(pred, 0), batch=data.batch)
         
 
 class ROIExpression_Image_gat(torch.nn.Module):
