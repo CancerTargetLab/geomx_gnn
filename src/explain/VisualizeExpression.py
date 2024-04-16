@@ -4,7 +4,7 @@ import seaborn as sns
 import numpy as np
 import scanpy as sc
 import pandas as pd
-from src.utils.stats import per_gene_pcc
+from src.utils.stats import per_gene_corr
 import os
 from tqdm import tqdm
 
@@ -253,6 +253,35 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     plt.savefig(os.path.join(figure_dir, f'cosine_similarity_slides{name}.png'))
     plt.close()
 
+def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
+    adata_y = get_bulk_expression_of(value_dict, IDs, exps, key='y')
+    adata_p = get_bulk_expression_of(value_dict, IDs, exps, key='roi_pred')
+
+    pred = adata_p.X
+    y = adata_y.X
+
+    p_statistic, p_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
+    s_statistic, s_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
+    k_statistic, k_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
+        
+    correlation_data = {
+        'Variable': adata_p.var_names.values,
+        'Pearson Correlation Coef.': [corr for corr in p_statistic],
+        'Pearson p-value': [corr for corr in p_pval],
+        'Spearman Correlation Coef.': [corr for corr in s_statistic],
+        'Spearman p-value': [corr for corr in s_pval],
+        'Kendall Correlation Coef.': [corr for corr in k_statistic],
+        'Kendall p-value': [corr for corr in k_pval]
+    }
+
+    corr_df = pd.DataFrame(correlation_data)
+
+    plt.figure(figsize=(10, 5))
+    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
+    plt.axis('off')
+    plt.savefig(os.path.join(figure_dir, 'corr'+name+'.pdf'))
+    plt.close()
+
 def visualizeExpression(processed_dir='TMA1_processed',
                         embed_dir='out/',
                         label_data='label_data.csv',
@@ -269,4 +298,4 @@ def visualizeExpression(processed_dir='TMA1_processed',
     # visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
     visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_cells)
     visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir)
-
+    visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir)
