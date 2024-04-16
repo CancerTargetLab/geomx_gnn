@@ -32,48 +32,35 @@ def init_weights(layer):
         torch.nn.init.xavier_uniform_(layer.lin_edge.weight)
 
 
-def create_GATv2_conv(num_layers=1,
-                      num_edge_features=1,
-                      num_embed_features=10, 
-                      heads=1,
-                      conv_dropout=0.1,
-                      embed_dropout=0.1,
-                      fill_value=0.0):
-
-            layers = torch.nn.ModuleList()
-
-            for _ in list(range(num_layers)):
-                if heads == 1:
-                    gat_layer = Sequential('x, edge_index, edge_attr', [
-                        (GATv2Conv(num_embed_features, 
-                                        num_embed_features, 
-                                        edge_dim=num_edge_features,
-                                        heads=heads,
-                                        dropout=conv_dropout,
-                                        fill_value=fill_value), 'x, edge_index, edge_attr -> x1'),
-                        (torch_geometric.nn.norm.LayerNorm(num_embed_features*heads)),
-                        (torch.nn.ReLU(inplace=True))
-                    ])
-                    layers.append(gat_layer)
-                else:
-                    gat_layer = Sequential('x, edge_index, edge_attr', [
-                        (GATv2Conv(num_embed_features, 
-                                        num_embed_features, 
-                                        edge_dim=num_edge_features,
-                                        heads=heads,
-                                        dropout=conv_dropout,
-                                        fill_value=fill_value), 'x, edge_index, edge_attr -> x1'),
-                        (torch_geometric.nn.norm.LayerNorm(num_embed_features*heads)),
-                        (torch.nn.ReLU(inplace=True)),
-                        (torch.nn.Linear(heads*num_embed_features, num_embed_features)),
-                        (torch.nn.LayerNorm(num_embed_features)),
-                        #(torch.nn.Dropout(p=embed_dropout, inplace=True)),
-                        (torch.nn.ReLU(inplace=True))
-                        ])
-                    layers.append(gat_layer)
-
-            return layers
-
+class GATBlock(torch.nn.Module):
+    def __init__(self,
+                num_edge_features=1,
+                num_embed_features=10, 
+                heads=1,
+                conv_dropout=0.1,
+                fill_value=0.0):
+        super().__init__()
+        self.gat = GATv2Conv(num_embed_features, 
+                            num_embed_features, 
+                            edge_dim=num_edge_features,
+                            heads=heads,
+                            dropout=conv_dropout,
+                            fill_value=fill_value)
+        self.norm1 = torch_geometric.nn.norm.LayerNorm(num_embed_features*heads)
+        self.lin = torch.nn.Linear(heads*num_embed_features, num_embed_features)
+        self.norm2 = torch_geometric.nn.norm.LayerNorm(num_embed_features)
+        self.relu = torch.nn.ReLU(inplace=True)
+    
+    def forward(self, x, edge_index, edge_attr):
+        identity = x
+        x = self.gat(x, edge_index, edge_attr=edge_attr)
+        x = self.norm1(x)
+        x = self.relu(x)
+        x = self.lin(x)
+        x = self.norm2(x)
+        x += identity
+        x = self.relu(x)
+        return x
 
 class ProjectionHead(torch.nn.Module):
     """
@@ -152,20 +139,21 @@ class GraphLearning(torch.nn.Module):
         self.heads = heads
         # TODO: GraphNorm ?
         self.node_embed = torch.nn.Sequential(
-            torch.nn.Dropout(p=embed_dropout, inplace=True),
             torch.nn.Linear(num_node_features, num_embed_features),
             torch.nn.LayerNorm(num_embed_features),
-            torch.nn.ReLU(inplace=True)
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Dropout(p=embed_dropout, inplace=True)
             )
 
-        self.convs = create_GATv2_conv(num_layers=layers,
-                                       num_embed_features=num_embed_features,
-                                       num_edge_features=num_edge_features,
-                                       heads=heads,
-                                       conv_dropout=conv_dropout,
-                                       embed_dropout=embed_dropout,
-                                       fill_value=0.0)
-        #TODO: skip connec as simple add as well?
+        blocks = []
+        for _ in range(layers):
+            blocks.append(GATBlock(num_embed_features=num_embed_features,
+                                    num_edge_features=num_edge_features,
+                                    heads=heads,
+                                    conv_dropout=conv_dropout,
+                                    fill_value=0.0))
+        self.convs = torch.nn.Sequential(*blocks)
+        
         self.conv_skip = torch_geometric.nn.models.JumpingKnowledge(mode='max')
         
         self.node_embed.apply(init_weights)
@@ -183,7 +171,6 @@ class GraphLearning(torch.nn.Module):
         for conv in list(range(len(self.convs))):
             h_i = self.convs[conv](h_i, edge_index, edge_attr=edge_attr)
 
-            # h = torch.concat((h, h_i), dim=1)
             h.append(h_i)
         
         h = self.conv_skip(h)
