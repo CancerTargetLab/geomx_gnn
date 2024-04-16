@@ -85,7 +85,7 @@ class EmbedDataset(Dataset):
             T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(0.2, 1.0)),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            T.RandomErasing(value=-1),
+            T.RandomErasing(value=0),
             AddGaussianNoiseToRandomChannels(),
             rnd_gausblur
         ])
