@@ -3,8 +3,25 @@ import pandas as pd
 import torch
 import os
 import torchvision.transforms as T
-import random
 from tqdm import tqdm
+
+class AddGaussianNoiseToRandomChannels(object):
+    # Obtained and adapted from ptrblck:
+    # https://discuss.pytorch.org/t/how-to-add-noise-to-mnist-dataset-when-using-pytorch/59745/2
+    def __init__(self, mean=0., std=1., p=0.5):
+        self.std = std
+        self.mean = mean
+        self.p = 0.5
+        
+    def __call__(self, tensor):
+        for channel in range(tensor.shape[0]):
+            if  (torch.randn(1) < self.p).item():
+                tensor[channel] = tensor[channel] + torch.randn(tensor[channel].size()) * self.std + self.mean
+        return tensor
+    
+    def __repr__(self):
+        return self.__class__.__name__ + '(mean={0}, std={1}, p={2})'.format(self.mean, self.std, self.p)
+
 
 class EmbedDataset(Dataset):
     """Face Landmarks dataset."""
@@ -61,19 +78,16 @@ class EmbedDataset(Dataset):
 
 
     def transform(self, data):
-        x_lower = int(self.crop_factor * data.shape[-1])
-        y_lower = int(self.crop_factor * data.shape[-2])
-        # Generate random integers for x and y within the specified range
-        random_x = random.randint(x_lower, data.shape[-1])
-        random_y = random.randint(y_lower, data.shape[-2])
-        
+        gausblur = T.GaussianBlur(kernel_size=int(0.1*data.shape[-1]), sigma=(0.1, 3.))
+        rnd_gausblur = T.RandomApply([gausblur], p=0.5)
+
         compose = T.Compose([
-            T.RandomCrop((random_y, random_x)),
-            T.Resize((data.shape[-1], data.shape[-2]), antialias=True),
+            T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(0.2, 1.0)),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            T.RandomRotation(degrees=90),
-            #T.GaussianBlur(kernel_size=(3,3), sigma=(0.0, 5.))
+            T.RandomErasing(value=-1),
+            AddGaussianNoiseToRandomChannels(),
+            rnd_gausblur
         ])
         x1, x2 = compose(data.to(torch.float32)), compose(data.to(torch.float32))
         return x1, x2
