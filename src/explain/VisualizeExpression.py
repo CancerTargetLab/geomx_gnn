@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 def get_true_graph_expression_dict(path):
     path = os.path.join(os.getcwd(), path)
-    graph_paths = [p for p in os.listdir(path) if p.startswith('graph')]
+    graph_paths = [p for p in os.listdir(path) if 'graph' in p and p.endswith('pt')]
     value_dict = {}
     for graph_p in graph_paths:
         graph = torch.load(os.path.join(path, graph_p), map_location='cpu')
