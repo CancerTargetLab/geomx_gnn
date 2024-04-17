@@ -14,7 +14,7 @@ df = pd.read_csv(os.path.join(dir, m))
 cell_sum = np.sum(df[df.columns.values[4:]].values, axis=1)
 upper_p_num = np.percentile(cell_sum, upper_p)
 lower_p_num = np.percentile(cell_sum, lower_p)
-cell_select = (cell_sum < upper_p_num) or (cell_sum > lower_p_num)
+cell_select = (cell_sum < upper_p_num) & (cell_sum > lower_p_num)
 
 df = df[cell_select]
 
