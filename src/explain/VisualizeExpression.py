@@ -33,10 +33,17 @@ def get_predicted_cell_expression(value_dict, path):
         value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'] = torch.load(os.path.join(path, roi_pred_p), map_location='cpu').squeeze().detach().numpy()
     return value_dict
 
-def get_patient_ids(label_data):
+def get_patient_ids(label_data, keys):
     df = pd.read_csv(os.path.join(os.getcwd(), 'data', 'raw', label_data), header=0, sep=',')
     IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
-    exps = df.columns.values[2:] #TODO: 2: for p2106
+    exps = df.columns.values[2:]
+
+    if len(keys) != IDs.shape[0]:
+        keys.sort()
+        tmp = np.ndarray((len(keys)), dtype=str)
+        for i_key in range(keys):
+            tmp[i_key] = df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID']
+        IDs = tmp
     return IDs, exps
 
 def get_bulk_expression_of(value_dict, IDs, exps, key='y'):
@@ -49,7 +56,7 @@ def get_bulk_expression_of(value_dict, IDs, exps, key='y'):
     files = np.array([])
 
     i = 0
-    for id in np.unique(IDs).tolist():
+    for id in np.unique(IDs).tolist():  #TODO: when subgraphs what then? how to automate instead of manual label creation?
         id_map = IDs==id
         id_keys = rois_np[id_map].tolist()
         for id_key in id_keys:
@@ -279,7 +286,7 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     plt.figure(figsize=(10, 5))
     plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
     plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, 'corr'+name+'.pdf'))
+    plt.savefig(os.path.join(figure_dir, 'corr_area'+name+'.pdf'))
     plt.close()
 
 def visualizeExpression(processed_dir='TMA1_processed',
@@ -291,7 +298,7 @@ def visualizeExpression(processed_dir='TMA1_processed',
     value_dict = get_true_graph_expression_dict(os.path.join('data/processed', processed_dir))
     value_dict = get_predicted_graph_expression(value_dict, embed_dir)
     value_dict = get_predicted_cell_expression(value_dict, embed_dir)
-    IDs, exps = get_patient_ids(label_data)
+    IDs, exps = get_patient_ids(label_data, list(value_dict.keys()))
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
         os.makedirs(figure_dir)
     # visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
