@@ -38,7 +38,7 @@ def get_patient_ids(label_data, keys):
     IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
     exps = df.columns.values[2:]
 
-    if len(keys) != IDs.shape[0]:
+    if len(keys) != IDs.shape[0] and keys[0] not in df['ROI'].values.tolist():
         keys.sort()
         tmp = np.ndarray((len(keys)), dtype=str)
         for i_key in range(keys):
