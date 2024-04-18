@@ -88,7 +88,7 @@ def parse_args():
     parser.add_argument("--num_hops_subgraph", type=int, default=10,
                         help="Number of hops to create subgraph neighborhoods")
     parser.add_argument("--graph_model_type", type=str, default="GAT",
-                        help="Type of Model to train, one of GAT, GAT_ph, LIN, LIN_ph")
+                        help="TType of Model to train, one of {IMAGE}GAT+{_ph , _NB , _ZINB}, {IMAGE}LINT+{_ph , _nb , _zinb}. When IMAGE in name, then model is trained together with an Image Model. When _ph, _nb, _zinb or name, entropy Loss, NB Loss or ZiNB Loss gets calculated on predicted Cell Expression.")
     parser.add_argument("--graph_mse_mult", type=float, default=1.0,
                         help="Multiplier for MSE Loss")
     parser.add_argument("--graph_cos_sim_mult", type=float, default=1.0,
@@ -114,11 +114,11 @@ def parse_args():
     parser.add_argument("--output_graph_embed", type=str, default="out/",
                         help="Dir in which to embed Cell Expressions")
     parser.add_argument("--init_image_model", type=str, default="",
-                        help="Dir in which to embed Cell Expressions")
+                        help="Name of pre-trained Image model to load. If not used, train from scratch. Only used when IMAGE in modeltype")
     parser.add_argument("--init_graph_model", type=str, default="",
-                        help="Dir in which to embed Cell Expressions")
+                        help="Name of pre-trained Graph model to load. If empty, train from scratch. Only used when IMAGE in modeltype")
     parser.add_argument("--train_gnn", action="store_true", default=False,
-                        help="Wther or not to train the Graph Model")
+                        help="Wether or not to train the Graph Model")
     parser.add_argument("--embed_gnn_data", action="store_true", default=False,
                         help="Wether or not to embed predicted Cell Expression")
 
