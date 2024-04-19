@@ -26,7 +26,7 @@ Now we are ready to go!
 
 ## Preprocessing
 The first process is to normalize Image data and uniformly cut out Cells:  
-```py
+```sh
 python -m --image_preprocess --preprocess_dir 'data/raw/{EXPERIMENT NAME}/' --cell_cutout 34 --preprocess_workers 26 --preprocess_channels 0,10,14,19 --preprocess_mean_std_dir 'data/raw/{EXPERIMENT NAME}/'
 ```
 - `--image_preprocess`:  
@@ -54,7 +54,7 @@ Seed for random computations.
 ## Cell Contrastive Learning
 
 Next, we learn Visual Representations of Cells via Contrastive learning:  
-```py
+```sh
 python -m main --train_image_model --embed_image_data --output_name_image 'out/models/image_contrast_model.pt' --image_dir 'data/raw/{EXPERIMENT NAME}/' --resnet_model '18' --batch_size_image 4096 --epochs_image 100 --warmup_epochs_image 10 --num_workers_image 25 --lr_image 0.1 --embedding_size_image 32 --contrast_size_image 16 --early_stopping_image 100 --crop_factor 0.2 --train_ratio_image 0.6 --val_ratio_image 0.2
 ```
 
@@ -96,7 +96,7 @@ We extract visual representations after training a model to learn visual represe
 ## Learning to predict SC Expression
 
 Next, we learn what each Cell contributes to the Count Data of an Image:  
-```py
+```sh
 python -m main --train_gnn --embed_gnn_data --output_name_graph 'out/models/image_graph_model.pt' --output_graph_embed '/out/graph_model/' --init_image_model 'out/models/image_contrast_model.pt' --init_graph_model 'out/models/graph_model.pt' --graph_dir 'data/' --graph_raw_subset_dir '{EXPERIMENT NAME}' --graph_label_data '{label}.csv'  --batch_size_graph 64 --epochs_graph 1000 --num_workers_graph 12 --lr_graph 0.005 --early_stopping_graph 50 --train_ratio_graph 0.6 --val_ratio_graph 0.2 --node_dropout 0.0 --edge_dropout 0.3 --cell_pos_jitter 40 --cell_n_knn 6 --subgraphs_per_graph 0 --num_hops_subgraph 11 --graph_model_type 'GAT' --graph_mse_mult 1 --graph_cos_sim_mult 1 --graph_entropy_mult 1 --layers_graph 3 --num_node_features 32 --num_edge_features 1 --num_embed_features 128 --heads_graph 4 --embed_dropout_graph 0.1 --conv_dropout_graph 0.1
 ```
 
@@ -170,7 +170,7 @@ Percentage of dropout chance between layers.
 After training a model to predict the Expression of Single Cells, the predicted Expression of all Single Cells in the specified directory in which is trained get embeded in the specified output graph embed directory. Each graph gets embedded seperatly in shape `(Number of Cells, Number of Genes/Transcripts/Proteins/...)`. It is important to note that models trained on subgraphs will embed subgraphs, if the embedding is not done in a seperate call where `--subgraphs_per_graph` is set to 0. Subgraphs are stored in `processed/subgraphs/` if created.
 ## Visualizing Model runs
 Model runs can be visualized as follows:  
-```py
+```sh
 python -m main --visualize_model_run --model_path 'out/models/graph_model.pt' --output_model_name 'Image Contrast Model' --figure_model_dir 'figures/graph_model/' --is_cs
 ```
 
@@ -188,7 +188,7 @@ Wether or not Cosine Similarity is used or Contrast Loss.
 ## Visualizing Expression Data
 
 The predicted single cell Expression can be visualized:
-```py
+```sh
 python -m main --visualize_expression --vis_label_data '{label}.csv' --processed_subset_dir '{EXPERIMENT NAME}' --figure_dir 'figures/graph_model/' --embed_dir 'out/graph_model/' --vis_select_cells 50000 --vis_name '_graph_model'
 ```
 
@@ -210,7 +210,7 @@ Name added to figures name, saves processed data as `{NAME}.h5ad` in `out/`. Add
 ## Visualizing Spatialomics
 
 The predicted single cell Expression can be also visualized on the Images themselfs:  
-```py
+```sh
 python -m main --visualize_image --vis_img_raw_subset_dir '{EXPERIMENT NAME}' --name_tiff 'CRC02.ome.tif' --figure_img_dir 'figures/graph_model/' --vis_protein 'CD45,CD8,Keratin,Ki67,Fibronectin,Some.Name' --vis_img_xcoords (0,0) --vis_img_ycoords (0,0) --vis_channel 0 --vis_all_channels --vis_name '_graph_model'
 ```
 
@@ -235,6 +235,6 @@ Wether or not to visualize all Image channels on their own.
 - `--vis_name`:  
 Name of `{NAME}.h5ad` produced via visualizing expression, needs to be given.
 
-## Tutorial
+## Reproduce
 
-Tutorials to repreduce our results can be found in the `tutorials/` directory.
+Tutorials to repreduce our results can be found in the `reproduce/` directory.
