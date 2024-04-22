@@ -286,7 +286,7 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     plt.figure(figsize=(10, 5))
     plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
     plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, 'corr_area'+name+'.pdf'))
+    plt.savefig(os.path.join(figure_dir, f'corr_area{name}.pdf'))
     plt.close()
 
 def visualizeExpression(processed_dir='TMA1_processed',
