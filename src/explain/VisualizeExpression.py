@@ -41,8 +41,8 @@ def get_patient_ids(label_data, keys):
     if len(keys) != IDs.shape[0] and keys[0] not in df['ROI'].values.tolist():
         keys.sort()
         tmp = np.ndarray((len(keys)), dtype=str)
-        for i_key in range(keys):
-            tmp[i_key] = df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID']
+        for i_key in range(len(keys)):
+            tmp[i_key] = df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID'].values[0]
         IDs = tmp
     return IDs, exps
 
