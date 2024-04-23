@@ -67,6 +67,9 @@ class GeoMXDataset(Dataset):
         IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
         un_IDs = np.unique(IDs)
 
+        sf = df[df.columns[2:].values].values
+        self.sf = torch.fromnumpy(np.sum(sf)/np.sum(sf, axis=0)).to(torch.float32)
+
         total_samples = un_IDs.shape[0]
         train_size = int(train_ratio * total_samples)
         val_size = int(val_ratio * total_samples)
