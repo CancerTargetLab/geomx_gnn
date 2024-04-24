@@ -141,8 +141,8 @@ class GraphLearning(torch.nn.Module):
         self.node_embed = torch.nn.Sequential(
             torch.nn.Linear(num_node_features, num_embed_features),
             torch.nn.LayerNorm(num_embed_features),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Dropout(p=embed_dropout, inplace=True)
+            torch.nn.ReLU(),
+            torch.nn.Dropout(p=embed_dropout)
             )
 
         blocks = []
