@@ -29,9 +29,12 @@ def get_predicted_graph_expression(value_dict, path):
 def get_predicted_cell_expression(value_dict, path):
     path = os.path.join(os.getcwd(), path)
     cell_pred_paths = [p for p in os.listdir(path) if p.startswith('cell_pred')]
+    num_cells = 0
     for roi_pred_p in cell_pred_paths:
         value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'] = torch.load(os.path.join(path, roi_pred_p), map_location='cpu').squeeze().detach().numpy()
-    return value_dict
+        num_cells += value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'].shape[0]
+    cell_shapes = (num_cells, value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'].shape[1])
+    return value_dict, cell_shapes
 
 def get_patient_ids(label_data, keys):
     df = pd.read_csv(os.path.join(os.getcwd(), 'data', 'raw', label_data), header=0, sep=',')
@@ -82,30 +85,32 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
-def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_cells=50000):
+def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shapes, select_cells=50000):
     if os.path.exists('out/'+name+'.h5ad'):
         adata = sc.read_h5ad('out/'+name+'.h5ad')
     else:
         rois = list(value_dict.keys())
         rois.sort()
         rois_np = np.array(rois)
-        counts = None
+        counts = np.zeros(cell_shapes, dtype=np.float32)
         cell_class = None
         ids = np.array([])
         files = np.array([])
 
         i = 0
+        num_cells = 0
         key = 'cell_pred'
         for id in np.unique(IDs).tolist():
             id_map = IDs==id
             id_keys = rois_np[id_map].tolist()
             for id_key in id_keys:
-                if counts is not None:
-                    counts = np.concatenate((counts, value_dict[id_key][key]))
+                tmp_counts = value_dict[id_key][key]
+                counts[num_cells:num_cells+tmp_counts.shape[0],:] = tmp_counts
+                num_cells += tmp_counts.shape[0]
+                if num_cells != 0:
                     if ('cell_class' in value_dict[id_key].keys()) and cell_class is not None:
                         cell_class = np.concatenate((cell_class, value_dict[id_key]['cell_class']))
                 else:
-                    counts = value_dict[id_key][key]
                     if ('cell_class' in value_dict[id_key].keys()):
                         cell_class = value_dict[id_key]['cell_class']
                 ids = np.concatenate((ids, np.array([id]*value_dict[id_key][key].shape[0])))
@@ -297,12 +302,12 @@ def visualizeExpression(processed_dir='TMA1_processed',
                         select_cells=50000):
     value_dict = get_true_graph_expression_dict(os.path.join('data/processed', processed_dir))
     value_dict = get_predicted_graph_expression(value_dict, embed_dir)
-    value_dict = get_predicted_cell_expression(value_dict, embed_dir)
+    value_dict, cell_shapes = get_predicted_cell_expression(value_dict, embed_dir)
     IDs, exps = get_patient_ids(label_data, list(value_dict.keys()))
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
         os.makedirs(figure_dir)
     # visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
     # visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
-    visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, select_cells)
+    visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shapes, select_cells)
     visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir)
     visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir)
