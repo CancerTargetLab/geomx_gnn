@@ -90,7 +90,7 @@ class ProjectionHead(torch.nn.Module):
             linear_layer = torch.nn.Linear(dim, next_dim, bias=bias_relu)
             self.layers.append(linear_layer)
             if use_bn and bias_relu:
-                bn_layer = torch_geometric.nn.norm.BatchNorm(next_dim)
+                bn_layer = torch.nn.LayerNorm(next_dim)
                 self.layers.append(bn_layer)
             
             if bias_relu and use_relu:
@@ -141,8 +141,8 @@ class GraphLearning(torch.nn.Module):
         self.node_embed = torch.nn.Sequential(
             torch.nn.Linear(num_node_features, num_embed_features),
             torch.nn.LayerNorm(num_embed_features),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(p=embed_dropout)
+            torch.nn.Dropout(p=embed_dropout, inplace=True),
+            torch.nn.ReLU(inplace=True)
             )
 
         blocks = []
