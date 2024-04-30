@@ -88,5 +88,5 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
             sq.pl.spatial_scatter(adata,
                                 img_channel=channel,
                                 crop_coord=crop_coord)
-        plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}_{name_tiff}.png'))
-        plt.close()
+            plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}_{name_tiff}.png'))
+            plt.close()
