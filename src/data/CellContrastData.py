@@ -78,7 +78,7 @@ class EmbedDataset(Dataset):
 
 
     def transform(self, data):
-        gausblur = T.GaussianBlur(kernel_size=int(0.1*data.shape[-1]), sigma=(0.1, 3.))
+        gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
         rnd_gausblur = T.RandomApply([gausblur], p=0.5)
 
         compose = T.Compose([
