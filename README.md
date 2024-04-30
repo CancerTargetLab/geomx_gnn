@@ -211,7 +211,7 @@ Name added to figures name, saves processed data as `{NAME}.h5ad` in `out/`. Add
 
 The predicted single cell Expression can be also visualized on the Images themselfs:  
 ```sh
-python -m main --visualize_image --vis_img_raw_subset_dir '{EXPERIMENT NAME}' --name_tiff 'CRC02.ome.tif' --figure_img_dir 'figures/graph_model/' --vis_protein 'CD45,CD8,Keratin,Ki67,Fibronectin,Some.Name' --vis_img_xcoords (0,0) --vis_img_ycoords (0,0) --vis_channel 0 --vis_all_channels --vis_name '_graph_model'
+python -m main --visualize_image --vis_img_raw_subset_dir '{EXPERIMENT NAME}' --name_tiff 'CRC02.ome.tif' --figure_img_dir 'figures/graph_model/' --vis_protein 'CD45,CD8,Keratin,Ki67,Fibronectin,Some.Name' --vis_img_xcoords 0 0 --vis_img_ycoords 0 0  --vis_channel 0 --vis_all_channels --vis_name '_graph_model'
 ```
 
 - `--visualize_image`:  

@@ -128,6 +128,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
             adata.obs['cell_class'] = cell_class
         adata.obs['ID'] = ids
         adata.obs['files'] = files
+        adata.obs['leiden'] = -1
         adata.var_names = exps
         adata.write('out/'+name+'_all.h5ad')
 
