@@ -214,6 +214,8 @@ class ROIExpression(torch.nn.Module):
                                       output_dim=num_out_features,
                                       num_layers=2)
         
+        self.mean_act = MeanAct()
+
         if self.nb:
             self.mean = torch.nn.Sequential(
                 OrderedDict([
@@ -245,7 +247,7 @@ class ROIExpression(torch.nn.Module):
         if return_cells:
             if self.nb and return_mean:
                 return self.mean(x)
-            return torch.clamp(pred, 0)
+            return self.mean_act(pred)
         else:
             if self.nb:
                 mean = self.mean(x)
@@ -254,11 +256,11 @@ class ROIExpression(torch.nn.Module):
                 drop = self.drop(x)
             
             if self.nb and not self.zinb:
-                return self.pool(torch.clamp(pred, 0), batch=data.batch), torch.clamp(pred, 0), mean, disp
+                return self.pool(self.mean_act(pred), batch=data.batch), self.mean_act(pred), mean, disp
             elif self.zinb and self.nb:
-                return self.pool(torch.clamp(pred, 0), batch=data.batch), torch.clamp(pred, 0), mean, disp, drop
+                return self.pool(self.mean_act(pred), batch=data.batch), self.mean_act(pred), mean, disp, drop
             else:
-                return self.pool(torch.clamp(pred, 0), batch=data.batch)
+                return self.pool(self.mean_act(pred), batch=data.batch)
 
 
 class ROIExpression_lin(torch.nn.Module):
@@ -299,6 +301,8 @@ class ROIExpression_lin(torch.nn.Module):
         
         self.pool = torch_geometric.nn.pool.global_add_pool
 
+        self.mean_act = MeanAct()
+
         if self.nb:
             self.mean = torch.nn.Sequential(
                 OrderedDict([
@@ -330,7 +334,7 @@ class ROIExpression_lin(torch.nn.Module):
         if return_cells:
             if self.nb and return_mean:
                 return self.mean(x)
-            return torch.clamp(pred, 0)
+            return self.mean_act(pred)
         else:
             if self.nb:
                 mean = self.mean(x)
@@ -339,11 +343,11 @@ class ROIExpression_lin(torch.nn.Module):
                 drop = self.drop(x)
             
             if self.nb and not self.zinb:
-                return self.pool(torch.clamp(pred, 0), batch=data.batch), torch.clamp(pred, 0), mean, disp
+                return self.pool(self.mean_act(pred), batch=data.batch), self.mean_act(pred), mean, disp
             elif self.zinb and self.nb:
-                return self.pool(torch.clamp(pred, 0), batch=data.batch), torch.clamp(pred, 0), mean, disp, drop
+                return self.pool(self.mean_act(pred), batch=data.batch), self.mean_act(pred), mean, disp, drop
             else:
-                return self.pool(torch.clamp(pred, 0), batch=data.batch)
+                return self.pool(self.mean_act(pred), batch=data.batch)
         
 
 class ROIExpression_Image_gat(torch.nn.Module):
