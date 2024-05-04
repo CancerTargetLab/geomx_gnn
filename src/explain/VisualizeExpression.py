@@ -288,6 +288,9 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     }
 
     corr_df = pd.DataFrame(correlation_data)
+    mean_values = corr_df.mean()
+    mean_row = pd.DataFrame({'Variable': 'mean', **mean_values}, index=[0])
+    corr_df = pd.concat([mean_row, corr_df], ignore_index=True)
 
     plt.figure(figsize=(10, 5))
     plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
