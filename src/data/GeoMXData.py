@@ -225,7 +225,7 @@ class GeoMXDataset(Dataset):
             else:
                 data = Data(x=node_features,
                             edge_index=edge_index,
-                            edge_attr=edge_attr,
+                            edge_attr=edge_attr.to(torch.float32),
                             pos=torch.from_numpy(coordinates).to(torch.float32),
                             y=label,
                             cellexpr=cellexpr)
