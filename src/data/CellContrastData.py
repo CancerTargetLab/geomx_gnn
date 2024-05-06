@@ -82,7 +82,7 @@ class EmbedDataset(Dataset):
         rnd_gausblur = T.RandomApply([gausblur], p=0.5)
 
         compose = T.Compose([
-            T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0)),
+            T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
             T.RandomErasing(value=0),

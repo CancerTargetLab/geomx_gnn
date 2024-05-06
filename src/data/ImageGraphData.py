@@ -5,6 +5,7 @@ from tqdm import tqdm
 import torchvision.transforms as T
 import random
 from src.data.GeoMXData import GeoMXDataset
+from src.data.CellContrastData import AddGaussianNoiseToRandomChannels
 
 class ImageGraphDataset(GeoMXDataset):
     def __init__(self, 
@@ -43,19 +44,16 @@ class ImageGraphDataset(GeoMXDataset):
     
     def transform(self, data):
         def img_transform(data):
+            gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
+            rnd_gausblur = T.RandomApply([gausblur], p=0.5)
             for img in range(data.shape[0]):
-                x_lower = int(self.crop_factor * data.shape[-1])
-                y_lower = int(self.crop_factor * data.shape[-2])
-                # Generate random integers for x and y within the specified range
-                random_x = random.randint(x_lower, data.shape[-1])
-                random_y = random.randint(y_lower, data.shape[-2])
                 compose = T.Compose([
-                    T.RandomCrop((random_y, random_x)),
-                    T.Resize((data.shape[-1], data.shape[-2]), antialias=True),
+                    T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
                     T.RandomHorizontalFlip(),
                     T.RandomVerticalFlip(),
-                    T.RandomRotation(degrees=90),
-                    #T.GaussianBlur(kernel_size=(3,3), sigma=(0.0, 5.))
+                    T.RandomErasing(value=0),
+                    #AddGaussianNoiseToRandomChannels(),
+                    rnd_gausblur
                 ])
                 data[img] = compose(data[img])
             return data
