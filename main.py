@@ -58,8 +58,8 @@ def parse_args():
                         help="How the subdir in raw/ and processed/ is called")
     parser.add_argument("--graph_label_data", type=str, default="OC1_all.csv",
                         help=".csv label data in the raw dir containing count data")
-    parser.add_argument("--data_is_log_graph", action="store_true", default=False,
-                        help="Wether or not the count data is log or not")
+    parser.add_argument("--data_use_log_graph", action="store_true", default=False,
+                        help="Wether or not to log count data when calulating loss")
     parser.add_argument("--batch_size_graph", type=int, default=1,
                         help="Number of Graphs per Batch")
     parser.add_argument("--epochs_graph", type=int, default=100,
@@ -88,7 +88,7 @@ def parse_args():
     parser.add_argument("--num_hops_subgraph", type=int, default=10,
                         help="Number of hops to create subgraph neighborhoods")
     parser.add_argument("--graph_model_type", type=str, default="GAT",
-                        help="TType of Model to train, one of {IMAGE}GAT+{_ph , _NB , _ZINB}, {IMAGE}LINT+{_ph , _nb , _zinb}. When IMAGE in name, then model is trained together with an Image Model. When _ph, _nb, _zinb or name, entropy Loss, NB Loss or ZiNB Loss gets calculated on predicted Cell Expression.")
+                        help="Type of Model to train, one of {IMAGE}GAT+{_ph , _NB , _ZINB}, {IMAGE}LINT+{_ph , _nb , _zinb}. When IMAGE in name, then model is trained together with an Image Model. When _ph, _nb, _zinb or name, entropy Loss, NB Loss or ZiNB Loss gets calculated on predicted Cell Expression.")
     parser.add_argument("--graph_mse_mult", type=float, default=1.0,
                         help="Multiplier for MSE Loss")
     parser.add_argument("--graph_cos_sim_mult", type=float, default=1.0,

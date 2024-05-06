@@ -18,7 +18,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     lr = args['lr_graph']
     num_workers = args['num_workers_graph']
     early_stopping = args['early_stopping_graph']
-    is_log = args['data_is_log_graph']
+    is_log = args['data_use_log_graph']
     alpha = args['graph_mse_mult']
     beta = args['graph_cos_sim_mult']
     theta = args['graph_entropy_mult']
@@ -161,7 +161,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                     else:
                         out = model(batch)
                     if is_log:
-                        l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
+                        l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
                     else:
                         l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
                     l = alpha * l
@@ -227,7 +227,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                         running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
                         running_out = torch.concatenate((running_out, out))
                         if is_log:
-                            l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
+                            l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
                         else:
                             l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
                         l = alpha * l
@@ -319,7 +319,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                 running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
                 running_out = torch.concatenate((running_out, out))
                 if is_log:
-                    l = loss(torch.log(out+1), batch.y.view(out.shape[0], out.shape[1]))
+                    l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
                 else:
                     l = loss(out, batch.y.view(out.shape[0], out.shape[1]))
                 l = alpha * l
