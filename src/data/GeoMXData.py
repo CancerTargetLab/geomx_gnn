@@ -68,7 +68,7 @@ class GeoMXDataset(Dataset):
         un_IDs = np.unique(IDs)
 
         sf = df[df.columns[2:].values].values
-        self.sf = torch.fromnumpy(np.sum(sf)/np.sum(sf, axis=0)).to(torch.float32)
+        self.sf = torch.from_numpy(np.sum(sf)/np.sum(sf, axis=0)).to(torch.float32)
 
         total_samples = un_IDs.shape[0]
         train_size = int(train_ratio * total_samples)
