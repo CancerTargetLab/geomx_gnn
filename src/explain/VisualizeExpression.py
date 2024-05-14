@@ -154,7 +154,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         sc.tl.umap(adata)
         sc.tl.leiden(adata, resolution=0.5)
 
-        sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
+        sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False, layer='logs')
 
         adata.write('out/'+name+'.h5ad')
     
