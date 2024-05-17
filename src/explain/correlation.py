@@ -40,6 +40,11 @@ correlation_data = {
 }
 
 corr_df = pd.DataFrame(correlation_data)
+mean_values = corr_df[corr_df.columns[1:]].mean()
+mean_row = pd.DataFrame({'Variable': 'mean', **mean_values}, index=[0])
+std_values = corr_df[corr_df.columns[1:]].std()
+std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
+corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
 plt.figure(figsize=(10, 5))
 plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
