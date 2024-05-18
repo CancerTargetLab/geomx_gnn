@@ -1,6 +1,6 @@
 # CRC Atlas 2022
 
-Follow the instructions to intall required packages and become familiar Image2Count.  
+Follow the instructions to intall required packages and become familiar with Image2Count.  
 
 Lets start by creating a directory to download images into and then download the data we used(~1.4TB):
 ```sh
