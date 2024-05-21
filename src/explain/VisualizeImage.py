@@ -59,7 +59,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                             size=25,
                             img_channel=args['vis_channel'],
                             crop_coord=crop_coord)
-    plt.savefig(os.path.join(figure_dir, f'cluster_{vis_name}_{name_tiff}.png'))
+    plt.savefig(os.path.join(figure_dir, f'cluster_{vis_name}_{name_tiff}.png'), bbox_inches='tight')
     plt.close()
 
     if len(args['vis_protein']) > 0:
@@ -70,8 +70,9 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                             color=proteins,
                             size=25,
                             img_channel=args['vis_channel'],
+                            img_alpha=0.,
                             crop_coord=crop_coord)
-        plt.savefig(os.path.join(figure_dir, f'cell_expression_pred_{vis_name}_{name_tiff}.png'))
+        plt.savefig(os.path.join(figure_dir, f'cell_expression_pred_{vis_name}_{name_tiff}.png'), bbox_inches='tight')
         plt.close()
 
     sq.pl.spatial_scatter(adata,
@@ -82,7 +83,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                             size=25,
                             img_channel=args['vis_channel'],
                             crop_coord=crop_coord)
-    plt.savefig(os.path.join(figure_dir, f'cluster_graph_{vis_name}_{name_tiff}.png'))
+    plt.savefig(os.path.join(figure_dir, f'cluster_graph_{vis_name}_{name_tiff}.png'), bbox_inches='tight')
     plt.close()
 
     if args['vis_all_channels']:
@@ -90,5 +91,5 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
             sq.pl.spatial_scatter(adata,
                                 img_channel=channel,
                                 crop_coord=crop_coord)
-            plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}_{name_tiff}.png'))
+            plt.savefig(os.path.join(figure_dir, f'{vis_name}_channel_{channel}_{name_tiff}.png'), bbox_inches='tight')
             plt.close()
