@@ -294,10 +294,9 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
     corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-    plt.figure(figsize=(10, 10))
     plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
     plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, f'corr_area{name}.pdf'))
+    plt.savefig(os.path.join(figure_dir, f'corr_area{name}.pdf'), bboc_inches='tight')
     plt.close()
 
 def visualizeExpression(processed_dir='TMA1_processed',
