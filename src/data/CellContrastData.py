@@ -11,7 +11,7 @@ class AddGaussianNoiseToRandomChannels(object):
     def __init__(self, mean=0., std=1., p=0.5):
         self.std = std
         self.mean = mean
-        self.p = 0.5
+        self.p = p
         
     def __call__(self, tensor):
         for channel in range(tensor.shape[0]):
