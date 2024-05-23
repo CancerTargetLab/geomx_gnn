@@ -24,3 +24,12 @@ def per_gene_corr(x, y, mean=True, method='pearsonr'):
         return np.nanmean(statistic), np.nanmean(pval)
     else:
         return statistic, pval
+
+def avg_cell_n(path):
+      import os
+      import torch
+      files = [os.path.join(path, file) for file in os.listdir(path) if file.endswith('.pt')]
+      num_cells = 0
+      for file in files:
+            num_cells += torch.load(file).x.shape[0]
+      return num_cells/len(files)
