@@ -6,6 +6,7 @@ class ProjectionHead(nn.Module):
     """
     Implemented in torch following the example of 
     https://github.com/google-research/simclr/blob/master/model_util.py#L141
+    MLP
     """
     def __init__(self, input_dim, output_dim, num_layers=2, use_bn=True, use_relu=True):
         super(ProjectionHead, self).__init__()
@@ -41,7 +42,30 @@ class ProjectionHead(nn.Module):
 
 
 class ContrastiveLearning(torch.nn.Module):
+    """
+    A PyTorch module for contrastive learning using a ResNet backbone.
+
+    Attributes:
+    mode (str): The mode of the model, either 'train' or 'eval'.
+    embed_size (int): The size of the embedding layer.
+    contrast_size (int): The size of the contrastive layer.
+    resnet_model (str): The ResNet model variant to use ('101', '50', '34', '18').
+    res (torchvision.models): The ResNet model.
+    embed (nn.Sequential): The embedding layer.
+    head (ProjectionHead): The projection head for contrastive learning.
+    """
     def __init__(self, channels, embed=256, contrast=124, mode='train', resnet='101'):
+        """
+        Initializes the ContrastiveLearning model with the given parameters.
+
+        Parameters:
+        channels (int): Number of input channels.
+        embed (int): Size of the embedding layer. Default is 256.
+        contrast (int): Size of the contrastive layer. Default is 124.
+        mode (str): Mode of the model, either 'train' or 'eval'. Default is 'train'.
+        resnet (str): ResNet model variant to use ('101', '50', '34', '18'). Default is '101'.
+        """
+         
         super().__init__()
         self.mode = mode
         self.embed_size = embed
@@ -70,6 +94,16 @@ class ContrastiveLearning(torch.nn.Module):
         self.head = ProjectionHead(embed, contrast)
 
     def forward(self, data):
+        """
+        Forward pass of the model.
+
+        Parameters:
+        data (torch.Tensor): The input data tensor.
+
+        Returns:
+        torch.Tensor: The output of the model. If in 'train' mode, returns the projection head output. Otherwise, returns the embeddings.
+        """
+
         data = self.res.conv1(data)
         data = self.res.bn1(data)
         data = self.res.relu(data)

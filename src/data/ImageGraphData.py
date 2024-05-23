@@ -8,6 +8,9 @@ from src.data.GeoMXData import GeoMXDataset
 from src.data.CellContrastData import AddGaussianNoiseToRandomChannels
 
 class ImageGraphDataset(GeoMXDataset):
+    """
+    Datset of Cell Graphs containing cell cutouts per ROI/Graph.
+    """
     def __init__(self, 
                  root_dir='data/',
                  raw_subset_dir='',
@@ -23,6 +26,24 @@ class ImageGraphDataset(GeoMXDataset):
                  transform=None,
                  crop_factor=0.5,
                  embed=False):
+        """
+        Init dataset.
+
+        root_dir (str): Path to dir containing raw/ and processed dir
+        raw_subset_dir (str): Name of dir in raw/ and processed/ containing  per ROI visual cell representations(in raw/)
+        train_ratio (float): Ratio of IDs used for training
+        val_ratio (float): Ratio of IDs used for validation
+        node_dropout (float): Chance of node dropout during training
+        edge_dropout (float): Chance of edge dropout during training
+        pixel_pos_jitter (int): Positional jittering of nodes during training
+        n_knn (int): Number of Nearest Neighbours to calculate for each cell and create edges to
+        subgraphs_per_graph (int): Number of ~equally distributed subgraphs per ROI to create, use when observable SC data exists
+        num_hops (int): Number of hops to create subgraphs from centoid cell
+        label_data (str): .csv name in raw/ dir contaiing ROI label data
+        transform (None): -
+        crop_factor (float): Min cell cut out image crop for transformation
+        embed (bool): Wether or not to load graphs during runtime or have them loaded in memory
+        """
         super().__init__(root_dir=root_dir,
                         raw_subset_dir=raw_subset_dir,
                         train_ratio=train_ratio,
@@ -43,7 +64,25 @@ class ImageGraphDataset(GeoMXDataset):
             self.data = [torch.load(os.path.join(self.processed_dir, graph)) for graph in self.data]
     
     def transform(self, data):
+        """"
+        Transform graph if training.
+
+        Paramters:
+        data (torch_geometric.data.Data): Graph
+
+        Returns:
+        torch_geometric.data.Data: Graph
+        """
         def img_transform(data):
+            """"
+            Create transformed views of all Images.
+
+            Paramters:
+            data (torch.Tensor): Cell Images
+
+            Returns:
+            torch.Tensor: Cell Images transformed
+            """
             gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
             rnd_gausblur = T.RandomApply([gausblur], p=0.5)
             for img in range(data.shape[0]):
@@ -64,6 +103,15 @@ class ImageGraphDataset(GeoMXDataset):
         return super().transform(data)
 
     def get(self, idx):
+        """
+        Get Graph self.data[idx] depending on mode.
+
+        Parameters:
+        idx (int): index
+
+        Returns:
+        torch_geometric.data.Data, Cell Graph
+        """
         if self.mode == self.train:
             return self.data[self.data_idx[self.train_map][idx]]
         elif self.mode == self.val:
@@ -74,6 +122,15 @@ class ImageGraphDataset(GeoMXDataset):
             return self.data[idx]
     
     def embed(self, model, path, device='cpu', batch_size=256, return_mean=False):
+        """
+        Save model sc expression of all cells per ROI and Image Representations.
+
+        model (torch.Module): model
+        path (str): Dir to save ROI sc expression to
+        device (str): device to operate on
+        batch_size (int): Number of cells to extract representations from at once
+        return_mean (bool): Wether or not ZINB/NB models return predicted mean of Genes/Proteins per cell
+        """
         del self.data
         path_list = []  #Needed as parent class uses self.data np array of str paths to load data
 

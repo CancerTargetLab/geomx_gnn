@@ -33,12 +33,26 @@ def init_weights(layer):
 
 
 class GATBlock(torch.nn.Module):
+    """
+    A Graph Attention Network (GAT) block for processing graph data.
+    """
     def __init__(self,
                 num_edge_features=1,
                 num_embed_features=10, 
                 heads=1,
                 conv_dropout=0.1,
                 fill_value=0.0):
+        """
+        Initializes the GATBlock with the given parameters.
+
+        Parameters:
+        num_edge_features (int): Number of edge features.
+        num_embed_features (int): Number of embedding features.
+        heads (int): Number of attention heads.
+        conv_dropout (float): Dropout rate for the convolution layer.
+        fill_value (float): Fill value for the GAT layer.
+        """
+
         super().__init__()
         self.gat = GATv2Conv(num_embed_features, 
                             num_embed_features, 
@@ -52,6 +66,18 @@ class GATBlock(torch.nn.Module):
         self.relu = torch.nn.ReLU(inplace=True)
     
     def forward(self, x, edge_index, edge_attr):
+        """
+        Forward pass of the GATBlock.
+
+        Parameters:
+        x (torch.Tensor): Node feature tensor.
+        edge_index (torch.Tensor): Edge indices.
+        edge_attr (torch.Tensor): Edge attributes.
+
+        Returns:
+        torch.Tensor: The output tensor after processing through the GAT block.
+        """
+         
         identity = x
         x = self.gat(x, edge_index, edge_attr=edge_attr)
         x = self.norm1(x)
@@ -74,6 +100,17 @@ class ProjectionHead(torch.nn.Module):
                  num_layers=2,
                  use_bn=True,
                  use_relu=True):
+        """
+        Initializes the ProjectionHead with the given parameters.
+
+        Parameters:
+        input_dim (int): Dimension of the input features.
+        output_dim (int): Dimension of the output features.
+        num_layers (int): Number of layers in the projection head.
+        use_bn (bool): Whether to use batch normalization.
+        use_relu (bool): Whether to use ReLU activation.
+        """
+
         super().__init__()
         self.layers = torch.nn.ModuleList()
         dim = input_dim
@@ -102,6 +139,16 @@ class ProjectionHead(torch.nn.Module):
         self.layers.apply(init_weights)
 
     def forward(self, hiddens):
+        """
+        Forward pass of the ProjectionHead.
+
+        Parameters:
+        hiddens (torch.Tensor): The input tensor.
+
+        Returns:
+        torch.Tensor: The output tensor after passing through the projection head.
+        """
+
         for layer in self.layers:
             hiddens = layer(hiddens)
         
@@ -109,8 +156,18 @@ class ProjectionHead(torch.nn.Module):
 
 
 class LinearBlock(torch.nn.Module):
+    """
+    A block of linear layers with normalization and activation.
+    """
     def __init__(self,
                  input_dim):
+        """
+        Initializes the LinearBlock with the given input dimension.
+
+        Parameters:
+        input_dim (int): Dimension of the input features.
+        """
+
         super().__init__()
         self.lin = torch.nn.Linear(input_dim,
                                    input_dim)
@@ -118,6 +175,16 @@ class LinearBlock(torch.nn.Module):
         self.relu = torch.nn.ReLU(inplace=True)
     
     def forward(self, x):
+        """
+        Forward pass of the LinearBlock.
+
+        Parameters:
+        x (torch.Tensor): The input tensor.
+
+        Returns:
+        torch.Tensor: The output tensor after passing through the linear block.
+        """
+
         identity = x
         x = self.lin(x)
         x = self.norm(x)
@@ -126,6 +193,9 @@ class LinearBlock(torch.nn.Module):
         return x
 
 class GraphLearning(torch.nn.Module):
+    """
+    A graph learning module using GAT blocks.
+    """
     def __init__(self,
                  layers=1,
                  num_node_features=100, 
@@ -134,6 +204,19 @@ class GraphLearning(torch.nn.Module):
                  heads=1,
                  embed_dropout=0.1,
                  conv_dropout=0.1,):
+        """
+        Initializes the GraphLearning module with the given parameters.
+
+        Parameters:
+        layers (int): Number of GAT layers.
+        num_node_features (int): Number of node features.
+        num_edge_features (int): Number of edge features.
+        num_embed_features (int): Number of embedding features.
+        heads (int): Number of attention heads.
+        embed_dropout (float): Dropout rate for the embedding layer.
+        conv_dropout (float): Dropout rate for the convolution layer.
+        """
+
         super().__init__()
 
         self.heads = heads
@@ -162,6 +245,16 @@ class GraphLearning(torch.nn.Module):
 
 
     def forward(self, data):#x, edge_index, edge_attr):
+        """
+        Forward pass of the GraphLearning module.
+
+        Parameters:
+        data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
+
+        Returns:
+        torch.Tensor: Output tensor after applying the graph learning module.
+        """
+
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         h_i = self.node_embed(x)
@@ -179,6 +272,9 @@ class GraphLearning(torch.nn.Module):
 
 
 class ROIExpression(torch.nn.Module):
+    """
+    A PyTorch module for predicting sc expressions.
+    """
     def __init__(self,
                  layers=1,
                  num_node_features=256, 
@@ -189,6 +285,21 @@ class ROIExpression(torch.nn.Module):
                  embed_dropout=0.1,
                  conv_dropout=0.1,
                  mtype=False):
+        """
+        Initializes the ROIExpression module with the specified parameters.
+
+        Parameters:
+        layers (int): Number of GAT blocks.
+        num_node_features (int): Number of node features.
+        num_edge_features (int): Number of edge features.
+        num_embed_features (int): Number of embedding features.
+        num_out_features (int): Number of output features.
+        heads (int): Number of attention heads.
+        embed_dropout (float): Dropout rate for the embedding layers.
+        conv_dropout (float): Dropout rate for the convolutional layers.
+        mtype (bool): Model type indicating whether or not to use zero-inflated negative binomial (ZINB) or negative binomial (NB) distribution.
+        """
+
         super().__init__()
 
         self.mtype = mtype
@@ -242,6 +353,18 @@ class ROIExpression(torch.nn.Module):
             self.drop.apply(init_weights)
 
     def forward(self, data, return_cells=False, return_mean=False):#x, edge_index, edge_attr, batch):
+        """
+        Forward pass of the ROIExpression module.
+
+        Parameters:
+        data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
+        return_cells (bool): Flag indicating whether to return cell-wise outputs.
+        return_mean (bool): Flag indicating whether to return mean outputs.
+
+        Returns:
+        (torch.Tensor|tuple): Output tensor/tesnor tuple after applying the ROI expression module.
+        """
+
         x = self.gnn(data)#x, edge_index, edge_attr)
         pred = self.project(x)
         if return_cells:
@@ -264,6 +387,9 @@ class ROIExpression(torch.nn.Module):
 
 
 class ROIExpression_lin(torch.nn.Module):
+    """
+    A PyTorch module for predicting sc expressions.
+    """
     def __init__(self,
                 layers=1,
                 num_node_features=256,
@@ -272,6 +398,19 @@ class ROIExpression_lin(torch.nn.Module):
                 embed_dropout=0.1,
                 conv_dropout=0.1,
                 mtype=False):
+        """
+        Initializes the ROIExpression_lin module with the specified parameters.
+
+        Parameters:
+        layers (int): Number of linear blocks.
+        num_node_features (int): Number of node features.
+        num_embed_features (int): Number of embedding features.
+        num_out_features (int): Number of output features.
+        embed_dropout (float): Dropout rate for the embedding layers.
+        conv_dropout (float): Dropout rate for the convolutional layers.
+        mtype (bool): Model type indicating whether or not to use zero-inflated negative binomial (ZINB) or negative binomial (NB) distribution.
+        """
+
         super().__init__()
 
         self.mtype = mtype
@@ -329,6 +468,18 @@ class ROIExpression_lin(torch.nn.Module):
             self.drop.apply(init_weights)
     
     def forward(self, data, return_cells=False, return_mean=False):
+        """
+        Forward pass of the ROIExpression_lin module.
+
+        Parameters:
+        data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
+        return_cells (bool): Flag indicating whether to return cell-wise outputs.
+        return_mean (bool): Flag indicating whether to return mean outputs.
+
+        Returns:
+        (torch.Tensor|tuple): Output tensor/tesnor tuple after applying the ROI expression module.
+        """
+
         x = self.lin(self.node_embed(data.x))
         pred = self.project(x)
         if return_cells:
@@ -351,6 +502,9 @@ class ROIExpression_lin(torch.nn.Module):
         
 
 class ROIExpression_Image_gat(torch.nn.Module):
+    """
+    A PyTorch module combining image-based learning and GAT-based graph learning for predicting sc expressions.
+    """
     def __init__(self,
                  channels,
                  embed=256,
@@ -367,6 +521,27 @@ class ROIExpression_Image_gat(torch.nn.Module):
                  mtype=False,
                  path_image_model='',
                  path_graph_model='') -> None:
+        """
+        Initializes the ROIExpression_Image_gat module with the specified parameters.
+
+        Parameters:
+        channels (int): Number of input channels for the image model.
+        embed (int): Embedding size for the image model.
+        contrast (int): Contrastive size for the image model.
+        mode (str): Mode of the image model (e.g., 'train_combined').
+        resnet (str): ResNet model variant (e.g., '101').
+        layers (int): Number of GAT blocks.
+        num_edge_features (int): Number of edge features.
+        num_embed_features (int): Number of embedding features.
+        num_out_features (int): Number of output features.
+        heads (int): Number of attention heads.
+        embed_dropout (float): Dropout rate for the embedding layers.
+        conv_dropout (float): Dropout rate for the convolutional layers.
+        mtype (bool): Model type indicating whether to use zero-inflated negative binomial (ZINB) or negative binomial (NB) distribution.
+        path_image_model (str): Path to the pretrained image model.
+        path_graph_model (str): Path to the pretrained graph model.
+        """
+
         super().__init__()
         self.image = ContrastiveLearning(channels=channels,
                                         embed=embed,
@@ -388,11 +563,26 @@ class ROIExpression_Image_gat(torch.nn.Module):
             self.graph.load_state_dict(torch.load(path_graph_model)['model'])
         
     def forward(self, data, return_cells=False, return_mean=False):
+        """
+        Forward pass of the ROIExpression_Image_gat module.
+
+        Parameters:
+        data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
+        return_cells (bool): Flag indicating whether to return cell-wise outputs.
+        return_mean (bool): Flag indicating whether to return mean outputs.
+
+        Returns:
+        Output tensor after applying the ROI expression module.
+        """
+
         data.x = self.image.forward(data.x)
         return self.graph.forward(data, return_cells=return_cells, return_mean=return_mean)
 
 
 class ROIExpression_Image_lin(torch.nn.Module):
+    """
+    A PyTorch module combining image-based learning and linear block-based graph learning for predicting sc expressions.
+    """
     def __init__(self,
                  channels,
                  embed=256,
@@ -407,6 +597,25 @@ class ROIExpression_Image_lin(torch.nn.Module):
                  mtype=False,
                  path_image_model='',
                  path_graph_model='') -> None:
+        """
+        Initializes the ROIExpression_Image_lin module with the specified parameters.
+
+        Parameters:
+        channels (int): Number of input channels for the image model.
+        embed (int): Embedding size for the image model.
+        contrast (int): Contrastive size for the image model.
+        mode (str): Mode of the image model (e.g., 'train_combined').
+        resnet (str): ResNet model variant (e.g., '101').
+        layers (int): Number of linear blocks.
+        num_embed_features (int): Number of embedding features.
+        num_out_features (int): Number of output features.
+        embed_dropout (float): Dropout rate for the embedding layers.
+        conv_dropout (float): Dropout rate for the convolutional layers.
+        mtype (bool): Model type indicating whether to use zero-inflated negative binomial (ZINB) or negative binomial (NB) distribution.
+        path_image_model (str): Path to the pretrained image model.
+        path_graph_model (str): Path to the pretrained graph model.
+        """
+
         super().__init__()
         self.image = ContrastiveLearning(channels=channels,
                                         embed=embed,
@@ -426,6 +635,18 @@ class ROIExpression_Image_lin(torch.nn.Module):
             self.graph.load_state_dict(torch.load(path_graph_model)['model'])
         
     def forward(self, data, return_cells=False, return_mean=False):
+        """
+        Forward pass of the ROIExpression_Image_lin module.
+
+        Parameters:
+        data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
+        return_cells (bool): Flag indicating whether to return cell-wise outputs.
+        return_mean (bool): Flag indicating whether to return mean outputs.
+
+        Returns:
+        torch.Tensor: Output tensor after applying the ROI expression module.
+        """
+        
         data.x = self.image.forward(data.x)
         return self.graph.forward(data, return_cells=return_cells, return_mean=return_mean)
         

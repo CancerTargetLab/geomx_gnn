@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import scanpy as sc
 import pandas as pd
 import matplotlib.pyplot as plt

@@ -5,9 +5,12 @@ import torch
 def set_seed(seed, cuda_reproduce=True):
     """
     Set seed for random,  numpy, torch and sklearn.
-    Usage:
-    set_seed(42)
+    
+    Parameters:
+    seed (int): Seed
+    cuda_reproduce (bool): Wether or not to use cuda reproducibility
     """
+    
     # Set seed for Python's random module
     random.seed(seed)
     

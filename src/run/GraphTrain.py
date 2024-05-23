@@ -10,6 +10,15 @@ import torch
 from tqdm import tqdm
 
 def train(raw_subset_dir, label_data, output_name, args):
+    """
+    Train model to predict sc expression of cells.
+
+    Parameters:
+    raw_subset_dir (str): name of dir in which torch.tensors of visual cell embeddings are
+    label_data (str): Name of .csv in raw/ containing label information of ROIs
+    output_name (str): Path and name of model torch save dict
+    args (dict): Arguments
+    """
 
     EPOCH = args['epochs_graph']
     SEED = args['seed']
@@ -28,6 +37,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     if args['deterministic']:
         set_seed(SEED)
 
+    #Wether to train together with image model
     if 'IMAGE' in model_type:
         dataset = ImageGraphDataset(root_dir=args['graph_dir'],
                                     raw_subset_dir=raw_subset_dir,
@@ -116,6 +126,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     zinb = ZINBLoss(ridge_lambda=0.0, device=device)
     nb = NBLoss(device=device)
 
+    #scale factor, TODO:rm
     sf = dataset.sf.to(device)
 
     train_acc_list = []

@@ -10,6 +10,9 @@ from anndata import AnnData
 from tqdm import tqdm
 
 class GeoMXDataset(Dataset):
+    """
+    Dataset of Cell Graphs and their summed expression.
+    """
     def __init__(self,
                  root_dir='data/',
                  raw_subset_dir='',
@@ -24,6 +27,23 @@ class GeoMXDataset(Dataset):
                  label_data='label_data.csv',
                  transform=None,
                  use_embed_image=True):
+        """
+        Init dataset.
+
+        root_dir (str): Path to dir containing raw/ and processed dir
+        raw_subset_dir (str): Name of dir in raw/ and processed/ containing  per ROI visual cell representations(in raw/)
+        train_ratio (float): Ratio of IDs used for training
+        val_ratio (float): Ratio of IDs used for validation
+        node_dropout (float): Chance of node dropout during training
+        edge_dropout (float): Chance of edge dropout during training
+        pixel_pos_jitter (int): Positional jittering of nodes during training
+        n_knn (int): Number of Nearest Neighbours to calculate for each cell and create edges to
+        subgraphs_per_graph (int): Number of ~equally distributed subgraphs per ROI to create, use when observable SC data exists
+        num_hops (int): Number of hops to create subgraphs from centoid cell
+        label_data (str): .csv name in raw/ dir contaiing ROI label data
+        transform (None): -
+        use_embed_image (bool): Wether or not to use visual representation embedings for cells, or cell cut outs
+        """
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
         self.processed_path = os.path.join(self.root_dir, 'processed', raw_subset_dir)
@@ -64,9 +84,10 @@ class GeoMXDataset(Dataset):
         self.data = np.array(self.processed_file_names)
 
         df = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
-        IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
+        IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)  #if duplicate, take first
         un_IDs = np.unique(IDs)
 
+        # scale factor of genes/proteins
         sf = df[df.columns[2:].values].values
         self.sf = torch.from_numpy(np.sum(sf)/np.sum(sf, axis=0)).to(torch.float32)
 
@@ -93,7 +114,9 @@ class GeoMXDataset(Dataset):
     
     @property
     def processed_file_names(self):
-        """ return list of files should be in processed dir, if found - skip processing."""
+        """
+        return list of files should be in processed dir, if found - skip processing.
+        """
         processed_filename = []
         for i, path in enumerate(self.raw_files):
             i += 1
@@ -106,6 +129,21 @@ class GeoMXDataset(Dataset):
         return processed_filename
 
     def _create_subgraphs(self, data, train_map, val_map, test_map):
+        """
+        Create somewhat equally distributed square number of subgraphs of all ROIs and save.
+
+        Parameters:
+        data (np.array): Array of file names
+        train_map (list): 0 or 1 depending if ROI for training
+        val_map (list): 0 or 1 depending if ROI for validation
+        test_map (list): 0 or 1 depending if ROI for testing
+
+        Return:
+        data (np.array): Array of file names of subgraphs
+        new_train_map (list): 0 or 1 depending if subgraph for training
+        new_val_map (list): 0 or 1 depending if subgraph for validation
+        new_test_map (list): 0 or 1 depending if subgraph for testing
+        """
         if not (os.path.exists(os.path.join(self.processed_path, 'subgraphs')) and os.path.isdir(os.path.join(self.processed_path, 'subgraphs'))):
             os.makedirs(os.path.join(self.processed_path, 'subgraphs'))
 
@@ -158,6 +196,15 @@ class GeoMXDataset(Dataset):
         return data, new_train_map, new_val_map, new_test_map
 
     def transform(self, data):
+        """"
+        Transform graph if training.
+
+        Paramters:
+        data (torch_geometric.data.Data): Graph
+
+        Returns:
+        torch_geometric.data.Data: Graph
+        """
         if self.mode==self.train:
             y = data.y
             data.edge_index = torch.Tensor([])
@@ -181,6 +228,9 @@ class GeoMXDataset(Dataset):
         pass
 
     def process(self):
+        """
+        Process all cell representations per ROI into Graphs if not done already.
+        """
         label = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
         df = pd.read_csv(self.cell_pos, header=0, sep=',')
         df['Centroid.X.px'] = df['Centroid.X.px'].astype(np.float32)
@@ -190,6 +240,14 @@ class GeoMXDataset(Dataset):
                 self._process_one_step(file, df, label)
 
     def _process_one_step(self, file, df, label):
+        """
+        Preprocess and create Cell Graph of ROI.
+
+        Paramters:
+        file (str): Path and file name of cell representations of ROI
+        df (pandas.DataFrame): DataFrame containing Cell postions of files
+        label (pandas.DataFrame): DataFrmae containing label information of ROI
+        """
         file_prefix = file.split('/')[-1].split('_')[0]
         df = df[df['Image']==file_prefix+self.image_ending]
         # Deduplicate identical cell position: ~ is not op, first selects duplicates, second selects non first duplicates, | is or op
@@ -212,7 +270,7 @@ class GeoMXDataset(Dataset):
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
         cellexpr = label.clone()
         if df.columns.shape[0] > 4:
-            cellexpr = torch.from_numpy(df[df.columns[4:].values].values).to(torch.float32)
+            cellexpr = torch.from_numpy(df[df.columns[4:].values].values).to(torch.float32) #SC oberseved expression data
         if torch.sum(label) > 0:
             if 'Class' in df.columns:
                 data = Data(x=node_features,
@@ -235,12 +293,21 @@ class GeoMXDataset(Dataset):
             raise Exception(f'File {file} has no Expression data in {self.label_data}!!!')
 
     def setMode(self, mode):
+        """
+        Set mode of dataset.
+
+        Parameters:
+        mode (str): mode of dataset to set to
+        """
         if mode.upper() in [self.train, self.val, self.test]:
             self.mode = mode.upper()
         else:
             print(f'Mode {mode} not suported, has to be one of .train, .val .test or .embed')
 
     def len(self):
+        """
+        Set mode of dataset.
+        """
         if self.mode == self.train:
             return len(self.train_map)
         elif self.mode == self.val:
@@ -251,6 +318,15 @@ class GeoMXDataset(Dataset):
             return self.data.shape[0]
 
     def get(self, idx):
+        """
+        Get Graph self.data[idx] depending on mode.
+
+        Parameters:
+        idx (int): index
+
+        Returns:
+        torch_geometric.data.Data, Cell Graph
+        """
         if self.mode == self.train:
             return torch.load(os.path.join(self.processed_dir, self.data[self.train_map][idx]))
         elif self.mode == self.val:
@@ -261,6 +337,14 @@ class GeoMXDataset(Dataset):
             return torch.load(os.path.join(self.processed_dir, self.data[idx]))
     
     def embed(self, model, path, device='cpu', return_mean=False):
+        """
+        Save model sc expression of all cells per ROI.
+
+        model (torch.Module): model
+        path (str): Dir to save ROI sc expression to
+        device (str): device to operate on
+        return_mean (bool): Wether or not ZINB/NB models return predicted mean of Genes/Proteins per cell
+        """
         with torch.no_grad():
             model = model.to(device)
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:

@@ -8,6 +8,14 @@ from src.optimizer.LARC import LARC
 from src.utils.setSeed import set_seed
 
 def train(image_dir, output_name, args):
+    """
+    Train Image model to learn visual representations.
+
+    image_dir (str): Path to dir containing torch.tensor cell cutouts
+    output_name (str): Path and name of torch save dict of model+metrics
+    args (dict): Arguments
+    """
+
     batch_size = args['batch_size_image']
     lr = args['lr_image']
     warmup_epochs = args['warmup_epochs_image']
@@ -31,8 +39,6 @@ def train(image_dir, output_name, args):
                                 contrast=args['contrast_size_image'], 
                                 resnet=args['resnet_model']).to(device, dtype=torch.float32)
 
-    #TODO: https://stackoverflow.com/questions/50544730/how-do-i-split-a-custom-dataset-into-training-and-test-datasets
-    # -> more mem eff
     dataset.setMode(dataset.train)
     train_loader = DataLoader(dataset,
                               batch_size=batch_size,

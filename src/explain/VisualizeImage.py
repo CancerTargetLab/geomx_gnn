@@ -8,6 +8,15 @@ from anndata import AnnData
 import matplotlib.pyplot as plt
 
 def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
+    """
+    Visualize sc expression on Image, and more Image visualisations.
+
+    raw_subset_dir (str): Dir name in data/raw/ containing images
+    name_tiff (str): name of image to visualize
+    figure_dir (str): Path to save figures to
+    vis_name: name of .h5ad file to load scanpy.AnnData and add to figure save name
+    args (dict): Arguments
+    """
     path = os.path.join('data/raw', raw_subset_dir)
     df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
     df = pd.read_csv(df_path, header=0, sep=",")

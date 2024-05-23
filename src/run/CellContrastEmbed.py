@@ -1,12 +1,18 @@
-from tqdm import tqdm
 import torch
-from torch.utils.data import DataLoader
 from src.data.CellContrastData import EmbedDataset
 from src.models.CellContrastModel import ContrastiveLearning
 from src.utils.load import load
 from src.utils.setSeed import set_seed
 
 def embed(image_dir, model_name, args):
+    """
+    Embed visual representations of cells.
+
+    Parameters:
+    image_dir (str): Path to dir in which torch.tensors of cell cut outs are
+    model_name (str): Path and name of model torch save dict
+    args (dict): Arguments
+    """
 
     batch_size = args['batch_size_image']
     seed = args['seed']

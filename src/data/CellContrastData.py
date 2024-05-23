@@ -6,9 +6,20 @@ import torchvision.transforms as T
 from tqdm import tqdm
 
 class AddGaussianNoiseToRandomChannels(object):
+    """
+    Add GaussianNoise with per channel random chance.
     # Obtained and adapted from ptrblck:
     # https://discuss.pytorch.org/t/how-to-add-noise-to-mnist-dataset-when-using-pytorch/59745/2
+    """
     def __init__(self, mean=0., std=1., p=0.5):
+        """
+        Init state.
+
+        Paramters:
+        mean (float): mean
+        std (float): std
+        p (float): per channel chance to add noise
+        """
         self.std = std
         self.mean = mean
         self.p = p
@@ -24,7 +35,9 @@ class AddGaussianNoiseToRandomChannels(object):
 
 
 class EmbedDataset(Dataset):
-    """Face Landmarks dataset."""
+    """
+    Dataset of tiffile zscore normalized, per ROI cut out cells.
+    """
 
     def __init__(self,
                  root_dir="data/raw",
@@ -32,7 +45,13 @@ class EmbedDataset(Dataset):
                  train_ratio=0.6,
                  val_ratio=0.2):
         """
-        Arguments:
+        Init dataset.
+
+        Parameters:
+        root_dir (str): Path to dir containing zscore normalized, per ROI cut out cells
+        crop_factor (float): Min crop size
+        train_ratio (float): Ratio of cells used for training
+        val_ratio (float): Ratio of cells used for validation
         """
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.crop_factor = crop_factor
@@ -71,6 +90,12 @@ class EmbedDataset(Dataset):
         self.embed = 'EMBED'
     
     def setMode(self, mode):
+        """
+        Set mode of dataset.
+
+        Parameters:
+        mode (str): mode of dataset to set to
+        """
         if mode.upper() in [self.train, self.val, self.test, self.embed]:
             self.mode = mode.upper()
         else:
@@ -78,6 +103,16 @@ class EmbedDataset(Dataset):
 
 
     def transform(self, data):
+        """"
+        Create two transformed views of Image.
+
+        Paramters:
+        data (torch.Tensor): Cell Image
+
+        Returns:
+        torch.Tensor: Cell Image 1 transformed
+        torch.Tensor: Cell Image 2 transformed
+        """
         gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
         rnd_gausblur = T.RandomApply([gausblur], p=0.5)
 
@@ -93,6 +128,9 @@ class EmbedDataset(Dataset):
         return x1, x2
 
     def __len__(self):
+        """
+        Set mode of dataset.
+        """
         if self.mode == self.train:
             return len(self.train_map)
         elif self.mode == self.val:
@@ -103,6 +141,15 @@ class EmbedDataset(Dataset):
             return self.data.shape[0]
 
     def __getitem__(self, idx):
+        """
+        Get specific cell cut out.
+
+        Parameters:
+        idx (int): index
+
+        Returns:
+        torch.Tensor, cell cut out
+        """
         if self.mode == self.train:
             return self.transform(self.train_data[idx])
         elif self.mode == self.val:
@@ -116,6 +163,13 @@ class EmbedDataset(Dataset):
     
     
     def save_embed_data(self, model, device='cpu', batch_size=256):
+        """
+        Save model representations of all cells per ROI.
+
+        model (torch.Module): model
+        device (str): device to operate on
+        batch_size (int): Number of cells to extract representations from at once
+        """
         del self.data
         with torch.no_grad():
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:

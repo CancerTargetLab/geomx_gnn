@@ -3,6 +3,16 @@ import torch
 import os
 
 def epochMetrics(model_path, figure_dir, is_cs, name):
+    """
+    Plots metrics of model and saves them.
+
+    Parameters:
+    model_path (str): Path and name to model dict containing model metrics
+    figure_dir (str): Path to figure dir
+    is_cs (bool): Wether or not to set y-axis as Cosine Smilarity or Contrast Accuracy
+    name (str): Title of figures
+    """
+
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
         os.makedirs(figure_dir)
 

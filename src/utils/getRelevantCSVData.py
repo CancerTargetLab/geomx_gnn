@@ -1,6 +1,13 @@
 import pandas as pd
 
 def getExpressionData(path, sep=','):
+    """
+    Get Expression data of of correctly formed .csv and save.
+
+    path (str): Path to data csv
+    sep (str): .csv seperator
+    """
+
     df = pd.read_csv(path, header=0, sep=sep)
     df = df[df['Slide_no']==1]
     index_df = df[['ROI', 'Segment_type', 'Patient_ID']]
@@ -10,6 +17,13 @@ def getExpressionData(path, sep=','):
     df.to_csv(path.split('.')[0]+'.csv', sep=',', header=True, index=False, )
 
 def getAllPositionData(path, sep=','):
+    """
+    Get Cell postion data of of correctly formed .csv and save.
+
+    path (str): Path to data csv
+    sep (str): .csv seperator
+    """
+
     df = pd.read_csv(path[0], header=0, sep=sep)
     df = df[['Image', 'Centroid.X.px', 'Centroid.Y.px', 'Class']]
     for p in path[1:]:

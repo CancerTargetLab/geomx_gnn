@@ -6,6 +6,16 @@ import torch
 import os
 
 def embed(raw_subset_dir, label_data, model_name, output_dir, args):
+    """
+    Embed predicted sc expression of cells.
+
+    Parameters:
+    raw_subset_dir (str): name of dir in which torch.tensors of visual cell embeddings are
+    label_data (str): Name of .csv in raw/ containing label information of ROIs
+    model_name (str): Path and name of model torch save dict
+    output_dir (str): Path to dir to save sc expression embeddings
+    args (dict): Arguments
+    """
 
     SEED = args['seed']
 
