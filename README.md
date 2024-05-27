@@ -1,4 +1,4 @@
-# Image2Count: From MultiPlex Imaging to Single-Cell Spatialomics Data to Investigate the Tumor Immune Microenvironment  
+# Image2Count: Predicting Single Cell Expression from Multiplex-Immunofloresent Imaging and Bulk-Count Data  
 
 ## Environment setup
 
