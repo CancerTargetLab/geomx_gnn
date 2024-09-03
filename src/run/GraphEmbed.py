@@ -24,11 +24,17 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     model_type = args['graph_model_type']
     set_seed(SEED)
 
+    if args['embed_graph_test_data']:
+        output_name = model_name
+    else:
+        output_name = None
+
     if 'IMAGE' in model_type:
         dataset = ImageGraphDataset(root_dir=args['graph_dir'],
                                     raw_subset_dir=raw_subset_dir,
                                     train_ratio=args['train_ratio_graph'],
                                     val_ratio=args['val_ratio_graph'],
+                                    num_folds=args['num_folds'],
                                     node_dropout=args['node_dropout'],
                                     edge_dropout=args['edge_dropout'],
                                     pixel_pos_jitter=args['cell_pos_jitter'],
@@ -37,19 +43,22 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                     num_hops=args['num_hops_subgraph'],
                                     label_data=label_data,
                                     crop_factor=args['crop_factor'],
+                                    output_name=output_name,
                                     embed=True)
     else:
         dataset = GeoMXDataset(root_dir=args['graph_dir'],
                             raw_subset_dir=raw_subset_dir,
                             train_ratio=args['train_ratio_graph'],
                             val_ratio=args['val_ratio_graph'],
+                            num_folds=args['num_folds'],
                             node_dropout=args['node_dropout'],
                             edge_dropout=args['edge_dropout'],
                             pixel_pos_jitter=args['cell_pos_jitter'],
                             n_knn=args['cell_n_knn'],
                             subgraphs_per_graph=args['subgraphs_per_graph'],
                             num_hops=args['num_hops_subgraph'],
-                            label_data=label_data)
+                            label_data=label_data,
+                            output_name=output_name)
 
     if 'IMAGEGAT' in model_type:
         model = ROIExpression_Image_gat(channels=dataset.get(0).x.shape[1],

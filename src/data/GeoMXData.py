@@ -26,6 +26,7 @@ class GeoMXDataset(Dataset):
                  subgraphs_per_graph=0,
                  num_hops=10,
                  label_data='label_data.csv',
+                 output_name='out/models/',
                  transform=None,
                  use_embed_image=True):
         """
@@ -110,6 +111,9 @@ class GeoMXDataset(Dataset):
             self.current_fold = 0
             self.IDs = IDs
             self.folds, self.test_map = self.kFold(self.num_folds, self.IDs, train_ratio)
+        
+        if output_name is not None:
+            np.save(os.path.join(output_name.split('.')[0], 'test_map.npy'), np.array(self.test_map))
 
         self.mode = 'TRAIN'
         self.train = 'TRAIN'
@@ -378,7 +382,7 @@ class GeoMXDataset(Dataset):
         else:
             return torch.load(os.path.join(self.processed_dir, self.data[idx]))
     
-    def embed(self, model, path, device='cpu', return_mean=False):
+    def embed(self, model, path, device='cpu', return_mean=False, output_name=None):
         """
         Save model sc expression of all cells per ROI.
 
@@ -389,6 +393,8 @@ class GeoMXDataset(Dataset):
         """
         with torch.no_grad():
             model = model.to(device)
+            if output_name is not None:
+                self.data = self.data[np.load(os.path.join(os.path.dirname(output_name), 'test_map.npy'))]
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
                 for graph_path in data:
                     graph = torch.load(os.path.join(self.processed_dir, graph_path))

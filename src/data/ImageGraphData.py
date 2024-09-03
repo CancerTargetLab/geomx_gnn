@@ -24,6 +24,7 @@ class ImageGraphDataset(GeoMXDataset):
                  subgraphs_per_graph=0,
                  num_hops=10,
                  label_data='label_data.csv',
+                 output_name='out/models/',
                  transform=None,
                  crop_factor=0.5,
                  embed=False):
@@ -58,6 +59,7 @@ class ImageGraphDataset(GeoMXDataset):
                         subgraphs_per_graph=subgraphs_per_graph,
                         num_hops=num_hops,
                         label_data=label_data,
+                        output_name=output_name,
                         transform=transform,
                         use_embed_image=False)
         self.crop_factor = crop_factor

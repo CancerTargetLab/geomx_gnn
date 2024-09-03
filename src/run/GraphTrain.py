@@ -7,6 +7,7 @@ from src.utils.setSeed import set_seed
 from src.utils.stats import per_gene_pcc
 from torch_geometric.loader import DataLoader
 import torch
+import os
 from tqdm import tqdm
 
 def train(raw_subset_dir, label_data, output_name, args):
@@ -43,31 +44,33 @@ def train(raw_subset_dir, label_data, output_name, args):
                                     raw_subset_dir=raw_subset_dir,
                                     train_ratio=args['train_ratio_graph'],
                                     val_ratio=args['val_ratio_graph'],
+                                    num_folds=args['num_folds'],
                                     node_dropout=args['node_dropout'],
                                     edge_dropout=args['edge_dropout'],
-                                    num_folds=args['num_folds'],
                                     pixel_pos_jitter=args['cell_pos_jitter'],
                                     n_knn=args['cell_n_knn'],
                                     subgraphs_per_graph=args['subgraphs_per_graph'],
                                     num_hops=args['num_hops_subgraph'],
                                     label_data=label_data,
-                                    crop_factor=args['crop_factor'])
+                                    crop_factor=args['crop_factor'],
+                                    output_name=output_name)
     else:
         dataset = GeoMXDataset(root_dir=args['graph_dir'],
                             raw_subset_dir=raw_subset_dir,
                             train_ratio=args['train_ratio_graph'],
                             val_ratio=args['val_ratio_graph'],
+                            num_folds=args['num_folds'],
                             node_dropout=args['node_dropout'],
                             edge_dropout=args['edge_dropout'],
-                            num_folds=args['num_folds'],
                             pixel_pos_jitter=args['cell_pos_jitter'],
                             n_knn=args['cell_n_knn'],
                             subgraphs_per_graph=args['subgraphs_per_graph'],
                             num_hops=args['num_hops_subgraph'],
-                            label_data=label_data)
+                            label_data=label_data,
+                            output_name=output_name)
 
     for k in range(args['num_folds']):
-        output_name = output_name.split('.')[0]+f'_{k}'+'.'+output_name.split('.')[-1]
+        output_name = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
         dataset.set_fold_k()
         dataset.setMode(dataset.train)
         train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
