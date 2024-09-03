@@ -18,6 +18,7 @@ class GeoMXDataset(Dataset):
                  raw_subset_dir='',
                  train_ratio=0.6,
                  val_ratio=0.2,
+                 num_folds=1,
                  node_dropout=0.2,
                  edge_dropout=0.3,
                  pixel_pos_jitter=40,
@@ -34,6 +35,7 @@ class GeoMXDataset(Dataset):
         raw_subset_dir (str): Name of dir in raw/ and processed/ containing  per ROI visual cell representations(in raw/)
         train_ratio (float): Ratio of IDs used for training
         val_ratio (float): Ratio of IDs used for validation
+        num_folds (int): Number of Crossvalidation folds, val_ratio is disregarded, train_ratio is data used for Crossvalidation, 1-train_ratio is ratio of test data used over all folds
         node_dropout (float): Chance of node dropout during training
         edge_dropout (float): Chance of edge dropout during training
         pixel_pos_jitter (int): Positional jittering of nodes during training
@@ -50,6 +52,7 @@ class GeoMXDataset(Dataset):
         self.label_data = label_data
         self.raw_subset_dir = raw_subset_dir
 
+        self.num_folds = num_folds
         self.node_dropout = node_dropout
         self.edge_dropout = edge_dropout
         self.pixel_pos_jitter = pixel_pos_jitter
@@ -100,8 +103,14 @@ class GeoMXDataset(Dataset):
         self.train_map, self.val_map, self.test_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
 
         if self.subgraphs_per_graph > 0:
-            map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, self.test_map)
-            self.data, self.train_map , self.val_map, self.test_map = map_tuple
+            map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, self.test_map, IDs)
+            self.data, self.train_map , self.val_map, self.test_map, IDs = map_tuple
+        
+        if self.num_folds > 1:
+            self.current_fold = 0
+            self.IDs = IDs
+            self.folds, self.test_map = self.kFold(self.num_folds, self.IDs, train_ratio)
+            self.set_fold_k()
 
         self.mode = 'TRAIN'
         self.train = 'TRAIN'
@@ -128,7 +137,7 @@ class GeoMXDataset(Dataset):
         processed_filename.sort()
         return processed_filename
 
-    def _create_subgraphs(self, data, train_map, val_map, test_map):
+    def _create_subgraphs(self, data, train_map, val_map, test_map, IDs):
         """
         Create somewhat equally distributed square number of subgraphs of all ROIs and save.
 
@@ -137,17 +146,21 @@ class GeoMXDataset(Dataset):
         train_map (list): 0 or 1 depending if ROI for training
         val_map (list): 0 or 1 depending if ROI for validation
         test_map (list): 0 or 1 depending if ROI for testing
+        IDs (np.array): Patient ID of sample
 
         Return:
         data (np.array): Array of file names of subgraphs
         new_train_map (list): 0 or 1 depending if subgraph for training
         new_val_map (list): 0 or 1 depending if subgraph for validation
         new_test_map (list): 0 or 1 depending if subgraph for testing
+        new_IDs (np.array): Patient ID of samples
         """
         if not (os.path.exists(os.path.join(self.processed_path, 'subgraphs')) and os.path.isdir(os.path.join(self.processed_path, 'subgraphs'))):
             os.makedirs(os.path.join(self.processed_path, 'subgraphs'))
 
-        new_data, new_train_map, new_val_map, new_test_map = [], [], [], []
+        new_IDs = np.ndarray(data.shape[0]*self.subgraphs_per_graph, dtype=object)
+        new_data = np.ndarray(data.shape[0]*self.subgraphs_per_graph, dtype=object)
+        new_train_map, new_val_map, new_test_map = [], [], []
         with tqdm(data, total=data.shape[0], desc='Creating Subgraphs...') as data:
             for g, graph_path in enumerate(data):
                 graph = torch.load(os.path.join(self.processed_dir, graph_path))
@@ -180,9 +193,10 @@ class GeoMXDataset(Dataset):
                     torch.save(subgraph, os.path.join(self.processed_path,
                                                     'subgraphs',
                                                     f'{p:03d}'+graph_path.split('/')[-1]))
-                    new_data.append(os.path.join(graph_path.split('/')[0],
+                    new_data[g+p] = os.path.join(graph_path.split('/')[0],
                                                 'subgraphs',
-                                                f'{p:03d}'+graph_path.split('/')[-1]))
+                                                f'{p:03d}'+graph_path.split('/')[-1])
+                    new_IDs[g+p] = IDs[g]
                     if g in train_map:
                         new_train_map.append(len(new_data)-1)
                     elif g in val_map:
@@ -193,7 +207,33 @@ class GeoMXDataset(Dataset):
                         raise Exception(f'Index of {graph_path} not in train/val/test map')
         
         data = np.array(new_data)
-        return data, new_train_map, new_val_map, new_test_map
+        return data, new_train_map, new_val_map, new_test_map, new_IDs
+
+    def kFold(self, K, IDs, train_ratio):
+        un_IDs = np.unique(IDs)
+
+        total_samples = un_IDs.shape[0]
+        train_size = int(train_ratio * total_samples)
+        test_size = total_samples - train_size
+
+        trainval_map, test_map = torch.utils.data.random_split(torch.arange(total_samples), [train_size, test_size])
+        test_map = np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
+        folds = torch.utils.data.random_split(torch.arange(total_samples)[trainval_map], [train_size/K]*K)
+        
+        return folds, test_map
+
+    def set_fold_k(self):
+        if self.current_fold == self.num_folds:
+            raise Exception(f'Current fold {self.current_fold}+1 exceeds number of folds {self.num_folds}')
+        un_IDs = np.unique(self.IDs)
+        train_map = []
+        for i, fold in enumerate(self.folds):
+            if i == self.current_fold:
+                self.val_map = np.argwhere(np.isin(self.IDs, un_IDs[fold.indices])).squeeze().tolist()
+            else:
+                train_map.append(np.argwhere(np.isin(self.IDs, un_IDs[fold.indices])).squeeze().tolist())
+        self.train_map = np.concatenate(train_map)
+        self.current_fold += 1
 
     def transform(self, data):
         """"
