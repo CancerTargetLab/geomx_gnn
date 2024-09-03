@@ -217,6 +217,7 @@ def main(**args):
     if args['visualize_expression']:
         from src.explain.VisualizeExpression import visualizeExpression
         visualizeExpression(processed_dir=args['processed_subset_dir'],
+                            output_name=args['model_path'] if args['embed_graph_test_data'] else None,
                             embed_dir=args['embed_dir'],
                             label_data=args['vis_label_data'],
                             figure_dir=args['figure_dir'],

@@ -7,7 +7,7 @@ import pandas as pd
 from src.utils.stats import per_gene_corr
 import os
 
-def get_true_graph_expression_dict(path):
+def get_true_graph_expression_dict(path, output_name=None):
     """
     Create a dict and populate it with name of graphs and ROI expression.
 
@@ -19,6 +19,10 @@ def get_true_graph_expression_dict(path):
     """
     path = os.path.join(os.getcwd(), path)
     graph_paths = [p for p in os.listdir(path) if 'graph' in p and p.endswith('pt')]
+    if output_name is not None:
+        graph_paths.sort()
+        graph_paths = np.array(graph_paths)[np.load(os.path.join(os.path.dirname(output_name), 'test_map.npy')).tolist()].tolist()
+
     value_dict = {}
     for graph_p in graph_paths:
         graph = torch.load(os.path.join(path, graph_p), map_location='cpu')
@@ -86,6 +90,12 @@ def get_patient_ids(label_data, keys):
         tmp = np.ndarray((len(keys)), dtype=str)
         for i_key in range(len(keys)):
             tmp[i_key] = df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID'].values[0]
+        IDs = tmp
+    elif len(keys) < IDs.shape[0]:
+        keys.sort() # VERY IMPORTANT!!! Enforces ID to ROI relation
+        tmp = np.ndarray((len(keys)), dtype=str)
+        for i_key in range(len(keys)):
+            tmp[i_key] = df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID'].values[0] #TODO: check paths
         IDs = tmp
     return IDs, exps
 
@@ -394,6 +404,7 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     plt.close()
 
 def visualizeExpression(processed_dir='TMA1_processed',
+                        output_name=None,
                         embed_dir='out/',
                         label_data='label_data.csv',
                         figure_dir='figures/',
@@ -407,7 +418,7 @@ def visualizeExpression(processed_dir='TMA1_processed',
     name (str): name of .h5ad file to save/load scanpy.AnnData, in figure path name
     select_cells (int): Number of cells to analyse, if 0 select all, otherwise random specified subset
     """
-    value_dict = get_true_graph_expression_dict(os.path.join('data/processed', processed_dir))
+    value_dict = get_true_graph_expression_dict(os.path.join('data/processed', processed_dir), output_name)
     value_dict = get_predicted_graph_expression(value_dict, embed_dir)
     value_dict, cell_shapes = get_predicted_cell_expression(value_dict, embed_dir)
     IDs, exps = get_patient_ids(label_data, list(value_dict.keys()))

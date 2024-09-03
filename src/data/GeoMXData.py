@@ -394,7 +394,7 @@ class GeoMXDataset(Dataset):
         with torch.no_grad():
             model = model.to(device)
             if output_name is not None:
-                self.data = self.data[np.load(os.path.join(os.path.dirname(output_name), 'test_map.npy'))]
+                self.data = self.data[np.load(os.path.join(os.path.dirname(output_name), 'test_map.npy')).tolist()]
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
                 for graph_path in data:
                     graph = torch.load(os.path.join(self.processed_dir, graph_path))
