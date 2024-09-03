@@ -16,6 +16,7 @@ class ImageGraphDataset(GeoMXDataset):
                  raw_subset_dir='',
                  train_ratio=0.6,
                  val_ratio=0.2,
+                 num_folds=1,
                  node_dropout=0.2,
                  edge_dropout=0.3,
                  pixel_pos_jitter=40,
@@ -33,6 +34,7 @@ class ImageGraphDataset(GeoMXDataset):
         raw_subset_dir (str): Name of dir in raw/ and processed/ containing  per ROI visual cell representations(in raw/)
         train_ratio (float): Ratio of IDs used for training
         val_ratio (float): Ratio of IDs used for validation
+        num_folds (int): Number of Crossvalidation folds, val_ratio is disregarded, train_ratio is data used for Crossvalidation, 1-train_ratio is ratio of test data used over all folds
         node_dropout (float): Chance of node dropout during training
         edge_dropout (float): Chance of edge dropout during training
         pixel_pos_jitter (int): Positional jittering of nodes during training
@@ -48,6 +50,7 @@ class ImageGraphDataset(GeoMXDataset):
                         raw_subset_dir=raw_subset_dir,
                         train_ratio=train_ratio,
                         val_ratio=val_ratio,
+                        num_folds=num_folds,
                         node_dropout=node_dropout,
                         edge_dropout=edge_dropout,
                         pixel_pos_jitter=pixel_pos_jitter,

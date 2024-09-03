@@ -110,7 +110,6 @@ class GeoMXDataset(Dataset):
             self.current_fold = 0
             self.IDs = IDs
             self.folds, self.test_map = self.kFold(self.num_folds, self.IDs, train_ratio)
-            self.set_fold_k()
 
         self.mode = 'TRAIN'
         self.train = 'TRAIN'
@@ -223,17 +222,20 @@ class GeoMXDataset(Dataset):
         return folds, test_map
 
     def set_fold_k(self):
-        if self.current_fold == self.num_folds:
+        if self.num_folds == 1:
+            pass
+        elif self.current_fold == self.num_folds:
             raise Exception(f'Current fold {self.current_fold}+1 exceeds number of folds {self.num_folds}')
-        un_IDs = np.unique(self.IDs)
-        train_map = []
-        for i, fold in enumerate(self.folds):
-            if i == self.current_fold:
-                self.val_map = np.argwhere(np.isin(self.IDs, un_IDs[fold.indices])).squeeze().tolist()
-            else:
-                train_map.append(np.argwhere(np.isin(self.IDs, un_IDs[fold.indices])).squeeze().tolist())
-        self.train_map = np.concatenate(train_map)
-        self.current_fold += 1
+        else:
+            un_IDs = np.unique(self.IDs)
+            train_map = []
+            for i, fold in enumerate(self.folds):
+                if i == self.current_fold:
+                    self.val_map = np.argwhere(np.isin(self.IDs, un_IDs[fold.indices])).squeeze().tolist()
+                else:
+                    train_map.append(np.argwhere(np.isin(self.IDs, un_IDs[fold.indices])).squeeze().tolist())
+            self.train_map = np.concatenate(train_map)
+            self.current_fold += 1
 
     def transform(self, data):
         """"
