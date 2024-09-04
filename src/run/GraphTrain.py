@@ -371,9 +371,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                 else:
                     print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
                 
-                save_data['total_test_loss'] = epoch_loss
-                save_data['test_mse_loss'] = geo_loss
+                save_data['test_total_loss'] = epoch_loss
+                save_data['test_list'] = geo_loss
                 save_data['test_acc'] = test_acc
-                save_data['test_pcc'] = statistic
-                save_data['test_pcc'] = pval
+                save_data['test_pcc_statistic_list'] = statistic
+                save_data['test_pcc_pval_list'] = pval
                 torch.save(save_data, output_name_model)
