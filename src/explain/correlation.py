@@ -20,6 +20,7 @@ tmp[var_names] = adata.X
 adata = tmp
 adata['files'] = adata['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
 adata = adata.sort_values(by='files').reset_index(drop=True)
+adata = adata[adata['files'].isin(df['Image'])]     #Selects files that exist in pred, in case ofonly investiating test data
 
 pred = adata[adata.columns[1:].values].values
 y = df[df.columns[4:].values].values
