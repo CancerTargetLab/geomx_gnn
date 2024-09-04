@@ -316,7 +316,8 @@ def train(raw_subset_dir, label_data, output_name, args):
             running_ph_entropy = 0
             running_zinb = 0
             num_graphs = 0
-            model.load_state_dict(torch.load(output_name_model)['model'])
+            save_data = torch.load(output_name_model)
+            model.load_state_dict(save_data['model'])
             model.eval()
             dataset.setMode(dataset.test)
 
@@ -369,3 +370,10 @@ def train(raw_subset_dir, label_data, output_name, args):
                     print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {val_acc:.4f}, Test ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
                 else:
                     print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                
+                save_data['total_test_loss'] = epoch_loss
+                save_data['test_mse_loss'] = geo_loss
+                save_data['test_acc'] = test_acc
+                save_data['test_pcc'] = statistic
+                save_data['test_pcc'] = pval
+                torch.save(save_data, output_name_model)
