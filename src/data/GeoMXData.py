@@ -113,6 +113,8 @@ class GeoMXDataset(Dataset):
             self.folds, self.test_map = self.kFold(self.num_folds, self.IDs, train_ratio)
         
         if output_name is not None:
+            if not os.path.isdir(os.path.join(output_name.split('.')[0])):
+                os.makedirs(os.path.join(output_name.split('.')[0])) 
             np.save(os.path.join(output_name.split('.')[0], 'test_map.npy'), np.array(self.test_map))
 
         self.mode = 'TRAIN'

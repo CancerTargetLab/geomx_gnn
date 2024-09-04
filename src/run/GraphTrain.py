@@ -70,7 +70,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             output_name=output_name)
 
     for k in range(args['num_folds']):
-        output_name = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
+        output_name_model = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
         dataset.set_fold_k()
         dataset.setMode(dataset.train)
         train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -306,7 +306,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 "val_pcc_statistic_list": val_pcc_statistic_list,
                                 "val_pcc_pval_list": val_pcc_pval_list,
                                 "epoch": epoch
-                            }, output_name)
+                            }, output_name_model)
 
 
         with torch.no_grad():
@@ -316,7 +316,7 @@ def train(raw_subset_dir, label_data, output_name, args):
             running_ph_entropy = 0
             running_zinb = 0
             num_graphs = 0
-            model.load_state_dict(torch.load(output_name)['model'])
+            model.load_state_dict(torch.load(output_name_model)['model'])
             model.eval()
             dataset.setMode(dataset.test)
 
