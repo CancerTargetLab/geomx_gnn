@@ -198,10 +198,10 @@ class GeoMXDataset(Dataset):
                     torch.save(subgraph, os.path.join(self.processed_path,
                                                     'subgraphs',
                                                     f'{p:03d}'+graph_path.split('/')[-1]))
-                    new_data[g+p] = os.path.join(graph_path.split('/')[0],
+                    new_data[g*self.subgraphs_per_graph+p] = os.path.join(graph_path.split('/')[0],
                                                 'subgraphs',
                                                 f'{p:03d}'+graph_path.split('/')[-1])
-                    new_IDs[g+p] = IDs[g]
+                    new_IDs[g*self.subgraphs_per_graph+p] = IDs[g]
                     if g in train_map:
                         new_train_map.append(len(new_data)-1)
                     elif g in val_map:
@@ -212,6 +212,7 @@ class GeoMXDataset(Dataset):
                         raise Exception(f'Index of {graph_path} not in train/val/test map')
         
         data = np.array(new_data)
+        new_IDs = np.array(new_IDs)
         return data, new_train_map, new_val_map, new_test_map, new_IDs
 
     def kFold(self, K, IDs, train_ratio):
@@ -223,7 +224,7 @@ class GeoMXDataset(Dataset):
 
         trainval_map, test_map = torch.utils.data.random_split(torch.arange(total_samples), [train_size, test_size])
         test_map = np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
-        folds = torch.utils.data.random_split(torch.arange(total_samples)[trainval_map], [1/K]*K)
+        folds = torch.utils.data.random_split(torch.arange(total_samples)[trainval_map.indices], [1/K]*K)
         
         return folds, test_map
 

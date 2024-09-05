@@ -400,7 +400,7 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
 
     plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
     plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, f'corr_area{name}.pdf'), bboc_inches='tight')
+    plt.savefig(os.path.join(figure_dir, f'corr_area{name}.pdf'), bbox_inches='tight')
     plt.close()
 
 def visualizeExpression(processed_dir='TMA1_processed',
