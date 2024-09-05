@@ -371,9 +371,26 @@ def train(raw_subset_dir, label_data, output_name, args):
                 else:
                     print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
                 
-                save_data['test_total_loss'] = epoch_loss
-                save_data['test_list'] = geo_loss
-                save_data['test_acc'] = test_acc
-                save_data['test_pcc_statistic_list'] = statistic
-                save_data['test_pcc_pval_list'] = pval
-                torch.save(save_data, output_name_model)
+                torch.save({
+                            "model": model.state_dict(),
+                            "opt": optimizer.state_dict(),
+                            "mtype": model_type,
+                            "train_acc": train_acc_list,
+                            "train_list": train_loss_list,
+                            "train_ph_entropy": train_ph_entropy_list,
+                            "train_total_list": train_total_loss_list,
+                            "train_zinb_list": train_zinb_list,
+                            "val_acc": val_acc_list,
+                            "val_list": val_loss_list,
+                            "val_ph_entropy": val_ph_entropy_list,
+                            "val_total_list": val_total_loss_list,
+                            "val_zinb_list": val_zinb_list,
+                            "val_pcc_statistic_list": val_pcc_statistic_list,
+                            "val_pcc_pval_list": val_pcc_pval_list,
+                            "epoch": save_data['epoch'],
+                            "test_total_loss": epoch_loss,
+                            "test_list": geo_loss,
+                            "test_acc": test_acc,
+                            "test_pcc_statistic_list": statistic,
+                            "test_pcc_pval_list": pval
+                        }, output_name_model)
