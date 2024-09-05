@@ -43,7 +43,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                     num_hops=args['num_hops_subgraph'],
                                     label_data=label_data,
                                     crop_factor=args['crop_factor'],
-                                    output_name=output_name,
+                                    output_name=None,
                                     embed=True)
     else:
         dataset = GeoMXDataset(root_dir=args['graph_dir'],
@@ -58,7 +58,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                             subgraphs_per_graph=args['subgraphs_per_graph'],
                             num_hops=args['num_hops_subgraph'],
                             label_data=label_data,
-                            output_name=output_name)
+                            output_name=None)
 
     if 'IMAGEGAT' in model_type:
         model = ROIExpression_Image_gat(channels=dataset.get(0).x.shape[1],
@@ -113,6 +113,6 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     if 'IMAGE' in model_type:
-        dataset.embed(model, output_dir, device=device, batch_size=args['batch_size_image'], return_mean='mean' in model_type)
+        dataset.embed(model, output_dir, device=device, batch_size=args['batch_size_image'], return_mean='mean' in model_type, output_name=output_name)
     else:
-        dataset.embed(model, output_dir, device='cpu', return_mean='mean' in model_type)
+        dataset.embed(model, output_dir, device='cpu', return_mean='mean' in model_type, output_name=output_name)
