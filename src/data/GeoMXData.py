@@ -223,7 +223,7 @@ class GeoMXDataset(Dataset):
 
         trainval_map, test_map = torch.utils.data.random_split(torch.arange(total_samples), [train_size, test_size])
         test_map = np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
-        folds = torch.utils.data.random_split(torch.arange(total_samples)[trainval_map], [train_size/K]*K)
+        folds = torch.utils.data.random_split(torch.arange(total_samples)[trainval_map], [1/K]*K)
         
         return folds, test_map
 

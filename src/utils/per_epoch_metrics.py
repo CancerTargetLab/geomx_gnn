@@ -127,7 +127,8 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
 
             plt.plot(mean_val_pcc, label='Val', color='blue', marker='o')
             plt.axhline(y=mean_test_pcc, label='Test', color='orange', marker='o')
-            plt.fill_between(list(range(mean_test_pcc.shape[0])), max_val_pcc, min_val_pcc, alpha=0.3, color='blue')
+            plt.fill_between(list(range(mean_val_pcc.shape[0])), max_val_pcc, min_val_pcc, alpha=0.3, color='blue')
+            #plt.fill_between(list(range(mean_val_pcc.shape[0])), max_test_pcc, min_test_pcc, alpha=0.3, color='orange')
             plt.ylabel('PCC')
             plt.xlabel('Epochs')
             plt.title(name)
@@ -138,6 +139,7 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
             plt.plot(mean_val_pval, label='Val', color='blue', marker='o')
             plt.axhline(y=mean_test_pval, label='Test', color='orange', marker='o')
             plt.fill_between(list(range(mean_test_pval.shape[0])), max_val_pval, min_val_pval, alpha=0.3, color='blue')
+            #plt.fill_between(list(range(mean_val_pcc.shape[0])), max_test_pval, min_test_pval, alpha=0.3, color='orange')
             plt.ylabel('PVAL')
             plt.xlabel('Epochs')
             plt.title(name)

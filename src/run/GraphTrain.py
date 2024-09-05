@@ -191,12 +191,12 @@ def train(raw_subset_dir, label_data, output_name, args):
                         num_graphs += out.shape[0]
                         if model_type.endswith('_ph'):
                             running_ph_entropy += ph.item() * out.shape[0]
-                            l += 1 - sim + ph
+                            l += 1 * beta - sim + ph
                         elif model_type.endswith('_zinb'):
                             running_zinb += loss_zinb.item() * out.shape[0]
-                            l += 1 - sim + loss_zinb
-                        else:
-                            l += 1 - sim
+                            l += 1 * beta - sim + loss_zinb
+                        else: 
+                            l += 1 * beta - sim
                         running_total_loss += l.item() * out.shape[0]
                         l.backward()
                         optimizer.step()
@@ -257,12 +257,12 @@ def train(raw_subset_dir, label_data, output_name, args):
                             num_graphs += out.shape[0]
                             if model_type.endswith('_ph'):
                                 running_ph_entropy += ph.item() * out.shape[0]
-                                l += 1 - sim + ph
+                                l += 1 * beta - sim + ph
                             elif model_type.endswith('_zinb'):
                                 running_zinb += loss_zinb.item() * out.shape[0]
-                                l += 1 - sim + loss_zinb
+                                l += 1 * beta - sim + loss_zinb
                             else:
-                                l += 1 - sim
+                                l += 1 * beta - sim
                             running_total_loss += l.item() * out.shape[0]
 
                         val_acc = running_acc / num_graphs
@@ -350,12 +350,12 @@ def train(raw_subset_dir, label_data, output_name, args):
                     num_graphs += out.shape[0]
                     if model_type.endswith('_ph'):
                         running_ph_entropy += ph.item() * out.shape[0]
-                        l += 1 - sim + ph
+                        l += 1 * beta - sim + ph
                     elif model_type.endswith('_zinb'):
                         running_zinb += loss_zinb.item() * out.shape[0]
-                        l += 1 - sim + loss_zinb
+                        l += 1 * beta - sim + loss_zinb
                     else:
-                        l += 1 - sim
+                        l += 1 * beta - sim
                     running_total_loss += l.item() * out.shape[0]
 
                 test_acc = running_acc / num_graphs
