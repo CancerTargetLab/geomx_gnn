@@ -17,8 +17,8 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
         os.makedirs(figure_dir)
 
-    if os.isdir(model_path):
-        models = [torch.load(m_path, map_location=torch.device('cpu')) for m_path in os.listdir(model_path) if m_path.endswith('.pt')]
+    if os.path.isdir(model_path):
+        models = [torch.load(os.path.join(model_path, m_path), map_location=torch.device('cpu')) for m_path in os.listdir(model_path) if m_path.endswith('.pt')]
         train_accs = [model['train_acc'] for model in models]
         val_accs = [model['val_acc'] for model in models]
         test_accs = [model['test_acc'] for model in models]
@@ -138,7 +138,7 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
 
             plt.plot(mean_val_pval, label='Val', color='blue', marker='o')
             plt.axhline(y=mean_test_pval, label='Test', color='orange', marker='o')
-            plt.fill_between(list(range(mean_test_pval.shape[0])), max_val_pval, min_val_pval, alpha=0.3, color='blue')
+            plt.fill_between(list(range(mean_val_pval.shape[0])), max_val_pval, min_val_pval, alpha=0.3, color='blue')
             #plt.fill_between(list(range(mean_val_pcc.shape[0])), max_test_pval, min_test_pval, alpha=0.3, color='orange')
             plt.ylabel('PVAL')
             plt.xlabel('Epochs')

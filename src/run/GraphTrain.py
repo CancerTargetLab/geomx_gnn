@@ -388,7 +388,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             "val_pcc_statistic_list": val_pcc_statistic_list,
                             "val_pcc_pval_list": val_pcc_pval_list,
                             "epoch": save_data['epoch'],
-                            "test_total_loss": epoch_loss,
+                            "test_total_list": epoch_loss,
                             "test_list": geo_loss,
                             "test_acc": test_acc,
                             "test_pcc_statistic_list": statistic,
