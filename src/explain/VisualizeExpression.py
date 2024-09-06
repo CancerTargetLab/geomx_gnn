@@ -20,7 +20,7 @@ def get_true_graph_expression_dict(path, output_name=None):
     path = os.path.join(os.getcwd(), path)
     graph_paths = [p for p in os.listdir(path) if 'graph' in p and p.endswith('pt')]
     if output_name is not None:
-        graph_paths.sort()
+        graph_paths.sort(key=lambda s: (s[-len(s)+3:], s[:3]))  #Done for subgraph sorting, does not change sorting of non subgraphs
         graph_paths = np.array(graph_paths)[np.load(os.path.join(os.path.dirname(output_name), 'test_map.npy')).tolist()].tolist()
 
     value_dict = {}
@@ -85,17 +85,10 @@ def get_patient_ids(label_data, keys):
     IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)
     exps = df.columns.values[2:]
 
-    if len(keys) != IDs.shape[0] and keys[0] not in df['ROI'].values.tolist():
-        keys.sort() # VERY IMPORTANT!!! Enforces ID to ROI relation
+    if len(keys) != IDs.shape[0]:
         tmp = np.ndarray((len(keys)), dtype=str)
         for i_key in range(len(keys)):
             tmp[i_key] = df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID'].values[0]
-        IDs = tmp
-    elif len(keys) < IDs.shape[0]:
-        keys.sort() # VERY IMPORTANT!!! Enforces ID to ROI relation
-        tmp = np.ndarray((len(keys)), dtype=str)
-        for i_key in range(len(keys)):
-            tmp[i_key] = df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID'].values[0] #TODO: check paths
         IDs = tmp
     return IDs, exps
 
