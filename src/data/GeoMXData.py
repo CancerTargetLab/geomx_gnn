@@ -96,12 +96,14 @@ class GeoMXDataset(Dataset):
         self.sf = torch.from_numpy(np.sum(sf)/np.sum(sf, axis=0)).to(torch.float32)
 
         total_samples = un_IDs.shape[0]
-        train_size = int(train_ratio * total_samples)
-        val_size = int(val_ratio * total_samples)
-        test_size = total_samples - train_size - val_size
-
-        train_map, val_map, test_map = torch.utils.data.random_split(torch.arange(total_samples), [train_size, val_size, test_size])
-        self.train_map, self.val_map, self.test_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
+        if self.num_folds > 1:
+            self.train_map = list(range(total_samples))
+            self.val_map = list(range(total_samples))
+            self.test_map = list(range(total_samples))
+        else:
+            train_map, val_map, test_map = torch.utils.data.random_split(torch.arange(total_samples),
+                                                                        [train_ratio, val_ratio, 1-train_ratio-val_ratio])
+            self.train_map, self.val_map, self.test_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
 
         if self.subgraphs_per_graph > 0:
             map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, self.test_map, IDs)
