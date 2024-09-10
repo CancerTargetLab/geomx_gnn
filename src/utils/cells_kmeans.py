@@ -42,7 +42,10 @@ with tqdm(range(2, max_clusters+1), total=max_clusters, desc='KMeans')as cluster
         for rep in range(n_reps):
             rand_index = np.random.randint(low=0, high=x.shape[0], size=num_samples)
             kmeans = KMeans(n_clusters=k, n_init=1).fit(x[rand_index])
-            sil.append(silhouette_score(x[rand_index], kmeans.labels_, metric = 'euclidean'))
+            centroids = kmeans.cluster_centers_
+            pred_clusters = kmeans.labels_
+            sil.append(np.linalg.norm(x[rand_index] - centroids[pred_clusters], axis=1))
+            #sil.append(silhouette_score(x[rand_index], kmeans.labels_, metric = 'euclidean'))
         sil = np.array(sil)
         sil_mean.append(np.mean(sil))
         sil_max.append(np.max(sil))
@@ -51,9 +54,8 @@ with tqdm(range(2, max_clusters+1), total=max_clusters, desc='KMeans')as cluster
 
 plt.plot(list(range(2, max_clusters+1)), sil_mean)
 plt.fill_between(list(range(2, max_clusters+1)), sil_max, sil_min, alpha=0.3)
-best_cluster = np.argmax(np.array(sil_mean)) + 2
-plt.title(f'KMeans Clusters best with k={best_cluster}')
-plt.ylabel('SIL score')
+plt.title(f'KMeans Clusters')
+plt.ylabel('WSS score')
 plt.xlabel('Num Clusters')
 plt.savefig(os.path.join(figure_dir, f'{name}.png'))
 plt.close()
