@@ -17,17 +17,19 @@ name = 'crc_optimal_num_clusters'
 if not os.path.isdir(figure_dir):
     os.makedirs(figure_dir)
 
-paths = [torch.load(os.path.join('data/raw', raw_dir, p)) for p in os.listdir(os.path.join('data/raw', raw_dir)) if p.endswith('_cells.pt')]
+paths = [os.path.join('data/raw', raw_dir, p) for p in os.listdir(os.path.join('data/raw', raw_dir)) if p.endswith('_cells.pt')]
 csv_path = [os.path.join('data/raw', raw_dir, p) for p in os.listdir(os.path.join('data/raw', raw_dir)) if p.endswith('.csv')][0]
 cell_number = pd.read_csv(csv_path, header=0, sep=',').shape[0]
 img_shape = torch.load(paths[0]).shape
 x = torch.zeros((cell_number, img_shape[1]), dtype=torch.float32)
 
 last_idx = 0
-for path in paths:
-    tmp = torch.load(tmp)
-    x[last_idx:tmp.shape[0]+last_idx] = torch.mean(tmp, axis=(2, 3))
-    del tmp
+with tqdm(paths, total=len(paths), desc='Load Channels Means...') as paths:
+    for path in paths:
+        tmp = torch.load(path)
+        x[last_idx:tmp.shape[0]+last_idx] = torch.mean(tmp, axis=(2, 3))
+        last_idx += tmp.shape[0]
+        del tmp
 x = x.numpy()
 
 sil_mean = []
