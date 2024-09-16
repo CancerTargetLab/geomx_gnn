@@ -23,7 +23,7 @@ def add_contrastive_loss(hidden,
     """
 
     LARGE_NUM = 1e9
-    
+
     # Get (normalized) hidden1 and hidden2.
     if hidden_norm:
         hidden = F.normalize(hidden, p=2, dim=-1)
