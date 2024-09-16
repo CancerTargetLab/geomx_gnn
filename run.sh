@@ -10,7 +10,7 @@
 # Apptainer images can only be used outside /home. In this example the
 # image is located here
 
-module load Anaconda/2021.05-nsc1
+module load Anaconda/2023.09-0-hpc1-bdist
 conda activate test
 
 # execute python script
