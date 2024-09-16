@@ -43,7 +43,8 @@ class EmbedDataset(Dataset):
                  root_dir="data/raw",
                  crop_factor=0.5,
                  train_ratio=0.6,
-                 val_ratio=0.2):
+                 val_ratio=0.2,
+                 n_clusters=1):
         """
         Init dataset.
 
@@ -52,6 +53,7 @@ class EmbedDataset(Dataset):
         crop_factor (float): Min crop size
         train_ratio (float): Ratio of cells used for training
         val_ratio (float): Ratio of cells used for validation
+        n_clusters (int): Number of KMeans clusters to calculate pseudo labels to balance sampling, ignored when 1
         """
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.crop_factor = crop_factor
@@ -82,6 +84,20 @@ class EmbedDataset(Dataset):
         self.train_data = self.data[self.train_map]
         self.val_data = self.data[self.val_map]
         self.test_data = self.data[self.test_map]
+
+        if n_clusters > 1:
+            from sklearn.cluster import KMeans
+            from sklearn.metrics import silhouette_score
+            import numpy as np
+            means = torch.mean(self.data, axis=(2,3)).numpy()
+            print('Calculate KMeans...')
+            kmeans = KMeans(n_clusters=n_clusters, n_init=5).fit(means) #TODO: save
+            print('Calculate SIL score...')
+            sil = silhouette_score(means, kmeans.labels_, metric = 'euclidean')
+            print(f'KMeans has SIL score of {sil}')
+            n_label  = [np.sum(kmeans.label_ == l) for l in np.unique(kmeans.labels_).tolist()]
+            self.weight = [1/n_label[kmeans.labels_[i]] for i in range(kmeans.labels_.shape[0])]
+            self.train_weight = torch.tensor(self.weight)[self.train_map]
 
         self.mode = 'TRAIN'
         self.train = 'TRAIN'

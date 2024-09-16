@@ -1,6 +1,6 @@
 from tqdm import tqdm
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from src.models.CellContrastModel import ContrastiveLearning
 from src.data.CellContrastData import EmbedDataset
 from src.loss.ContrastiveLoss import add_contrastive_loss
@@ -33,7 +33,8 @@ def train(image_dir, output_name, args):
     dataset = EmbedDataset(root_dir=image_dir, 
                            crop_factor=args['crop_factor'],
                            train_ratio=args['train_ratio_image'],
-                           val_ratio=args['val_ratio_image'])
+                           val_ratio=args['val_ratio_image'],
+                           n_clusters=args['n_clusters_image'])
     model = ContrastiveLearning(channels=dataset.__getitem__(0)[0].shape[0],
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
@@ -45,7 +46,8 @@ def train(image_dir, output_name, args):
                               shuffle=True,
                               num_workers=num_workers,
                               drop_last=True,
-                              pin_memory=True)
+                              pin_memory=True,
+                              sampler=None if args['n_clusters_image'] <= 1 else WeightedRandomSampler(dataset.train_weight, dataset.__len__()))
     dataset.setMode(dataset.val)
     val_loader = DataLoader(dataset,
                             batch_size=batch_size,
