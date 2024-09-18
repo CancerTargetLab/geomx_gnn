@@ -54,7 +54,7 @@ def calc_mean_std(image_paths,
 
     global_hist = None
     
-    # Sum channel-wise histograms of pixel values over all images
+    # Sum channel-wise histograms of pixel values over all images,TODO: do stuff in torch?
     for img_p in tqdm(image_paths, desc='Calculating mean and std for ROIs'):
         img = torch.load(img_p.split('.')[0]+'_cells.pt').numpy()
         if global_hist is None:

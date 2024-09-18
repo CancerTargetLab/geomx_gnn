@@ -72,6 +72,9 @@ class EmbedDataset(Dataset):
             self.data[last_idx:data.shape[0]+last_idx] = data
             last_idx += data.shape[0]
         
+        self.mean = torch.from_numpy(np.load(self.root_dir, 'mean.npy'))
+        self.std = torch.from_numpy(np.load(self.root_dir, 'std.npy'))
+        
         total_samples = self.data.shape[0]
         train_size = int(train_ratio * total_samples)
         val_size = int(val_ratio * total_samples)
@@ -137,6 +140,7 @@ class EmbedDataset(Dataset):
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
             T.RandomErasing(value=0),
+            T.Normalize(mean=self.mean, std=self.std),
             AddGaussianNoiseToRandomChannels(),
             rnd_gausblur
         ])
@@ -190,7 +194,7 @@ class EmbedDataset(Dataset):
         with torch.no_grad():
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 for path in cells_path:
-                    data = torch.load(os.path.join(path))
+                    data = T.Normalize(mean=self.mean, std=self.std)(torch.load(os.path.join(path)))
                     embed = torch.zeros((data.shape[0], model.embed_size), dtype=torch.float32)
                     num_batches = (data.shape[0] // batch_size) + 1
                     for batch_idx in range(num_batches):
