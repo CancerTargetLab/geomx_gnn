@@ -6,10 +6,10 @@ Our models are trained with nvidia GPUs. To run on GPUs appropiate CUDA versions
 Setup via Anaconda environment:
 ```
 conda install -c anaconda python=3.11.5  
-pip install torch -f https://data.pyg.org/whl/torch-2.1.0+cu121.html  
-pip install torch-geometric -f https://data.pyg.org/whl/torch-2.1.0+cu121.html  
-pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html  
-pip install torchvision -f https://data.pyg.org/whl/torch-2.1.0+cu121.html  
+pip install torch -f https://data.pyg.org/whl/torch-2.4.0+cu121.html  
+pip install torch-geometric -f https://data.pyg.org/whl/torch-2.4.0+cu121.html  
+pip install torch-cluster -f https://data.pyg.org/whl/torch-2.4.0+cu121.html  
+pip install torchvision -f https://data.pyg.org/whl/torch-2.4.0+cu121.html  
 conda install -c conda-forge squidpy  
 ```
 
