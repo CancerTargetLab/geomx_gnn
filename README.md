@@ -10,7 +10,7 @@ pip install torch -f https://data.pyg.org/whl/torch-2.4.0+cu121.html
 pip install torch-geometric -f https://data.pyg.org/whl/torch-2.4.0+cu121.html  
 pip install torch-cluster -f https://data.pyg.org/whl/torch-2.4.0+cu121.html  
 pip install torchvision -f https://data.pyg.org/whl/torch-2.4.0+cu121.html  
-conda install -c conda-forge squidpy  
+pip install squidpy  
 ```
 
 ## Required Data
@@ -27,7 +27,7 @@ Now we are ready to go!
 ## Preprocessing
 The first process is to normalize Image data and uniformly cut out Cells:  
 ```sh
-python -m --image_preprocess --preprocess_dir 'data/raw/{EXPERIMENT NAME}/' --cell_cutout 34 --preprocess_workers 26 --preprocess_channels 0,10,14,19 --preprocess_mean_std_dir 'data/raw/{EXPERIMENT NAME}/'
+python -m main --image_preprocess --preprocess_dir 'data/raw/{EXPERIMENT NAME}/' --cell_cutout 34 --preprocess_workers 26 --preprocess_channels 0,10,14,19 --preprocess_mean_std_dir 'data/raw/{EXPERIMENT NAME}/'
 ```
 - `--image_preprocess`:  
 Wether or not to run image preprocessing.
