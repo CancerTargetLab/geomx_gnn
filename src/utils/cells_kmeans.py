@@ -44,7 +44,7 @@ with tqdm(range(2, max_clusters+1), total=max_clusters, desc='KMeans')as cluster
             kmeans = KMeans(n_clusters=k, n_init=1).fit(x[rand_index])
             centroids = kmeans.cluster_centers_
             pred_clusters = kmeans.labels_
-            sil.append(np.linalg.norm(x[rand_index] - centroids[pred_clusters], axis=1))
+            sil.append(np.sum((x[rand_index] - centroids[pred_clusters])**2)/num_samples)
             #sil.append(silhouette_score(x[rand_index], kmeans.labels_, metric = 'euclidean'))
         sil = np.array(sil)
         sil_mean.append(np.mean(sil))
