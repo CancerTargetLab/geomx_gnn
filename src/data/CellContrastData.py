@@ -2,36 +2,51 @@ from torch.utils.data import Dataset
 import pandas as pd
 import torch
 import os
-import torchvision.transforms as T
+import torchvision.transforms.v2 as T
 from tqdm import tqdm
 
-class AddGaussianNoiseToRandomChannels(object):
-    """
-    Add GaussianNoise with per channel random chance.
-    # Obtained and adapted from ptrblck:
-    # https://discuss.pytorch.org/t/how-to-add-noise-to-mnist-dataset-when-using-pytorch/59745/2
-    """
-    def __init__(self, mean=0., std=1., p=0.5):
-        """
-        Init state.
-
-        Paramters:
-        mean (float): mean
-        std (float): std
-        p (float): per channel chance to add noise
-        """
-        self.std = std
-        self.mean = mean
-        self.p = p
-        
-    def __call__(self, tensor):
-        for channel in range(tensor.shape[0]):
-            if  (torch.randn(1) < self.p).item():
-                tensor[channel] = tensor[channel] + torch.randn(tensor[channel].size()) * self.std + self.mean
-        return tensor
+class RandomArtefact(T.RandomErasing):
+    def __init__(self,
+                 p=0.5,
+                 scale=(0.02, 0.33),
+                 ratio=(0.3, 3.3),
+                 min_value=0,
+                 max_value=2**16,
+                 inplace=False):
+        super().__init__(p=p,
+                         scale=scale,
+                         ratio=ratio,
+                         inplace=inplace)
+        self.min_value = min_value
+        self.max_value = max_value
     
-    def __repr__(self):
-        return self.__class__.__name__ + '(mean={0}, std={1}, p={2})'.format(self.mean, self.std, self.p)
+    def forward(self, img):
+        super().value = torch.randint(low=self.min_value, high=self.max_value)
+        return super().forward(img)
+
+class RandomBackground(torch.nn.Module):
+    def __init__(self,
+                 std=1,
+                 std_frac=0.5,
+                 p=0.5,
+                 min_value=0,
+                 max_value=2**16 - 1,
+                 inplace=False):
+        self.std = std
+        self.std_frac = std_frac
+        self.p = p
+        self.min_value = min_value
+        self.max_value = max_value
+        self.inplace = inplace
+    
+    def forward(self, img):
+        if torch.rand(1) < self.p:
+            if not self.inplace:
+                img = img.clone()
+            background = self.std_frac * self.std * torch.randn(img.shape[-3])
+            img += background.unsqueeze(1).unsqueeze(1).expand(img.shape[-3], img.shape[-2], img.shape[-1])
+            img = torch.clamp(img, self.min_value, self.max_value)
+        return img
 
 
 class EmbedDataset(Dataset):
@@ -133,15 +148,20 @@ class EmbedDataset(Dataset):
         torch.Tensor: Cell Image 2 transformed
         """
         gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
-        rnd_gausblur = T.RandomApply([gausblur], p=0.5)
+        rnd_gausblur = T.RandomApply([gausblur], p=0.8)
+        gausnoise = T.GaussianNoise(clip=False)
+        rnd_gausnoise = T.RandomApply([gausnoise], p=0.2)
+        
 
         compose = T.Compose([
             T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            T.RandomErasing(value=0),
+            RandomBackground(std=self.std, std_frac=0.1),
+            RandomArtefact(),
+            T.ConvertImageDtype(torch.float32),
             T.Normalize(mean=self.mean, std=self.std),
-            AddGaussianNoiseToRandomChannels(),
+            rnd_gausnoise,
             rnd_gausblur
         ])
         x1, x2 = compose(data.to(torch.float32)), compose(data.to(torch.float32))
