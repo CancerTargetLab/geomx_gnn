@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 import pandas as pd
+import numpy as np
 import torch
 import os
 import torchvision.transforms.v2 as T
@@ -148,7 +149,7 @@ class EmbedDataset(Dataset):
         torch.Tensor: Cell Image 2 transformed
         """
         gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
-        rnd_gausblur = T.RandomApply([gausblur], p=0.8)
+        rnd_gausblur = T.RandomApply([gausblur], p=0.5)
         gausnoise = T.GaussianNoise(clip=False)
         rnd_gausnoise = T.RandomApply([gausnoise], p=0.2)
         
