@@ -183,7 +183,7 @@ def cell_seg(df_path,
         chunks = [list(range(i, min(i + chunk_size, len(x)))) for i in range(0, len(x), chunk_size)]
 
         # Create between processes shared list of tensors to save cut outs
-        all_results = [torch.zeros((len(chunk),img.shape[-1],cell_cutout,cell_cutout)) for chunk in (chunks)]
+        all_results = [torch.zeros((len(chunk),img.shape[-1],cell_cutout,cell_cutout), dtype=img.dtype) for chunk in (chunks)]
         for result in all_results:
             result.share_memory_()
         all_cells = []
@@ -207,7 +207,8 @@ def cell_seg(df_path,
             all_cells.extend(result)
         
         all_cells = torch.stack(all_cells)
-        torch.save(all_cells, os.path.join(image.split('.')[0]+'_cells.pt'))
+        np.save(os.path.join(image.split('.')[0]+'_cells.npy'), all_cells.numpy())
+        #torch.save(all_cells.to(torch.int32), os.path.join(image.split('.')[0]+'_cells.pt'))
         del img
         del all_cells
         del df_img

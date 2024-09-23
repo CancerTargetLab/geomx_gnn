@@ -74,22 +74,26 @@ class EmbedDataset(Dataset):
         self.root_dir = os.path.join(os.getcwd(), root_dir)
         self.crop_factor = crop_factor
 
-        self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.pt')]
+        self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.npy')] #TODO: to pt when saving torch uint16 is supported
         self.cells_path.sort()
 
         csv_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('.csv')][0]
         self.cell_number = pd.read_csv(csv_path, header=0, sep=',').shape[0]
-        img_shape = torch.load(self.cells_path[0]).shape
-        self.data = torch.zeros((self.cell_number, img_shape[1], img_shape[2], img_shape[3]), dtype=torch.float16)
+        #img = torch.load(self.cells_path[0]).to(torch.uint16)
+        img = np.load(self.cells_path[0])
+        img_shape = img.shape
+        self.data = torch.zeros((self.cell_number, img_shape[1], img_shape[2], img_shape[3]), dtype=torch.uint16)
+        del img
 
         last_idx = 0
         for cells in self.cells_path:
-            data = torch.load(cells)
+            data = torch.from_numpy(np.load(cells)).to(torch.uint16)
+            #data = torch.load(cells).to(torch.uint16)
             self.data[last_idx:data.shape[0]+last_idx] = data
             last_idx += data.shape[0]
         
-        self.mean = torch.from_numpy(np.load(self.root_dir, 'mean.npy'))
-        self.std = torch.from_numpy(np.load(self.root_dir, 'std.npy'))
+        self.mean = torch.from_numpy(np.load(os.path.join(self.root_dir, 'mean.npy')))
+        self.std = torch.from_numpy(np.load(os.path.join(self.root_dir, 'std.npy')))
         
         total_samples = self.data.shape[0]
         train_size = int(train_ratio * total_samples)
@@ -107,14 +111,13 @@ class EmbedDataset(Dataset):
         if n_clusters > 1:
             from sklearn.cluster import KMeans
             from sklearn.metrics import silhouette_score
-            import numpy as np
-            means = torch.mean(self.data, axis=(2,3)).numpy()
+            means = self.data[:,:,int(img_shape[-2]/2),int(img_shape[-1]/2)].numpy()
             print('Calculate KMeans...')
             kmeans = KMeans(n_clusters=n_clusters, n_init=5).fit(means) #TODO: save
             print('Calculate SIL score...')
             sil = silhouette_score(means, kmeans.labels_, metric = 'euclidean')
             print(f'KMeans has SIL score of {sil}')
-            n_label  = [np.sum(kmeans.label_ == l) for l in np.unique(kmeans.labels_).tolist()]
+            n_label  = [np.sum(kmeans.labels_ == l) for l in sorted(np.unique(kmeans.labels_).tolist())]
             self.weight = [1/n_label[kmeans.labels_[i]] for i in range(kmeans.labels_.shape[0])]
             self.train_weight = torch.tensor(self.weight)[self.train_map]
 
@@ -215,7 +218,8 @@ class EmbedDataset(Dataset):
         with torch.no_grad():
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 for path in cells_path:
-                    data = T.Normalize(mean=self.mean, std=self.std)(torch.load(os.path.join(path)))
+                    data = T.Normalize(mean=self.mean, std=self.std)(torch.from_numpy(np.load((os.path.join(path)))))#TODO: rm
+                    #data = T.Normalize(mean=self.mean, std=self.std)(torch.load(os.path.join(path)))
                     embed = torch.zeros((data.shape[0], model.embed_size), dtype=torch.float32)
                     num_batches = (data.shape[0] // batch_size) + 1
                     for batch_idx in range(num_batches):
