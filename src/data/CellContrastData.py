@@ -130,12 +130,12 @@ class EmbedDataset(Dataset):
             T.RandomVerticalFlip(),
             RandomBackground(std=self.std, std_frac=0.5),
             RandomArtefact(),
-            T.ConvertImageDtype(torch.float32),
+            #T.ConvertImageDtype(torch.float32),
             T.Normalize(mean=self.mean, std=self.std),
             rnd_gausnoise,
             rnd_gausblur
         ])
-        x1, x2 = compose(data), compose(data)
+        x1, x2 = compose(data.to(torch.float32)), compose(data.to(torch.float32))
         return x1, x2
 
     def __len__(self):

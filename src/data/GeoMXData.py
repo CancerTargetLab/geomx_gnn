@@ -15,6 +15,7 @@ class GeoMXDataset(Dataset):
     """
     def __init__(self,
                  root_dir='data/',
+                 split='train',
                  raw_subset_dir='',
                  train_ratio=0.6,
                  val_ratio=0.2,
@@ -48,6 +49,8 @@ class GeoMXDataset(Dataset):
         use_embed_image (bool): Wether or not to use visual representation embedings for cells, or cell cut outs
         """
         self.root_dir = os.path.join(os.getcwd(), root_dir)
+        assert split in ['train', 'test'], f'split must be either train or test, but is {split}'
+        self.split = split
         self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
         self.processed_path = os.path.join(self.root_dir, 'processed', raw_subset_dir)
         self.label_data = label_data
@@ -67,15 +70,15 @@ class GeoMXDataset(Dataset):
         self.Distance = Distance(norm=False, cat=False)
         self.LocalCartesian = LocalCartesian()
 
-        if not (os.path.exists(self.processed_path) and os.path.isdir(self.processed_path)):
-            os.makedirs(self.processed_path)
+        if not (os.path.exists(os.path.join(self.processed_path, self.split)) and os.path.isdir(os.path.join(self.processed_path, self.split))):
+            os.makedirs(os.path.join(self.processed_path, self.split))
 
         if os.path.exists(self.raw_path) and os.path.isdir(self.raw_path):
             self.cell_pos = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('.csv')][0]
             self.raw_files = pd.read_csv(os.path.join(self.root_dir, 'raw', self.label_data),
                                                       header=0,
                                                       sep=',')['ROI'].apply(lambda x: x.split('.')[0]+'_cells_embed.pt').unique().tolist()
-            self.raw_files = [os.path.join(self.raw_path, p) for p in self.raw_files]
+            self.raw_files = [os.path.join(self.raw_path, self.split, p) for p in self.raw_files]
             self.raw_files.sort()
         
         image_name_split = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].iloc[0].split('.')
@@ -138,7 +141,7 @@ class GeoMXDataset(Dataset):
             i += 1
             appendix = path.split('/')[-1].split('_')[0]
             if len(self.raw_subset_dir) > 0:
-                processed_filename.append(f'{self.raw_subset_dir}/graph_{appendix}.pt')
+                processed_filename.append(os.path.join(self.raw_subset_dir, self.split, f'graph_{appendix}.pt'))
             else:
                 processed_filename.append(f'graph_{appendix}.pt')
         processed_filename.sort()
@@ -313,7 +316,7 @@ class GeoMXDataset(Dataset):
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
         if self.use_embed_image:
-            node_features =torch.load(file)[torch.from_numpy(mask.values)]
+            node_features =torch.load(file)[torch.from_numpy(mask.values)]#TODO
         else: 
             node_features =torch.load(file.split('_embed')[0]+'.pt')[torch.from_numpy(mask.values)]
 
@@ -339,7 +342,7 @@ class GeoMXDataset(Dataset):
                             y=label,
                             cellexpr=cellexpr)
             data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
-            torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
+            torch.save(data, os.path.join(self.processed_path, self.split, f"graph_{file_prefix}.pt"))
         else: 
             raise Exception(f'File {file} has no Expression data in {self.label_data}!!!')
 
