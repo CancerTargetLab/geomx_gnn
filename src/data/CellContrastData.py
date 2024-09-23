@@ -57,9 +57,8 @@ class EmbedDataset(Dataset):
 
     def __init__(self,
                  root_dir="data/raw",
+                 split='train',
                  crop_factor=0.5,
-                 train_ratio=0.6,
-                 val_ratio=0.2,
                  n_clusters=1):
         """
         Init dataset.
@@ -71,7 +70,8 @@ class EmbedDataset(Dataset):
         val_ratio (float): Ratio of cells used for validation
         n_clusters (int): Number of KMeans clusters to calculate pseudo labels to balance sampling, ignored when 1
         """
-        self.root_dir = os.path.join(os.getcwd(), root_dir)
+        assert split in ['train', 'test'], f'split must be either train or test, but is {split}'
+        self.root_dir = os.path.join(os.getcwd(), root_dir, split)
         self.crop_factor = crop_factor
 
         self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.npy')] #TODO: to pt when saving torch uint16 is supported
@@ -80,33 +80,20 @@ class EmbedDataset(Dataset):
         csv_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('.csv')][0]
         self.cell_number = pd.read_csv(csv_path, header=0, sep=',').shape[0]
         #img = torch.load(self.cells_path[0]).to(torch.uint16)
-        img = np.load(self.cells_path[0])
+        img = torch.from_numpy(np.load(self.cells_path[0]))
         img_shape = img.shape
-        self.data = torch.zeros((self.cell_number, img_shape[1], img_shape[2], img_shape[3]), dtype=torch.uint16)
+        self.data = torch.zeros((self.cell_number, img_shape[1], img_shape[2], img_shape[3]), dtype=img.dtype)
         del img
 
         last_idx = 0
         for cells in self.cells_path:
-            data = torch.from_numpy(np.load(cells)).to(torch.uint16)
+            data = torch.from_numpy(np.load(cells)).to(self.data.dtype)
             #data = torch.load(cells).to(torch.uint16)
             self.data[last_idx:data.shape[0]+last_idx] = data
             last_idx += data.shape[0]
         
         self.mean = torch.from_numpy(np.load(os.path.join(self.root_dir, 'mean.npy')))
         self.std = torch.from_numpy(np.load(os.path.join(self.root_dir, 'std.npy')))
-        
-        total_samples = self.data.shape[0]
-        train_size = int(train_ratio * total_samples)
-        val_size = int(val_ratio * total_samples)
-        test_size = total_samples - train_size - val_size
-
-        # Use random_split to split the data tensor
-        train_map, val_map, test_map = torch.utils.data.random_split(self.data, [train_size, val_size, test_size])
-        self.train_map, self.val_map, self.test_map = train_map.indices, val_map.indices, test_map.indices
-
-        self.train_data = self.data[self.train_map]
-        self.val_data = self.data[self.val_map]
-        self.test_data = self.data[self.test_map]
 
         if n_clusters > 1:
             from sklearn.cluster import KMeans
@@ -119,26 +106,6 @@ class EmbedDataset(Dataset):
             print(f'KMeans has SIL score of {sil}')
             n_label  = [np.sum(kmeans.labels_ == l) for l in sorted(np.unique(kmeans.labels_).tolist())]
             self.weight = [1/n_label[kmeans.labels_[i]] for i in range(kmeans.labels_.shape[0])]
-            self.train_weight = torch.tensor(self.weight)[self.train_map]
-
-        self.mode = 'TRAIN'
-        self.train = 'TRAIN'
-        self.val = 'VAL'
-        self.test = 'TEST'
-        self.embed = 'EMBED'
-    
-    def setMode(self, mode):
-        """
-        Set mode of dataset.
-
-        Parameters:
-        mode (str): mode of dataset to set to
-        """
-        if mode.upper() in [self.train, self.val, self.test, self.embed]:
-            self.mode = mode.upper()
-        else:
-            print(f'Mode {mode} not suported, has to be one of .train, .val .test or .embed')
-
 
     def transform(self, data):
         """"
@@ -161,28 +128,21 @@ class EmbedDataset(Dataset):
             T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            RandomBackground(std=self.std, std_frac=0.1),
+            RandomBackground(std=self.std, std_frac=0.5),
             RandomArtefact(),
             T.ConvertImageDtype(torch.float32),
             T.Normalize(mean=self.mean, std=self.std),
             rnd_gausnoise,
             rnd_gausblur
         ])
-        x1, x2 = compose(data.to(torch.float32)), compose(data.to(torch.float32))
+        x1, x2 = compose(data), compose(data)
         return x1, x2
 
     def __len__(self):
         """
         Set mode of dataset.
         """
-        if self.mode == self.train:
-            return len(self.train_map)
-        elif self.mode == self.val:
-            return len(self.val_map)
-        elif self.mode == self.test:
-            return len(self.test_map)
-        else:
-            return self.data.shape[0]
+        return self.data.shape[0]
 
     def __getitem__(self, idx):
         """
@@ -194,16 +154,7 @@ class EmbedDataset(Dataset):
         Returns:
         torch.Tensor, cell cut out
         """
-        if self.mode == self.train:
-            return self.transform(self.train_data[idx])
-        elif self.mode == self.val:
-            return self.transform(self.val_data[idx])
-        elif self.mode == self.test:
-            return self.transform(self.test_data[idx])
-        elif self.mode == self.embed:
-            return self.data[idx]
-        else:
-            return self.transform(self.data[idx])
+        return self.transform(self.data[idx])
     
     
     def save_embed_data(self, model, device='cpu', batch_size=256):

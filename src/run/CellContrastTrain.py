@@ -30,41 +30,35 @@ def train(image_dir, output_name, args):
     if args['deterministic']:
         set_seed(seed)
 
-    dataset = EmbedDataset(root_dir=image_dir, 
+    train_dataset = EmbedDataset(root_dir=image_dir,
+                           split='train' ,
                            crop_factor=args['crop_factor'],
-                           train_ratio=args['train_ratio_image'],
-                           val_ratio=args['val_ratio_image'],
                            n_clusters=args['n_clusters_image'])
-    model = ContrastiveLearning(channels=dataset.__getitem__(0)[0].shape[0],
+    test_dataset = EmbedDataset(root_dir=image_dir,
+                           split='test' ,
+                           crop_factor=args['crop_factor'],
+                           n_clusters=args['n_clusters_image'])
+    model = ContrastiveLearning(channels=train_dataset.__getitem__(0)[0].shape[0],
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
                                 resnet=args['resnet_model']).to(device, dtype=torch.float32)
 
-    dataset.setMode(dataset.train)
-    train_loader = DataLoader(dataset,
+    train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
                               shuffle=True,
                               num_workers=num_workers,
                               drop_last=True,
                               pin_memory=True,
-                              sampler=None if args['n_clusters_image'] <= 1 else WeightedRandomSampler(dataset.train_weight, dataset.__len__()))
-    dataset.setMode(dataset.val)
-    val_loader = DataLoader(dataset,
+                              sampler=None if args['n_clusters_image'] <= 1 else WeightedRandomSampler(train_dataset.weight, train_dataset.__len__()))
+    val_loader = DataLoader(test_dataset,
                             batch_size=batch_size,
                             shuffle=False,
                             num_workers=num_workers,
                             drop_last=True,
                             pin_memory=True)
-    dataset.setMode(dataset.test)
-    test_loader = DataLoader(dataset,
-                             batch_size=batch_size,
-                             shuffle=False,
-                             num_workers=num_workers,
-                             drop_last=True)
 
     #TODO: lr scheduling
     #sc_lr = lr * batch_size / 256
-    dataset.setMode(dataset.train)
     #warmup_steps = int(round(warmup_epochs*len(dataset)/batch_size))
     optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-6, momentum=0.9)
     #optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-6)
@@ -90,7 +84,6 @@ def train(image_dir, output_name, args):
         running_loss = 0
         running_acc = 0
         model.train()
-        dataset.setMode(dataset.train)
 
         if best_run < early_stopping:
             with tqdm(train_loader, total=len(train_loader), desc=f"Training epoch {epoch}") as train_loader:
@@ -119,7 +112,6 @@ def train(image_dir, output_name, args):
                 running_loss = 0
                 running_acc = 0
                 model.eval()
-                dataset.setMode("val")
 
                 with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch}") as val_loader:
                     for idx, batch in enumerate(val_loader):
@@ -156,9 +148,8 @@ def train(image_dir, output_name, args):
         running_acc = 0
         model.load_state_dict(torch.load(output_name)['model'])
         model.eval()
-        dataset.setMode(dataset.test)
 
-        with tqdm(test_loader, total=len(test_loader), desc="Test") as test_loader:
+        with tqdm(val_loader, total=len(val_loader), desc="Test") as test_loader:
             for idx, batch in enumerate(test_loader):
                 batch = torch.cat((batch[0], batch[1])).to(device)
                 out = model(batch)

@@ -2,10 +2,10 @@ import torch
 import numpy as np
 import os
 from tqdm import tqdm
-import torchvision.transforms as T
+import torchvision.transforms.v2 as T
 import random
 from src.data.GeoMXData import GeoMXDataset
-from src.data.CellContrastData import AddGaussianNoiseToRandomChannels
+from src.data.CellContrastData import RandomArtefact, RandomBackground
 
 class ImageGraphDataset(GeoMXDataset):
     """
@@ -67,6 +67,7 @@ class ImageGraphDataset(GeoMXDataset):
         self.data_idx = np.array(list(range(self.data.shape[0])))
         if not embed:
             self.data = [torch.load(os.path.join(self.processed_dir, graph)) for graph in self.data]
+        #TODO: load mean, std
     
     def transform(self, data):
         """"
@@ -88,10 +89,11 @@ class ImageGraphDataset(GeoMXDataset):
             Returns:
             torch.Tensor: Cell Images transformed
             """
+            #TODO: normalize, use other augs
             gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
             rnd_gausblur = T.RandomApply([gausblur], p=0.5)
             for img in range(data.shape[0]):
-                compose = T.Compose([
+                compose = T.Compose([#TODO: make usable for new structure
                     T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
                     T.RandomHorizontalFlip(),
                     T.RandomVerticalFlip(),

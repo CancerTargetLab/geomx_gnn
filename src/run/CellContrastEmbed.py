@@ -21,13 +21,14 @@ def embed(image_dir, model_name, args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     set_seed(seed)
 
-    dataset = EmbedDataset(root_dir=image_dir, 
-                           crop_factor=args['crop_factor'],
-                           train_ratio=args['train_ratio_image'],
-                           val_ratio=args['val_ratio_image'])
-    dataset.setMode(dataset.embed)
+    train_dataset = EmbedDataset(root_dir=image_dir,
+                                 split='train',
+                                 crop_factor=args['crop_factor'])
+    test_dataset = EmbedDataset(root_dir=image_dir,
+                                 split='test',
+                                 crop_factor=args['crop_factor'])
 
-    model = ContrastiveLearning(channels=dataset.__getitem__(0).shape[0],
+    model = ContrastiveLearning(channels=train_dataset.__getitem__(0).shape[0],
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
                                 resnet=args['resnet_model']).to(device, torch.float32)
@@ -35,4 +36,5 @@ def embed(image_dir, model_name, args):
     model.eval()
     model.mode = 'embed'
 
-    dataset.save_embed_data(model, device=device, batch_size=batch_size)
+    train_dataset.save_embed_data(model, device=device, batch_size=batch_size)
+    test_dataset.save_embed_data(model, device=device, batch_size=batch_size)
