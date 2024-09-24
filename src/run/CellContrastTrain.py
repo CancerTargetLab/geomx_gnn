@@ -45,7 +45,7 @@ def train(image_dir, output_name, args):
 
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
-                              shuffle=True,
+                              shuffle=False,
                               num_workers=num_workers,
                               drop_last=True,
                               pin_memory=True,

@@ -22,7 +22,7 @@ class RandomArtefact(T.RandomErasing):
         self.max_value = max_value
     
     def forward(self, img):
-        super().value = torch.randint(low=self.min_value, high=self.max_value)
+        self.value = [float(torch.randint(low=self.min_value, high=self.max_value, size=(1,)).item())]
         return super().forward(img)
 
 class RandomBackground(torch.nn.Module):
@@ -33,6 +33,7 @@ class RandomBackground(torch.nn.Module):
                  min_value=0,
                  max_value=2**16 - 1,
                  inplace=False):
+        super().__init__()
         self.std = std
         self.std_frac = std_frac
         self.p = p
@@ -119,10 +120,11 @@ class EmbedDataset(Dataset):
             means = self.data[:,:,int(img_shape[-2]/2),int(img_shape[-1]/2)].numpy()
             print('Calculate KMeans...')
             kmeans = KMeans(n_clusters=n_clusters, n_init=5).fit(means) #TODO: save
-            print('Calculate SIL score...')
-            sil = silhouette_score(means, kmeans.labels_, metric = 'euclidean')
-            print(f'KMeans has SIL score of {sil}')
+            print('Number of cells per cluster:')
+            # sil = silhouette_score(means, kmeans.labels_, metric = 'euclidean')
+            # print(f'KMeans has SIL score of {sil}')
             n_label  = [np.sum(kmeans.labels_ == l) for l in sorted(np.unique(kmeans.labels_).tolist())]
+            print(n_label)
             self.weight = [1/n_label[kmeans.labels_[i]] for i in range(kmeans.labels_.shape[0])]
 
     def transform(self, data):
