@@ -231,14 +231,14 @@ def image_preprocess(path,
     cell_cutout (int): length/width of cut out
     num_processes (int): number of processes to use
     """
-
-    df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
+    raw_dir = os.path.abspath(os.path.join(path, '..'))
+    df_path = [os.path.join(path, p) for p in os.listdir(raw_dir) if p.endswith(('.csv'))][0]
     img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.tiff', '.tif'))]
 
     img_channels = img_channels if len(img_channels) == 0 else np.array([int(channel) for channel in img_channels.split(',')])
     cell_seg(df_path, img_paths, img_channels=img_channels, cell_cutout=cell_cutout, num_processes=num_processes)
     if len(path_mean_std) == 0:
         mean, std = calc_mean_std(img_paths, max_img=max_img)
-        np.save(os.path.join(path, 'mean.npy'), mean)
-        np.save(os.path.join(path, 'std.npy'), std)
+        np.save(os.path.join(raw_dir, 'mean.npy'), mean)
+        np.save(os.path.join(raw_dir, 'std.npy'), std)
     #zscore(img_paths, torch.from_numpy(mean), torch.from_numpy(std))
