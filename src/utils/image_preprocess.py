@@ -56,7 +56,7 @@ def calc_mean_std(image_paths,
     
     # Sum channel-wise histograms of pixel values over all images,TODO: do stuff in torch?
     for img_p in tqdm(image_paths, desc='Calculating mean and std for ROIs'):
-        img = torch.load(img_p.split('.')[0]+'_cells.pt').numpy()
+        img = torch.from_numpy(np.load(img_p.split('.')[0]+'_cells.npy'))   #TODO: change when torch support save/indexing for uint16
         if global_hist is None:
             global_hist = np.zeros((img.shape[1], max_img+1))
         for channel in range(img.shape[1]):
@@ -232,7 +232,7 @@ def image_preprocess(path,
     num_processes (int): number of processes to use
     """
     raw_dir = os.path.abspath(os.path.join(path, '..'))
-    df_path = [os.path.join(path, p) for p in os.listdir(raw_dir) if p.endswith(('.csv'))][0]
+    df_path = [os.path.join(raw_dir, p) for p in os.listdir(raw_dir) if p.endswith(('.csv'))][0]
     img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.tiff', '.tif'))]
 
     img_channels = img_channels if len(img_channels) == 0 else np.array([int(channel) for channel in img_channels.split(',')])
