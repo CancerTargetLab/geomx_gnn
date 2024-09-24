@@ -46,10 +46,8 @@ def parse_args():
                         help="What ResNet model to choose, on of 18, 34, 50 and 101")
     parser.add_argument("--output_name_image", type=str, default="out/image_contrast.pt",
                         help="Name of model")
-    parser.add_argument("--balance_image_data", action="store_true", default=False,
-                        help="Wether or not to balance sampling of data based on KMeans labels of channel means")
     parser.add_argument("--n_clusters_image", type=int, default=1,
-                        help="Number of Clusters to use for KMeans when balance_image_data is True")
+                        help="Number of Clusters to use for KMeans when only use when >= 1")
     parser.add_argument("--train_image_model", action="store_true", default=False,
                         help="Wether or not to train the Image model")
     parser.add_argument("--embed_image_data", action="store_true", default=False,

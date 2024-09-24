@@ -37,7 +37,7 @@ def train(image_dir, output_name, args):
     test_dataset = EmbedDataset(root_dir=image_dir,
                            split='test' ,
                            crop_factor=args['crop_factor'],
-                           n_clusters=args['n_clusters_image'])
+                           n_clusters=1)
     model = ContrastiveLearning(channels=train_dataset.__getitem__(0)[0].shape[0],
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
