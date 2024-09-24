@@ -63,11 +63,27 @@ class ImageGraphDataset(GeoMXDataset):
                         transform=transform,
                         use_embed_image=False)
         self.crop_factor = crop_factor
+        self.mean = torch.from_numpy(np.load(self.raw_path, 'mean.npy'))
+        self.std = torch.from_numpy(np.load(self.raw_path, 'std.npy'))
         self.data_path = self.data
         self.data_idx = np.array(list(range(self.data.shape[0])))
         if not embed:
             self.data = [torch.load(os.path.join(self.processed_dir, graph)) for graph in self.data]
-        #TODO: load mean, std
+        #TODO: normalize, use other augs
+        gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
+        rnd_gausblur = T.RandomApply([gausblur], p=0.5)
+        gausnoise = T.GaussianNoise(clip=False)
+        rnd_gausnoise = T.RandomApply([gausnoise], p=0.2)
+        self.compose = T.Compose([#TODO: make usable for new structure
+            #T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
+            T.RandomHorizontalFlip(),
+            T.RandomVerticalFlip(),
+            RandomBackground(std=self.std, std_frac=0.5),
+            RandomArtefact(),
+            T.Normalize(mean=self.mean, std=self.std),
+            rnd_gausnoise,
+            rnd_gausblur
+        ])
     
     def transform(self, data):
         """"
@@ -79,33 +95,9 @@ class ImageGraphDataset(GeoMXDataset):
         Returns:
         torch_geometric.data.Data: Graph
         """
-        def img_transform(data):
-            """"
-            Create transformed views of all Images.
-
-            Paramters:
-            data (torch.Tensor): Cell Images
-
-            Returns:
-            torch.Tensor: Cell Images transformed
-            """
-            #TODO: normalize, use other augs
-            gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
-            rnd_gausblur = T.RandomApply([gausblur], p=0.5)
-            for img in range(data.shape[0]):
-                compose = T.Compose([#TODO: make usable for new structure
-                    T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
-                    T.RandomHorizontalFlip(),
-                    T.RandomVerticalFlip(),
-                    T.RandomErasing(value=0),
-                    #AddGaussianNoiseToRandomChannels(),
-                    rnd_gausblur
-                ])
-                data[img] = compose(data[img])
-            return data
-        data.x = data.x.to(torch.float32)
+        data.x = torch.from_numpy(data.x).to(torch.int32)
         if self.mode == self.train:
-            data.x = img_transform(data.x)
+            data.x = self.compose(data.x)
         
         return super().transform(data)
 

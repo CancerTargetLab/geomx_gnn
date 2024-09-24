@@ -40,7 +40,8 @@ def train(raw_subset_dir, label_data, output_name, args):
 
     #Wether to train together with image model
     if 'IMAGE' in model_type:
-        dataset = ImageGraphDataset(root_dir=args['graph_dir'],
+        train_dataset = ImageGraphDataset(root_dir=args['graph_dir'],
+                                    split='train',
                                     raw_subset_dir=raw_subset_dir,
                                     train_ratio=args['train_ratio_graph'],
                                     val_ratio=args['val_ratio_graph'],
@@ -54,8 +55,24 @@ def train(raw_subset_dir, label_data, output_name, args):
                                     label_data=label_data,
                                     crop_factor=args['crop_factor'],
                                     output_name=output_name)
+        test_dataset = ImageGraphDataset(root_dir=args['graph_dir'],
+                                    split='test',
+                                    raw_subset_dir=raw_subset_dir,
+                                    train_ratio=args['train_ratio_graph'],
+                                    val_ratio=args['val_ratio_graph'],
+                                    num_folds=1,
+                                    node_dropout=args['node_dropout'],
+                                    edge_dropout=args['edge_dropout'],
+                                    pixel_pos_jitter=args['cell_pos_jitter'],
+                                    n_knn=args['cell_n_knn'],
+                                    subgraphs_per_graph=args['subgraphs_per_graph'],
+                                    num_hops=args['num_hops_subgraph'],
+                                    label_data=label_data,
+                                    crop_factor=args['crop_factor'],
+                                    output_name=output_name)
     else:
-        dataset = GeoMXDataset(root_dir=args['graph_dir'],
+        train_dataset = GeoMXDataset(root_dir=args['graph_dir'],
+                            split='test',
                             raw_subset_dir=raw_subset_dir,
                             train_ratio=args['train_ratio_graph'],
                             val_ratio=args['val_ratio_graph'],
@@ -68,26 +85,40 @@ def train(raw_subset_dir, label_data, output_name, args):
                             num_hops=args['num_hops_subgraph'],
                             label_data=label_data,
                             output_name=output_name)
+        test_dataset = GeoMXDataset(root_dir=args['graph_dir'],
+                            split='test',
+                            raw_subset_dir=raw_subset_dir,
+                            train_ratio=args['train_ratio_graph'],
+                            val_ratio=args['val_ratio_graph'],
+                            num_folds=1,
+                            node_dropout=args['node_dropout'],
+                            edge_dropout=args['edge_dropout'],
+                            pixel_pos_jitter=args['cell_pos_jitter'],
+                            n_knn=args['cell_n_knn'],
+                            subgraphs_per_graph=args['subgraphs_per_graph'],
+                            num_hops=args['num_hops_subgraph'],
+                            label_data=label_data,
+                            output_name=output_name)
 
     for k in range(args['num_folds']):
         output_name_model = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
-        dataset.set_fold_k()
-        dataset.setMode(dataset.train)
-        train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        dataset.setMode(dataset.val)
-        val_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        dataset.setMode(dataset.test)
-        test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        train_dataset.set_fold_k()
+        train_dataset.setMode(train_dataset.train)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+        train_dataset.setMode(train_dataset.val)
+        val_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        test_dataset.setMode(test_dataset.test)
+        test_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
         if 'IMAGEGAT' in model_type:
-            model = ROIExpression_Image_gat(channels=dataset.get(0).x.shape[1],
+            model = ROIExpression_Image_gat(channels=train_dataset.get(0).x.shape[1],
                                             embed=args['embedding_size_image'],
                                             contrast=args['contrast_size_image'], 
                                             resnet=args['resnet_model'],
                                             layers=args['layers_graph'],
                                             num_edge_features=args['num_edge_features'],
                                             num_embed_features=args['num_embed_features'],
-                                            num_out_features=dataset.get(0).y.shape[0],
+                                            num_out_features=train_dataset.get(0).y.shape[0],
                                             heads=args['heads_graph'],
                                             embed_dropout=args['embed_dropout_graph'],
                                             conv_dropout=args['conv_dropout_graph'],
@@ -101,17 +132,17 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 num_embed_features=args['num_embed_features'],
                                 embed_dropout=args['embed_dropout_graph'],
                                 conv_dropout=args['conv_dropout_graph'],
-                                num_out_features=dataset.get(0).y.shape[0],
+                                num_out_features=train_dataset.get(0).y.shape[0],
                                 heads=args['heads_graph'],
                                 mtype=model_type).to(device, dtype=torch.float32)
         elif 'IMAGELIN' in model_type:
-            model = ROIExpression_Image_lin(channels=dataset.get(0).x.shape[1],
+            model = ROIExpression_Image_lin(channels=train_dataset.get(0).x.shape[1],
                                             embed=args['embedding_size_image'],
                                             contrast=args['contrast_size_image'], 
                                             resnet=args['resnet_model'],
                                             layers=args['layers_graph'],
                                             num_embed_features=args['num_embed_features'],
-                                            num_out_features=dataset.get(0).y.shape[0],
+                                            num_out_features=train_dataset.get(0).y.shape[0],
                                             embed_dropout=args['embed_dropout_graph'],
                                             conv_dropout=args['conv_dropout_graph'],
                                             mtype=model_type,
@@ -123,12 +154,12 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 num_embed_features=args['num_embed_features'],
                                 embed_dropout=args['embed_dropout_graph'],
                                 conv_dropout=args['conv_dropout_graph'],
-                                num_out_features=dataset.get(0).y.shape[0],
+                                num_out_features=train_dataset.get(0).y.shape[0],
                                 mtype=model_type).to(device, dtype=torch.float32)
         else:
             raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
-        dataset.setMode(dataset.train)
+        train_dataset.setMode(train_dataset.train)
 
         loss = torch.nn.L1Loss()
         similarity = torch.nn.CosineSimilarity()
@@ -136,7 +167,7 @@ def train(raw_subset_dir, label_data, output_name, args):
         nb = NBLoss(device=device)
 
         #scale factor, TODO:rm
-        sf = dataset.sf.to(device)
+        sf = train_dataset.sf.to(device)
 
         train_acc_list = []
         train_loss_list = []
@@ -162,7 +193,7 @@ def train(raw_subset_dir, label_data, output_name, args):
             running_zinb = 0
             num_graphs = 0
             model.train()
-            dataset.setMode(dataset.train)
+            train_dataset.setMode(train_dataset.train)
 
             if best_run < early_stopping:
                 with tqdm(train_loader, total=len(train_loader), desc=f"Training epoch {epoch} of Fold {k}") as train_loader:
@@ -226,7 +257,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                     running_zinb = 0
                     num_graphs = 0
                     model.eval()
-                    dataset.setMode("val")
+                    train_dataset.setMode("val")
 
                     with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch} of Fold {k}") as val_loader:
                         running_y = torch.Tensor().to(device)
@@ -319,7 +350,7 @@ def train(raw_subset_dir, label_data, output_name, args):
             save_data = torch.load(output_name_model)
             model.load_state_dict(save_data['model'])
             model.eval()
-            dataset.setMode(dataset.test)
+            test_dataset.setMode(test_dataset.test)
 
             with tqdm(test_loader, total=len(test_loader), desc=f"Test of fold {k}") as test_loader:
                 running_y = torch.Tensor().to(device)

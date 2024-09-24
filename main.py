@@ -127,7 +127,7 @@ def parse_args():
                         help="Wether or not to train the Graph Model")
     parser.add_argument("--embed_gnn_data", action="store_true", default=False,
                         help="Wether or not to embed predicted Cell Expression")
-    parser.add_argument("--embed_graph_test_data", action="store_true", default=False,
+    parser.add_argument("--embed_graph_test_data", action="store_true", default=True,
                         help="Wether or not to embed predicted Cell Expression for only test data")
 
 
@@ -221,7 +221,7 @@ def main(**args):
     if args['visualize_expression']:
         from src.explain.VisualizeExpression import visualizeExpression
         visualizeExpression(processed_dir=args['processed_subset_dir'],
-                            output_name=args['output_name_graph'] if args['embed_graph_test_data'] else None,
+                            output_name=None,   #args['output_name_graph'] if args['embed_graph_test_data'] else None,
                             embed_dir=args['embed_dir'],
                             label_data=args['vis_label_data'],
                             figure_dir=args['figure_dir'],

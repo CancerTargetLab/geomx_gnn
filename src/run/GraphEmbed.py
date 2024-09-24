@@ -25,12 +25,13 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     set_seed(SEED)
 
     if args['embed_graph_test_data']:
-        output_name = model_name
+        split = 'test'
     else:
-        output_name = None
+        split = 'train'
 
     if 'IMAGE' in model_type:
         dataset = ImageGraphDataset(root_dir=args['graph_dir'],
+                                    split=split,
                                     raw_subset_dir=raw_subset_dir,
                                     train_ratio=args['train_ratio_graph'],
                                     val_ratio=args['val_ratio_graph'],
@@ -47,6 +48,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                     embed=True)
     else:
         dataset = GeoMXDataset(root_dir=args['graph_dir'],
+                            split=split,
                             raw_subset_dir=raw_subset_dir,
                             train_ratio=args['train_ratio_graph'],
                             val_ratio=args['val_ratio_graph'],
@@ -113,6 +115,6 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     if 'IMAGE' in model_type:
-        dataset.embed(model, output_dir, device=device, batch_size=args['batch_size_image'], return_mean='mean' in model_type, output_name=output_name)
+        dataset.embed(model, output_dir, device=device, batch_size=args['batch_size_image'], return_mean='mean' in model_type)
     else:
-        dataset.embed(model, output_dir, device='cpu', return_mean='mean' in model_type, output_name=output_name)
+        dataset.embed(model, output_dir, device='cpu', return_mean='mean' in model_type)

@@ -19,9 +19,9 @@ def get_true_graph_expression_dict(path, output_name=None):
     """
     path = os.path.join(os.getcwd(), path)
     graph_paths = [p for p in os.listdir(path) if 'graph' in p and p.endswith('pt')]
-    if output_name is not None:
-        graph_paths.sort(key=lambda s: (s[-len(s)+3:], s[:3]))  #Done for subgraph sorting, does not change sorting of non subgraphs
-        graph_paths = np.array(graph_paths)[np.load(os.path.join(os.path.dirname(output_name), 'test_map.npy')).tolist()].tolist()
+    # if output_name is not None:
+    #     graph_paths.sort(key=lambda s: (s[-len(s)+3:], s[:3]))  #Done for subgraph sorting, does not change sorting of non subgraphs
+    #     graph_paths = np.array(graph_paths)[np.load(os.path.join(os.path.dirname(output_name), 'test_map.npy')).tolist()].tolist()
 
     value_dict = {}
     for graph_p in graph_paths:

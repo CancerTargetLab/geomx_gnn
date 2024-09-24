@@ -71,10 +71,11 @@ class EmbedDataset(Dataset):
         n_clusters (int): Number of KMeans clusters to calculate pseudo labels to balance sampling, ignored when 1
         """
         assert split in ['train', 'test'], f'split must be either train or test, but is {split}'
-        self.root_dir = os.path.join(os.getcwd(), root_dir, split)
+        self.root_dir = os.path.join(os.getcwd(), root_dir)
+        self.work_dir = os.path.join(os.getcwd(), root_dir, split)
         self.crop_factor = crop_factor
 
-        self.cells_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('_cells.npy')] #TODO: to pt when saving torch uint16 is supported
+        self.cells_path = [os.path.join(self.work_dir, p) for p in os.listdir(self.work_dir) if p.endswith('_cells.npy')] #TODO: to pt when saving torch uint16 is supported
         self.cells_path.sort()
 
         csv_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('.csv')][0]
@@ -94,6 +95,23 @@ class EmbedDataset(Dataset):
         
         self.mean = torch.from_numpy(np.load(os.path.join(self.root_dir, 'mean.npy')))
         self.std = torch.from_numpy(np.load(os.path.join(self.root_dir, 'std.npy')))
+
+        gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
+        rnd_gausblur = T.RandomApply([gausblur], p=0.5)
+        gausnoise = T.GaussianNoise(clip=False)
+        rnd_gausnoise = T.RandomApply([gausnoise], p=0.2)
+    
+        self.compose = T.Compose([
+            T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
+            T.RandomHorizontalFlip(),
+            T.RandomVerticalFlip(),
+            RandomBackground(std=self.std, std_frac=0.5),
+            RandomArtefact(),
+            #T.ConvertImageDtype(torch.float32),
+            T.Normalize(mean=self.mean, std=self.std),
+            rnd_gausnoise,
+            rnd_gausblur
+        ])
 
         if n_clusters > 1:
             from sklearn.cluster import KMeans
@@ -118,25 +136,7 @@ class EmbedDataset(Dataset):
         torch.Tensor: Cell Image 1 transformed
         torch.Tensor: Cell Image 2 transformed
         """
-        gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
-        rnd_gausblur = T.RandomApply([gausblur], p=0.5)
-        gausnoise = T.GaussianNoise(clip=False)
-        rnd_gausnoise = T.RandomApply([gausnoise], p=0.2)
-        
-
-        compose = T.Compose([
-            T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
-            T.RandomHorizontalFlip(),
-            T.RandomVerticalFlip(),
-            RandomBackground(std=self.std, std_frac=0.5),
-            RandomArtefact(),
-            #T.ConvertImageDtype(torch.float32),
-            T.Normalize(mean=self.mean, std=self.std),
-            rnd_gausnoise,
-            rnd_gausblur
-        ])
-        x1, x2 = compose(data.to(torch.float32)), compose(data.to(torch.float32))
-        return x1, x2
+        return self.compose(data.to(torch.float32)), self.compose(data.to(torch.float32))
 
     def __len__(self):
         """
@@ -169,7 +169,7 @@ class EmbedDataset(Dataset):
         with torch.no_grad():
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 for path in cells_path:
-                    data = T.Normalize(mean=self.mean, std=self.std)(torch.from_numpy(np.load((os.path.join(path)))))#TODO: rm
+                    data = T.Normalize(mean=self.mean, std=self.std)(torch.from_numpy(np.load((os.path.join(path)))))#TODO: rm np when torch supports needed ops for uint16
                     #data = T.Normalize(mean=self.mean, std=self.std)(torch.load(os.path.join(path)))
                     embed = torch.zeros((data.shape[0], model.embed_size), dtype=torch.float32)
                     num_batches = (data.shape[0] // batch_size) + 1

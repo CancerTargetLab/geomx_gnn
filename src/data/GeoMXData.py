@@ -52,7 +52,7 @@ class GeoMXDataset(Dataset):
         assert split in ['train', 'test'], f'split must be either train or test, but is {split}'
         self.split = split
         self.raw_path = os.path.join(self.root_dir, 'raw', raw_subset_dir)
-        self.processed_path = os.path.join(self.root_dir, 'processed', raw_subset_dir)
+        self.processed_path = os.path.join(self.root_dir, 'processed', raw_subset_dir, self.split)
         self.label_data = label_data
         self.raw_subset_dir = raw_subset_dir
 
@@ -70,8 +70,8 @@ class GeoMXDataset(Dataset):
         self.Distance = Distance(norm=False, cat=False)
         self.LocalCartesian = LocalCartesian()
 
-        if not (os.path.exists(os.path.join(self.processed_path, self.split)) and os.path.isdir(os.path.join(self.processed_path, self.split))):
-            os.makedirs(os.path.join(self.processed_path, self.split))
+        if not (os.path.exists(self.processed_path) and os.path.isdir(self.processed_path)):
+            os.makedirs(self.processed_path)
 
         if os.path.exists(self.raw_path) and os.path.isdir(self.raw_path):
             self.cell_pos = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('.csv')][0]
@@ -102,25 +102,22 @@ class GeoMXDataset(Dataset):
         if self.num_folds > 1:
             self.train_map = list(range(total_samples))
             self.val_map = list(range(total_samples))
-            self.test_map = list(range(total_samples))
         else:
             train_map, val_map, test_map = torch.utils.data.random_split(torch.arange(total_samples),
-                                                                        [train_ratio, val_ratio, 1-train_ratio-val_ratio])
-            self.train_map, self.val_map, self.test_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
+                                                                        [train_ratio, val_ratio])
+            self.train_map, self.val_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist()
 
         if self.subgraphs_per_graph > 0:
-            map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, self.test_map, IDs)
-            self.data, self.train_map , self.val_map, self.test_map, IDs = map_tuple
+            map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, IDs)
+            self.data, self.train_map , self.val_map, IDs = map_tuple
         
         if self.num_folds > 1:
             self.current_fold = 0
             self.IDs = IDs
-            self.folds, self.test_map = self.kFold(self.num_folds, self.IDs, train_ratio)
+            self.folds, self.test_map = self.kFold(self.num_folds, self.IDs)
         
-        if output_name is not None:
-            if not os.path.isdir(os.path.join(output_name.split('.')[0])):
-                os.makedirs(os.path.join(output_name.split('.')[0])) 
-            np.save(os.path.join(output_name.split('.')[0], 'test_map.npy'), np.array(self.test_map))
+        if output_name is not None and not os.path.isdir(os.path.join(output_name.split('.')[0])):
+                os.makedirs(os.path.join(output_name.split('.')[0]))
 
         self.mode = 'TRAIN'
         self.train = 'TRAIN'
@@ -147,7 +144,7 @@ class GeoMXDataset(Dataset):
         processed_filename.sort()
         return processed_filename
 
-    def _create_subgraphs(self, data, train_map, val_map, test_map, IDs):
+    def _create_subgraphs(self, data, train_map, val_map, IDs):
         """
         Create somewhat equally distributed square number of subgraphs of all ROIs and save.
 
@@ -155,14 +152,12 @@ class GeoMXDataset(Dataset):
         data (np.array): Array of file names
         train_map (list): 0 or 1 depending if ROI for training
         val_map (list): 0 or 1 depending if ROI for validation
-        test_map (list): 0 or 1 depending if ROI for testing
         IDs (np.array): Patient ID of sample
 
         Return:
         data (np.array): Array of file names of subgraphs
         new_train_map (list): 0 or 1 depending if subgraph for training
         new_val_map (list): 0 or 1 depending if subgraph for validation
-        new_test_map (list): 0 or 1 depending if subgraph for testing
         new_IDs (np.array): Patient ID of samples
         """
         if not (os.path.exists(os.path.join(self.processed_path, 'subgraphs')) and os.path.isdir(os.path.join(self.processed_path, 'subgraphs'))):
@@ -170,7 +165,7 @@ class GeoMXDataset(Dataset):
 
         new_IDs = np.ndarray(data.shape[0]*self.subgraphs_per_graph, dtype=object)
         new_data = np.ndarray(data.shape[0]*self.subgraphs_per_graph, dtype=object)
-        new_train_map, new_val_map, new_test_map = [], [], []
+        new_train_map, new_val_map = [], []
         with tqdm(data, total=data.shape[0], desc='Creating Subgraphs...') as data:
             for g, graph_path in enumerate(data):
                 graph = torch.load(os.path.join(self.processed_dir, graph_path))
@@ -211,27 +206,18 @@ class GeoMXDataset(Dataset):
                         new_train_map.append(len(new_data)-1)
                     elif g in val_map:
                         new_val_map.append(len(new_data)-1)
-                    elif g in test_map:
-                        new_test_map.append(len(new_data)-1)
                     else:
-                        raise Exception(f'Index of {graph_path} not in train/val/test map')
+                        raise Exception(f'Index of {graph_path} not in train/val map')
         
         data = np.array(new_data)
         new_IDs = np.array(new_IDs)
-        return data, new_train_map, new_val_map, new_test_map, new_IDs
+        return data, new_train_map, new_val_map, new_IDs
 
-    def kFold(self, K, IDs, train_ratio):
+    def kFold(self, K, IDs):
         un_IDs = np.unique(IDs)
-
         total_samples = un_IDs.shape[0]
-        train_size = int(train_ratio * total_samples)
-        test_size = total_samples - train_size
-
-        trainval_map, test_map = torch.utils.data.random_split(torch.arange(total_samples), [train_size, test_size])
-        test_map = np.argwhere(np.isin(IDs, un_IDs[test_map.indices])).squeeze().tolist()
-        folds = torch.utils.data.random_split(torch.arange(total_samples)[trainval_map.indices], [1/K]*K)
-        
-        return folds, test_map
+        folds = torch.utils.data.random_split(torch.arange(total_samples), [1/K]*K)
+        return folds
 
     def set_fold_k(self):
         if self.num_folds == 1:
@@ -316,9 +302,9 @@ class GeoMXDataset(Dataset):
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
         if self.use_embed_image:
-            node_features =torch.load(file)[torch.from_numpy(mask.values)]#TODO
+            node_features = torch.load(file)[torch.from_numpy(mask.values)]#TODO
         else: 
-            node_features =torch.load(file.split('_embed')[0]+'.pt')[torch.from_numpy(mask.values)]
+            node_features = np.load(file.split('_embed')[0]+'.npy')[mask.values] # Cant select in torch cuz uint16
 
         label = label[label['ROI']==file_prefix]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
@@ -342,7 +328,7 @@ class GeoMXDataset(Dataset):
                             y=label,
                             cellexpr=cellexpr)
             data = torch_geometric.transforms.AddRemainingSelfLoops(attr='edge_attr', fill_value=0.0)(data)
-            torch.save(data, os.path.join(self.processed_path, self.split, f"graph_{file_prefix}.pt"))
+            torch.save(data, os.path.join(self.processed_path, f"graph_{file_prefix}.pt"))
         else: 
             raise Exception(f'File {file} has no Expression data in {self.label_data}!!!')
 
@@ -367,7 +353,7 @@ class GeoMXDataset(Dataset):
         elif self.mode == self.val:
             return len(self.val_map)
         elif self.mode == self.test:
-            return len(self.test_map)
+            return self.data.shape[0]
         else:
             return self.data.shape[0]
 
@@ -386,11 +372,11 @@ class GeoMXDataset(Dataset):
         elif self.mode == self.val:
             return torch.load(os.path.join(self.processed_dir, self.data[self.val_map][idx]))
         elif self.mode == self.test:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.test_map][idx]))
+            return torch.load(os.path.join(self.processed_dir, self.data[idx]))
         else:
             return torch.load(os.path.join(self.processed_dir, self.data[idx]))
     
-    def embed(self, model, path, device='cpu', return_mean=False, output_name=None):
+    def embed(self, model, path, device='cpu', return_mean=False):
         """
         Save model sc expression of all cells per ROI.
 
@@ -401,8 +387,6 @@ class GeoMXDataset(Dataset):
         """
         with torch.no_grad():
             model = model.to(device)
-            if output_name is not None:
-                self.data = self.data[np.load(os.path.join(os.path.dirname(output_name), 'test_map.npy')).tolist()]
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
                 for graph_path in data:
                     graph = torch.load(os.path.join(self.processed_dir, graph_path))
@@ -411,4 +395,3 @@ class GeoMXDataset(Dataset):
                     cell_pred = model(graph.to(device), return_cells=True, return_mean=return_mean)
                     torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path.split('/')[-1]))
                     torch.save(cell_pred, os.path.join(path, 'cell_pred_'+graph_path.split('/')[-1]))
-
