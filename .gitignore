@@ -12,6 +12,7 @@
 *.npz
 *.h5ad
 *.xlsx
+*.vscode*
 #data/
 __pycache__*
 figures*
