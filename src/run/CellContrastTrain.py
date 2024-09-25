@@ -125,6 +125,16 @@ def train(image_dir, output_name, args):
                 epoch_loss = running_loss / len(val_loader)
                 val_loss_list.append(epoch_loss)
                 print(f"Val Loss: {epoch_loss:.4f}, Val Accuracy: {val_acc:.4f}")
+        if (epoch+1) % 10 == 0:
+            torch.save({
+                "model": model.state_dict(),
+                "opt": optimizer.state_dict(),
+                "train_acc": train_acc_list,
+                "train_list": train_loss_list,
+                "val_acc": val_acc_list,
+                "val_list": val_loss_list,
+                "epoch": epoch
+            }, output_name)
 
     torch.save({
                 "model": model.state_dict(),
@@ -135,4 +145,3 @@ def train(image_dir, output_name, args):
                 "val_list": val_loss_list,
                 "epoch": epoch
             }, output_name)
-
