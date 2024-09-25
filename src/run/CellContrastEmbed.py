@@ -28,7 +28,7 @@ def embed(image_dir, model_name, args):
                                  split='test',
                                  crop_factor=args['crop_factor'])
 
-    model = ContrastiveLearning(channels=train_dataset.__getitem__(0).shape[0],
+    model = ContrastiveLearning(channels=train_dataset.__getitem__(0)[0].shape[0],
                                 embed=args['embedding_size_image'],
                                 contrast=args['contrast_size_image'], 
                                 resnet=args['resnet_model']).to(device, torch.float32)

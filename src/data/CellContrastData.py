@@ -80,7 +80,10 @@ class EmbedDataset(Dataset):
         self.cells_path.sort()
 
         csv_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('.csv')][0]
-        self.cell_number = pd.read_csv(csv_path, header=0, sep=',').shape[0]
+        img_names = [p for p in os.listdir(self.work_dir) if p.endswith(('.tiff', '.tif'))]
+        df = pd.read_csv(csv_path, header=0, sep=',')
+        self.cell_number = df[df['Image'].isin(img_names)].shape[0]
+        del df
         #img = torch.load(self.cells_path[0]).to(torch.uint16)
         img = torch.from_numpy(np.load(self.cells_path[0]))
         img_shape = img.shape
@@ -119,7 +122,8 @@ class EmbedDataset(Dataset):
             from sklearn.metrics import silhouette_score
             means = self.data[:,:,int(img_shape[-2]/2),int(img_shape[-1]/2)].numpy()
             print('Calculate KMeans...')
-            kmeans = KMeans(n_clusters=n_clusters, n_init=5).fit(means) #TODO: save
+            kmeans = KMeans(n_clusters=n_clusters, n_init=5).fit(means)
+            np.save(self.root_dir+'kmeans_cluster_centers.npy', kmeans.cluster_centers_)
             print('Number of cells per cluster:')
             # sil = silhouette_score(means, kmeans.labels_, metric = 'euclidean')
             # print(f'KMeans has SIL score of {sil}')
