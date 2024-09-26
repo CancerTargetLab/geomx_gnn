@@ -10,7 +10,7 @@
 # Apptainer images can only be used outside /home. In this example the
 # image is located here
 
-module load Anaconda/2023.09-0-hpc1-bdist
+module load Mambaforge/23.3.1-1-hpc1-bdist
 conda activate geomx
 
 # execute python script
