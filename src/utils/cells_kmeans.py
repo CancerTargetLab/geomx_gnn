@@ -11,26 +11,26 @@ num_samples = 10000
 max_clusters = 100
 n_reps = 5
 raw_dir = 'CRC'
+split = 'train'
 figure_dir = 'figures/KMeans'
 name = 'crc_optimal_num_clusters'
 
 if not os.path.isdir(figure_dir):
     os.makedirs(figure_dir)
 
-paths = [os.path.join('data/raw', raw_dir, p) for p in os.listdir(os.path.join('data/raw', raw_dir)) if p.endswith('_cells.pt')]
+paths = [os.path.join('data/raw', raw_dir, split, p) for p in os.listdir(os.path.join('data/raw', raw_dir, split)) if p.endswith('_cells.npy')]
 csv_path = [os.path.join('data/raw', raw_dir, p) for p in os.listdir(os.path.join('data/raw', raw_dir)) if p.endswith('.csv')][0]
 cell_number = pd.read_csv(csv_path, header=0, sep=',').shape[0]
-img_shape = torch.load(paths[0]).shape
-x = torch.zeros((cell_number, img_shape[1]), dtype=torch.float32)
+img_shape = np.load(paths[0]).shape
+x = np.zeros((cell_number, img_shape[1]), dtype=np.float32)
 
 last_idx = 0
 with tqdm(paths, total=len(paths), desc='Load Channels Means...') as paths:
     for path in paths:
-        tmp = torch.load(path)
-        x[last_idx:tmp.shape[0]+last_idx] = torch.mean(tmp, axis=(2, 3))
+        tmp = np.load(path)
+        x[last_idx:tmp.shape[0]+last_idx] = tmp[:,:,int(tmp.shape[-2]/2),int(tmp.shape[-1]/2)]
         last_idx += tmp.shape[0]
         del tmp
-x = x.numpy()
 
 sil_mean = []
 sil_max = []
