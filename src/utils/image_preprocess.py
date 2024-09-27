@@ -26,7 +26,7 @@ def load_img(path,
     if path.endswith(('.tiff', '.tif')):
         img = io.imread(path, plugin='tifffile')
         if img.shape[2] < img.shape[1] and img.shape[2] < img.shape[0]:
-            img = np.transpose(img, (2,1,0))
+            img = np.transpose(img, (2,0,1))
         if not type(img_channels) == str:
             img = img[img_channels,:,:]
     else:
@@ -154,7 +154,7 @@ def cell_seg(df_path,
         chunks = [list(range(i, min(i + chunk_size, len(x)))) for i in range(0, len(x), chunk_size)]
 
         # Create between processes shared list of tensors to save cut outs
-        all_results = torch.zeros((len(x),img.shape[-1],cell_cutout,cell_cutout), dtype=img.dtype)
+        all_results = torch.zeros((len(x),img.shape[0],cell_cutout,cell_cutout), dtype=img.dtype)
         all_results.share_memory_()
         num_processes = num_processes - 1 if num_processes >= 2 else 1
         processes = []
