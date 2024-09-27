@@ -4,7 +4,6 @@ from skimage import io
 import torch
 import torch.multiprocessing as mp
 from concurrent.futures import ThreadPoolExecutor
-import torchvision.transforms as T
 import pandas as pd
 from tqdm import tqdm
 
@@ -26,10 +25,10 @@ def load_img(path,
 
     if path.endswith(('.tiff', '.tif')):
         img = io.imread(path, plugin='tifffile')
-        if img.shape[0] < img.shape[1] and img.shape[0] < img.shape[2]:
-            img = np.transpose(img, (1,2,0))
+        if img.shape[2] < img.shape[1] and img.shape[2] < img.shape[0]:
+            img = np.transpose(img, (2,1,0))
         if not type(img_channels) == str:
-            img = img[:, :, img_channels]
+            img = img[img_channels,:,:]
     else:
         file_end = path.split('/')[-1]
         print(f"Do not support opening of files of type {file_end}.")
@@ -38,15 +37,13 @@ def load_img(path,
     return img
 
 def calc_mean_std(image_paths,
-                  max_img=2**16,
-                  img_channels=''):
+                  max_img=2**16):
     """
     Calculate mean and std per channel over all images.
 
     Paramters:
     image_paths (list): List containing str paths to tifffile images
     max_img (int): Max possible pixel intensitiy of images
-    img_channels (list|str): List containing indices of image channels to extract, str: error
 
     Returns:
     (np.array, np.array), tuple containing 1D arrays of mean,std values for each channel extracted
@@ -70,36 +67,12 @@ def calc_mean_std(image_paths,
     
     return mean.astype(np.float32), std.astype(np.float32)
 
-def zscore(image_paths,
-           mean,
-           std):
-    """
-    Perform zscore normalisation for all cell cut outs and save.
-
-    Parameters:
-    image_paths (list): list of str paths to images. cell_seg has to be done before.
-    mean (np.array): mean of channels
-    std (np.array): std of channels
-    """
-
-    for img_p in tqdm(image_paths, desc='ZScore normalisation of ROIs'):
-        img = torch.load(img_p.split('.')[0]+'_cells.pt')
-        img = torch.permute(img, (0, 2, 3, 1))
-        # following 4 lines copied and adapted from naronet preprocess_imagrs.py line 107-110 commit 7c419bc
-        cells,x,y,chan = img.shape[0],img.shape[1],img.shape[2],img.shape[3]
-        img = torch.reshape(img,(cells*x*y,chan))
-        img = (img-mean)/(std+1e-16)
-        img = torch.reshape(img,(cells,x,y,chan))
-        img = torch.permute(img, (0, 3, 1, 2))
-
-        torch.save(img.to(torch.float16), img_p.split('.')[0]+'_cells.pt')
-
 def process_cells(img,
                   x,
                   y,
+                  chunk,
                   cell_cutout,
-                  all_results,
-                  process_idx):
+                  all_results):
     """
     Cut out cells of image.
 
@@ -107,28 +80,26 @@ def process_cells(img,
     img (torch.tensor): image
     x (list): List of floats or ints containing pixel x cell positions
     y (list): List of floats or ints containing pixel y cell positions
+    chunk (list): List of ints containing index position of cell cutouts
     cell_cutout (int): length/width of cut out
     all_results (list): List containing torch.tensor of shape (num_cells, cell_cutout,cell_cutout,channels)
-    process_idx (int): id of process
     """
-
+    l_w = int(cell_cutout/2)
     for cell in list(range(x.shape[0])):
-        delta_x1 = int(cell_cutout/2) if x[cell] >= int(cell_cutout/2) else x[cell]
-        delta_y1 = int(cell_cutout/2) if y[cell] >= int(cell_cutout/2) else y[cell]
-        delta_x2 = int(cell_cutout/2) if img.shape[1]-x[cell] >= int(cell_cutout/2) else img.shape[1]-x[cell]
-        delta_y2 = int(cell_cutout/2) if img.shape[0]-y[cell] >= int(cell_cutout/2) else img.shape[0]-y[cell]
-        cell_img = img[y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2,:]
-        cell_img = T.Resize((cell_cutout, cell_cutout), antialias=None)(torch.moveaxis(cell_img, 2, 0))
-        all_results[process_idx][cell] = cell_img
+        delta_x1 = l_w if x[cell] >= l_w else x[cell]
+        delta_y1 = l_w if y[cell] >= l_w else y[cell]
+        delta_x2 = l_w if img.shape[2]-x[cell] >= l_w else img.shape[2]-x[cell]
+        delta_y2 = l_w if img.shape[1]-y[cell] >= l_w else img.shape[1]-y[cell]
+        all_results[chunk[cell],:,l_w-delta_y1:l_w+delta_y2,l_w-delta_x1:l_w+delta_x2] = img[:,y[cell]-delta_y1:y[cell]+delta_y2,x[cell]-delta_x1:x[cell]+delta_x2]
 
 #https://github.com/pytorch/pytorch/issues/17199#issuecomment-833226969
 # sometimes issues arise were processes deadlock when using fork instead of spawn, as more threads are used then available
 def process_cells_wrapped(img,
                   x,
                   y,
+                  chunk,
                   cell_cutout,
-                  all_results,
-                  process_idx):
+                  all_results):
     """
     Wrapper for process_cells.
 
@@ -136,18 +107,18 @@ def process_cells_wrapped(img,
     img (torch.tensor): image
     x (list): List of floats or ints containing pixel x cell positions
     y (list): List of floats or ints containing pixel y cell positions
+    chunk (list): List of ints containing index position of cell cutouts
     cell_cutout (int): length/width of cut out
     all_results (list): List containing torch.tensor of shape (num_cells, cell_cutout,cell_cutout,channels)
-    process_idx (int): id of process
     """
 
     return ThreadPoolExecutor().submit(process_cells,
                                        img=img,
                                        x=x,
                                        y=y,
+                                       chunk=chunk,
                                        cell_cutout=cell_cutout,
-                                       all_results=all_results,
-                                       process_idx=process_idx).result()
+                                       all_results=all_results).result()
 
 def cell_seg(df_path,
              image_paths,
@@ -183,10 +154,8 @@ def cell_seg(df_path,
         chunks = [list(range(i, min(i + chunk_size, len(x)))) for i in range(0, len(x), chunk_size)]
 
         # Create between processes shared list of tensors to save cut outs
-        all_results = [torch.zeros((len(chunk),img.shape[-1],cell_cutout,cell_cutout), dtype=img.dtype) for chunk in (chunks)]
-        for result in all_results:
-            result.share_memory_()
-        all_cells = []
+        all_results = torch.zeros((len(x),img.shape[-1],cell_cutout,cell_cutout), dtype=img.dtype)
+        all_results.share_memory_()
         num_processes = num_processes - 1 if num_processes >= 2 else 1
         processes = []
         
@@ -194,23 +163,19 @@ def cell_seg(df_path,
             process = mp.Process(target=process_cells_wrapped, args=(img,
                                                              x[chunk],
                                                              y[chunk],
+                                                             chunk,
                                                              cell_cutout,
-                                                             all_results,
-                                                             process_idx))
+                                                             all_results))
             process.start()
             processes.append(process)
         
         for process in processes:
             process.join()
         
-        for result in all_results:
-            all_cells.extend(result)
-        
-        all_cells = torch.stack(all_cells)
-        np.save(os.path.join(image.split('.')[0]+'_cells.npy'), all_cells.numpy())
-        #torch.save(all_cells.to(torch.int32), os.path.join(image.split('.')[0]+'_cells.pt'))
+        np.save(os.path.join(image.split('.')[0]+'_cells.npy'), all_results.numpy())
+        #torch.save(all_results, os.path.join(image.split('.')[0]+'_cells.pt'))
         del img
-        del all_cells
+        del all_results
         del df_img
 
 def image_preprocess(path,
@@ -241,4 +206,3 @@ def image_preprocess(path,
         mean, std = calc_mean_std(img_paths, max_img=max_img)
         np.save(os.path.join(raw_dir, 'mean.npy'), mean)
         np.save(os.path.join(raw_dir, 'std.npy'), std)
-    #zscore(img_paths, torch.from_numpy(mean), torch.from_numpy(std))
