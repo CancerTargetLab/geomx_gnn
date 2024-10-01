@@ -175,7 +175,7 @@ class EmbedDataset(Dataset):
         with torch.no_grad():
             with tqdm(self.cells_path, total=len(self.cells_path), desc='Save embedings') as cells_path:
                 for path in cells_path:
-                    data = T.Normalize(mean=self.mean, std=self.std)(torch.from_numpy(np.load((os.path.join(path)))))#TODO: rm np when torch supports needed ops for uint16
+                    data = T.Normalize(mean=self.mean, std=self.std)(torch.from_numpy(np.load((os.path.join(path)))).to(torch.float32))#TODO: rm np when torch supports needed ops for uint16
                     #data = T.Normalize(mean=self.mean, std=self.std)(torch.load(os.path.join(path)))
                     embed = torch.zeros((data.shape[0], model.embed_size), dtype=torch.float32)
                     num_batches = (data.shape[0] // batch_size) + 1
