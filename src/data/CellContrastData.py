@@ -119,14 +119,11 @@ class EmbedDataset(Dataset):
 
         if n_clusters > 1:
             from sklearn.cluster import KMeans
-            from sklearn.metrics import silhouette_score
             means = self.data[:,:,int(img_shape[-2]/2),int(img_shape[-1]/2)].numpy()
             print('Calculate KMeans...')
             kmeans = KMeans(n_clusters=n_clusters, n_init=10).fit(means)
             np.save(os.path.join(self.root_dir,'kmeans_cluster_centers.npy'), kmeans.cluster_centers_)
             print('Number of cells per cluster:')
-            # sil = silhouette_score(means, kmeans.labels_, metric = 'euclidean')
-            # print(f'KMeans has SIL score of {sil}')
             n_label  = [np.sum(kmeans.labels_ == l) for l in sorted(np.unique(kmeans.labels_).tolist())]
             print(n_label)
             self.weight = [1/n_label[kmeans.labels_[i]] for i in range(kmeans.labels_.shape[0])]
@@ -185,4 +182,6 @@ class EmbedDataset(Dataset):
                         else:
                             embed[batch_idx*batch_size:] = model(data[batch_idx*batch_size:].to(device, torch.float32)).to('cpu')
                     torch.save(embed, os.path.join(path, path.split('.')[0]+'_embed.pt'))
+                    del data
+                    del embed
 
