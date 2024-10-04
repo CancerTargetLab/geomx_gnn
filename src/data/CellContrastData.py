@@ -123,7 +123,7 @@ class EmbedDataset(Dataset):
             means = self.data[:,:,int(img_shape[-2]/2),int(img_shape[-1]/2)].numpy()
             print('Calculate KMeans...')
             kmeans = KMeans(n_clusters=n_clusters, n_init=10).fit(means)
-            np.save(self.root_dir+'kmeans_cluster_centers.npy', kmeans.cluster_centers_)
+            np.save(os.path.join(self.root_dir,'kmeans_cluster_centers.npy'), kmeans.cluster_centers_)
             print('Number of cells per cluster:')
             # sil = silhouette_score(means, kmeans.labels_, metric = 'euclidean')
             # print(f'KMeans has SIL score of {sil}')
