@@ -36,6 +36,9 @@ def train(raw_subset_dir, label_data, output_name, args):
     if EPOCH > 900: # Weird bug, when running for more then 982 epochs we get an recursion error
         import sys
         sys.setrecursionlimit(100000)
+    
+    if args['num_folds'] > 1 and not os.path.isdir(os.path.join(output_name.split('.')[0])):
+        os.makedirs(os.path.join(output_name.split('.')[0]))
 
     # move to GPU (if available)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -57,8 +60,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                     subgraphs_per_graph=args['subgraphs_per_graph'],
                                     num_hops=args['num_hops_subgraph'],
                                     label_data=label_data,
-                                    crop_factor=args['crop_factor'],
-                                    output_name=output_name)
+                                    crop_factor=args['crop_factor'])
         test_dataset = ImageGraphDataset(root_dir=args['graph_dir'],
                                     split='test',
                                     raw_subset_dir=raw_subset_dir,
@@ -72,11 +74,10 @@ def train(raw_subset_dir, label_data, output_name, args):
                                     subgraphs_per_graph=args['subgraphs_per_graph'],
                                     num_hops=args['num_hops_subgraph'],
                                     label_data=label_data,
-                                    crop_factor=args['crop_factor'],
-                                    output_name=output_name)
+                                    crop_factor=args['crop_factor'])
     else:
         train_dataset = GeoMXDataset(root_dir=args['graph_dir'],
-                            split='test',
+                            split='train',
                             raw_subset_dir=raw_subset_dir,
                             train_ratio=args['train_ratio_graph'],
                             val_ratio=args['val_ratio_graph'],
@@ -87,8 +88,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             n_knn=args['cell_n_knn'],
                             subgraphs_per_graph=args['subgraphs_per_graph'],
                             num_hops=args['num_hops_subgraph'],
-                            label_data=label_data,
-                            output_name=output_name)
+                            label_data=label_data,)
         test_dataset = GeoMXDataset(root_dir=args['graph_dir'],
                             split='test',
                             raw_subset_dir=raw_subset_dir,
@@ -101,11 +101,11 @@ def train(raw_subset_dir, label_data, output_name, args):
                             n_knn=args['cell_n_knn'],
                             subgraphs_per_graph=args['subgraphs_per_graph'],
                             num_hops=args['num_hops_subgraph'],
-                            label_data=label_data,
-                            output_name=output_name)
+                            label_data=label_data)
 
     for k in range(args['num_folds']):
-        output_name_model = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
+        if args['num_folds'] > 1:
+            output_name_model = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
         train_dataset.set_fold_k()
         train_dataset.setMode(train_dataset.train)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -351,7 +351,7 @@ def train(raw_subset_dir, label_data, output_name, args):
             running_ph_entropy = 0
             running_zinb = 0
             num_graphs = 0
-            save_data = torch.load(output_name_model)
+            save_data = torch.load(output_name_model, weights_only=False)
             model.load_state_dict(save_data['model'])
             model.eval()
             test_dataset.setMode(test_dataset.test)

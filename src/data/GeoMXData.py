@@ -70,15 +70,22 @@ class GeoMXDataset(Dataset):
         self.Distance = Distance(norm=False, cat=False)
         self.LocalCartesian = LocalCartesian()
 
+        self.mode = self.split.upper()
+        self.train = 'TRAIN'
+        self.val = 'VAL'
+        self.test = 'TEST'
+
         if not (os.path.exists(self.processed_path) and os.path.isdir(self.processed_path)):
             os.makedirs(self.processed_path)
 
         if os.path.exists(self.raw_path) and os.path.isdir(self.raw_path):
             self.cell_pos = [os.path.join(self.raw_path, p) for p in os.listdir(self.raw_path) if p.endswith('.csv')][0]
-            self.raw_files = pd.read_csv(os.path.join(self.root_dir, 'raw', self.label_data),
+            raw_files = pd.read_csv(os.path.join(self.root_dir, 'raw', self.label_data),
                                                       header=0,
                                                       sep=',')['ROI'].apply(lambda x: x.split('.')[0]+'_cells_embed.pt').unique().tolist()
-            self.raw_files = [os.path.join(self.raw_path, self.split, p) for p in self.raw_files]
+            raw_files = [os.path.join(self.raw_path, self.split, p) for p in raw_files]
+            tmp = [os.path.join(self.raw_path, split, p) for p in os.listdir(os.path.join(self.raw_path, self.split)) if p.endswith('_cells_embed.pt')]
+            self.raw_files = list(set(raw_files).intersection(set(tmp)))
             self.raw_files.sort()
         
         image_name_split = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].iloc[0].split('.')
@@ -86,11 +93,19 @@ class GeoMXDataset(Dataset):
         for i in range(len(image_name_split)-1):
             self.image_ending = self.image_ending + '.' + image_name_split[i+1]
 
+        # torch.serialization.add_safe_globals([np.array,
+        #                                       np.ndarray,
+        #                                       np.core.multiarray._reconstruct,
+        #                                       torch_geometric.data.data.DataEdgeAttr,
+        #                                       torch_geometric.data.data.DataTensorAttr,
+        #                                       torch_geometric.data.storage.GlobalStorage,
+        #                                       _codecs.encode])
         super().__init__(self.root_dir, self.transform if transform is None else transform, None, None)
 
         self.data = np.array(self.processed_file_names)
 
         df = pd.read_csv(os.path.join(self.raw_dir, self.label_data), header=0, sep=',')
+        df = df[df['ROI'].apply(lambda x: os.path.join(self.raw_path, self.split, x.split('.')[0]+'_cells_embed.pt')).isin(self.raw_files)]
         IDs = np.array(df[~df.duplicated(subset=['ROI'], keep=False) | ~df.duplicated(subset=['ROI'], keep='first')].sort_values(by=['ROI'])['Patient_ID'].values)  #if duplicate, take first
         un_IDs = np.unique(IDs)
 
@@ -99,11 +114,11 @@ class GeoMXDataset(Dataset):
         self.sf = torch.from_numpy(np.sum(sf)/np.sum(sf, axis=0)).to(torch.float32)
 
         total_samples = un_IDs.shape[0]
-        if self.num_folds > 1:
+        if self.num_folds > 1 and self.mode == self.train:
             self.train_map = list(range(total_samples))
             self.val_map = list(range(total_samples))
-        else:
-            train_map, val_map, test_map = torch.utils.data.random_split(torch.arange(total_samples),
+        elif self.mode == self.train:
+            train_map, val_map = torch.utils.data.random_split(torch.arange(total_samples),
                                                                         [train_ratio, val_ratio])
             self.train_map, self.val_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist()
 
@@ -114,15 +129,7 @@ class GeoMXDataset(Dataset):
         if self.num_folds > 1:
             self.current_fold = 0
             self.IDs = IDs
-            self.folds, self.test_map = self.kFold(self.num_folds, self.IDs)
-        
-        if output_name is not None and not os.path.isdir(os.path.join(output_name.split('.')[0])):
-                os.makedirs(os.path.join(output_name.split('.')[0]))
-
-        self.mode = 'TRAIN'
-        self.train = 'TRAIN'
-        self.val = 'VAL'
-        self.test = 'TEST'
+            self.folds = self.kFold(self.num_folds, self.IDs)
 
     @property
     def raw_file_names(self):
@@ -168,7 +175,7 @@ class GeoMXDataset(Dataset):
         new_train_map, new_val_map = [], []
         with tqdm(data, total=data.shape[0], desc='Creating Subgraphs...') as data:
             for g, graph_path in enumerate(data):
-                graph = torch.load(os.path.join(self.processed_dir, graph_path))
+                graph = torch.load(os.path.join(self.processed_dir, graph_path), weights_only=False)
                 xmax, xmin, ymax, ymin = torch.max(graph.pos[:,0]), torch.min(graph.pos[:,0]), torch.max(graph.pos[:,1]), torch.min(graph.pos[:,1])
                 # Calculate the step sizes for x and y dimensions
                 step_x = (xmax - xmin) / (self.subgraphs_per_graph ** 0.5 + 1)
@@ -302,7 +309,7 @@ class GeoMXDataset(Dataset):
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
         if self.use_embed_image:
-            node_features = torch.load(file)[torch.from_numpy(mask.values)]#TODO
+            node_features = torch.load(file, weights_only=False)[torch.from_numpy(mask.values)]#TODO
         else: 
             node_features = np.load(file.split('_embed')[0]+'.npy')[mask.values] # Cant select in torch cuz uint16
 
@@ -368,13 +375,13 @@ class GeoMXDataset(Dataset):
         torch_geometric.data.Data, Cell Graph
         """
         if self.mode == self.train:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.train_map][idx]))
+            return torch.load(os.path.join(self.processed_dir, self.data[self.train_map][idx]), weights_only=False)
         elif self.mode == self.val:
-            return torch.load(os.path.join(self.processed_dir, self.data[self.val_map][idx]))
+            return torch.load(os.path.join(self.processed_dir, self.data[self.val_map][idx]), weights_only=False)
         elif self.mode == self.test:
-            return torch.load(os.path.join(self.processed_dir, self.data[idx]))
+            return torch.load(os.path.join(self.processed_dir, self.data[idx]), weights_only=False)
         else:
-            return torch.load(os.path.join(self.processed_dir, self.data[idx]))
+            return torch.load(os.path.join(self.processed_dir, self.data[idx]), weights_only=False)
     
     def embed(self, model, path, device='cpu', return_mean=False):
         """
@@ -389,7 +396,7 @@ class GeoMXDataset(Dataset):
             model = model.to(device)
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
                 for graph_path in data:
-                    graph = torch.load(os.path.join(self.processed_dir, graph_path))
+                    graph = torch.load(os.path.join(self.processed_dir, graph_path), weights_only=False)
                     roi_pred = model(graph.to(device))
                     roi_pred = roi_pred[0] if isinstance(roi_pred, tuple) else roi_pred
                     cell_pred = model(graph.to(device), return_cells=True, return_mean=return_mean)
