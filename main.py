@@ -129,7 +129,7 @@ def parse_args():
                         help="Wether or not to embed predicted Cell Expression for only test data")
 
 
-    parser.add_argument("--deterministic", action="store_true", default=True,
+    parser.add_argument("--deterministic", action="store_true", default=False,
                         help="Wether or not to run NNs deterministicly")
     parser.add_argument("--seed", type=int, default=42,
                         help="Seed for random computations")

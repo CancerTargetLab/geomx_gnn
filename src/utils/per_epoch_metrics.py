@@ -18,7 +18,7 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
         os.makedirs(figure_dir)
 
     if os.path.isdir(model_path):
-        models = [torch.load(os.path.join(model_path, m_path), map_location=torch.device('cpu')) for m_path in os.listdir(model_path) if m_path.endswith('.pt')]
+        models = [torch.load(os.path.join(model_path, m_path), map_location=torch.device('cpu'), weights_only=False) for m_path in os.listdir(model_path) if m_path.endswith('.pt')]
         train_accs = [model['train_acc'] for model in models]
         val_accs = [model['val_acc'] for model in models]
         test_accs = [model['test_acc'] for model in models]
