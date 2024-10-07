@@ -1,6 +1,7 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.data.ImageGraphData import ImageGraphDataset
 from src.models.GraphModel import ROIExpression, ROIExpression_lin, ROIExpression_Image_gat, ROIExpression_Image_lin
+from src.optimizer.grokfast import gradfilter_ema
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
 from src.loss.zinb import ZINBLoss, NBLoss
 from src.utils.setSeed import set_seed
@@ -114,6 +115,8 @@ def train(raw_subset_dir, label_data, output_name, args):
         test_dataset.setMode(test_dataset.test)
         test_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
+        grads = None
+
         if 'IMAGEGAT' in model_type:
             model = ROIExpression_Image_gat(channels=train_dataset.get(0).x.shape[1],
                                             embed=args['embedding_size_image'],
@@ -162,7 +165,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 mtype=model_type).to(device, dtype=torch.float32)
         else:
             raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=5e-4)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+                                     lr=lr,
+                                     weight_decay=5e-4)
         train_dataset.setMode(train_dataset.train)
 
         loss = torch.nn.L1Loss()
@@ -234,6 +239,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             l += 1 * beta - sim
                         running_total_loss += l.item() * out.shape[0]
                         l.backward()
+                        grads = gradfilter_ema(model, grads=grads, alpha=0.98, lamb=2)
                         optimizer.step()
 
                     train_acc = running_acc / num_graphs

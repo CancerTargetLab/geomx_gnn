@@ -32,6 +32,17 @@ def init_weights(layer):
         torch.nn.init.xavier_uniform_(layer.lin_edge.weight)
 
 
+class FeedForward(torch.nn.Module):
+    def __init__(self,
+                 dim,
+                 hidden_dim):
+        super().__init__()
+        self.lin1 = torch.nn.Linear(dim, hidden_dim)
+        self.lin2 = torch.nn.Linear(hidden_dim, dim)
+    
+    def forward(self, x):
+        return self.lin2(torch.nn.functional.relu(self.lin1(x)))
+
 class GATBlock(torch.nn.Module):
     """
     A Graph Attention Network (GAT) block for processing graph data.
@@ -54,16 +65,17 @@ class GATBlock(torch.nn.Module):
         """
 
         super().__init__()
+        self.norm_gat = torch_geometric.nn.norm.LayerNorm(num_embed_features)
         self.gat = GATv2Conv(num_embed_features, 
                             num_embed_features, 
                             edge_dim=num_edge_features,
                             heads=heads,
                             dropout=conv_dropout,
                             fill_value=fill_value)
-        self.norm1 = torch_geometric.nn.norm.LayerNorm(num_embed_features*heads)
-        self.lin = torch.nn.Linear(heads*num_embed_features, num_embed_features)
-        self.norm2 = torch_geometric.nn.norm.LayerNorm(num_embed_features)
-        self.relu = torch.nn.ReLU(inplace=True)
+        self.lin_h = torch.nn.Linear(heads*num_embed_features, num_embed_features)
+        self.norm_lin = torch_geometric.nn.norm.LayerNorm(num_embed_features)
+        self.ffw = FeedForward(dim=num_embed_features, hidden_dim=num_embed_features*4)
+        self.relu = torch.nn.ReLU()
     
     def forward(self, x, edge_index, edge_attr):
         """
@@ -78,14 +90,8 @@ class GATBlock(torch.nn.Module):
         torch.Tensor: The output tensor after processing through the GAT block.
         """
          
-        identity = x
-        x = self.gat(x, edge_index, edge_attr=edge_attr)
-        x = self.norm1(x)
-        x = self.relu(x)
-        x = self.lin(x)
-        x = self.norm2(x)
-        x += identity
-        x = self.relu(x)
+        x = x + self.lin_h(self.gat(self.relu(self.norm_gat(x)), edge_index, edge_attr=edge_attr))
+        x = x + self.ffw(self.relu(self.norm_lin(x)))
         return x
 
 class ProjectionHead(torch.nn.Module):
@@ -169,8 +175,8 @@ class LinearBlock(torch.nn.Module):
         """
 
         super().__init__()
-        self.lin = torch.nn.Linear(input_dim,
-                                   input_dim)
+        self.ffw = FeedForward(dim=input_dim,
+                               hidden_dim=input_dim*4)
         self.norm = torch.nn.LayerNorm(input_dim)
         self.relu = torch.nn.ReLU(inplace=True)
     
@@ -185,12 +191,7 @@ class LinearBlock(torch.nn.Module):
         torch.Tensor: The output tensor after passing through the linear block.
         """
 
-        identity = x
-        x = self.lin(x)
-        x = self.norm(x)
-        x += identity
-        x = self.relu(x)
-        return x
+        return x + self.ffw(self.relu(self.norm(x)))
 
 class GraphLearning(torch.nn.Module):
     """
@@ -220,13 +221,10 @@ class GraphLearning(torch.nn.Module):
         super().__init__()
 
         self.heads = heads
-        # TODO: GraphNorm ?
-        self.node_embed = torch.nn.Sequential(
-            torch.nn.Linear(num_node_features, num_embed_features),
-            torch.nn.LayerNorm(num_embed_features),
-            torch.nn.Dropout(p=embed_dropout, inplace=True),
-            torch.nn.ReLU(inplace=True)
-            )
+        self.drop = torch.nn.Dropout(p=embed_dropout, inplace=True)
+        self.node_embed = ProjectionHead(input_dim=num_node_features, 
+                                      output_dim=num_embed_features,
+                                      num_layers=2)
 
         blocks = []
         for _ in range(layers):
@@ -237,11 +235,8 @@ class GraphLearning(torch.nn.Module):
                                     fill_value=0.0))
         self.convs = torch.nn.Sequential(*blocks)
         
-        self.conv_skip = torch_geometric.nn.models.JumpingKnowledge(mode='max')
-        
         self.node_embed.apply(init_weights)
         self.convs.apply(init_weights)
-        self.conv_skip.apply(init_weights)
 
 
     def forward(self, data):#x, edge_index, edge_attr):
@@ -257,18 +252,12 @@ class GraphLearning(torch.nn.Module):
 
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
-        h_i = self.node_embed(x)
-        # h = h_i.clone()
-        h = [h_i]
+        x = self.node_embed(self.drop(x))
 
         for conv in list(range(len(self.convs))):
-            h_i = self.convs[conv](h_i, edge_index, edge_attr=edge_attr)
+            x = self.convs[conv](x, edge_index, edge_attr=edge_attr)
 
-            h.append(h_i)
-        
-        h = self.conv_skip(h)
-
-        return h
+        return x
 
 
 class ROIExpression(torch.nn.Module):
@@ -324,6 +313,7 @@ class ROIExpression(torch.nn.Module):
         self.project = ProjectionHead(input_dim=num_embed_features, 
                                       output_dim=num_out_features,
                                       num_layers=2)
+        self.norm = torch.nn.LayerNorm(num_embed_features)
         
         self.mean_act = MeanAct()
 
@@ -366,7 +356,7 @@ class ROIExpression(torch.nn.Module):
         """
 
         x = self.gnn(data)#x, edge_index, edge_attr)
-        pred = self.project(x)
+        pred = self.project(self.norm(x))
         if return_cells:
             if self.nb and return_mean:
                 return self.mean(x)
@@ -422,12 +412,10 @@ class ROIExpression_lin(torch.nn.Module):
         if mtype.endswith('_nb'):
             self.nb = True
 
-        self.node_embed = torch.nn.Sequential(
-            torch.nn.Linear(num_node_features, num_embed_features),
-            torch.nn.LayerNorm(num_embed_features),
-            torch.nn.Dropout(p=embed_dropout, inplace=True),
-            torch.nn.ReLU(inplace=True)
-            )
+        self.drop = torch.nn.Dropout(p=embed_dropout, inplace=True)
+        self.node_embed = ProjectionHead(input_dim=num_node_features, 
+                                      output_dim=num_embed_features,
+                                      num_layers=2)
         
         blocks = []
         for _ in range(layers):
@@ -480,7 +468,7 @@ class ROIExpression_lin(torch.nn.Module):
         (torch.Tensor|tuple): Output tensor/tesnor tuple after applying the ROI expression module.
         """
 
-        x = self.lin(self.node_embed(data.x))
+        x = self.lin(self.node_embed(self.drop(data.x)))
         pred = self.project(x)
         if return_cells:
             if self.nb and return_mean:
@@ -558,9 +546,11 @@ class ROIExpression_Image_gat(torch.nn.Module):
                                 conv_dropout=conv_dropout,
                                 mtype=mtype)
         if path_image_model:
-            self.image.load_state_dict(torch.load(path_image_model)['model'])
+            self.image.load_state_dict(torch.load(path_image_model, weights_only=True)['model'])
+            for param in self.image.parameters():
+                param.requires_grad = False
         if path_graph_model:
-            self.graph.load_state_dict(torch.load(path_graph_model)['model'])
+            self.graph.load_state_dict(torch.load(path_graph_model, weights_only=True)['model'])
         
     def forward(self, data, return_cells=False, return_mean=False):
         """
