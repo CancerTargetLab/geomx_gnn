@@ -23,7 +23,7 @@ def train(image_dir, output_name, args):
     num_workers = args['num_workers_image']
     seed = args['seed']
 
-    if EPOCH < 900: # Weird bug, when running for more then 982 epochs we get an recursion error
+    if EPOCH > 900: # Weird bug, when running for more then 982 epochs we get an recursion error
         import sys
         sys.setrecursionlimit(100000)
 

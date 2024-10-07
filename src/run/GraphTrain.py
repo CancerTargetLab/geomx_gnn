@@ -33,7 +33,7 @@ def train(raw_subset_dir, label_data, output_name, args):
     beta = args['graph_cos_sim_mult']
     theta = args['graph_entropy_mult']
 
-    if EPOCH < 900: # Weird bug, when running for more then 982 epochs we get an recursion error
+    if EPOCH > 900: # Weird bug, when running for more then 982 epochs we get an recursion error
         import sys
         sys.setrecursionlimit(100000)
 
