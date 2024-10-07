@@ -46,7 +46,7 @@ class RandomBackground(torch.nn.Module):
             if not self.inplace:
                 img = img.clone()
             background = self.std_frac * self.std * torch.randn(img.shape[-3])
-            img += background.unsqueeze(1).unsqueeze(1).expand(img.shape[-3], img.shape[-2], img.shape[-1])
+            img += background.unsqueeze(1).unsqueeze(1).expand(img.shape[-3], img.shape[-2], img.shape[-1]).to(img.dtype)
             img = torch.clamp(img, self.min_value, self.max_value)
         return img
 
