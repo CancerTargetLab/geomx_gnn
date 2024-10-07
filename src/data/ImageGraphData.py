@@ -13,6 +13,7 @@ class ImageGraphDataset(GeoMXDataset):
     """
     def __init__(self, 
                  root_dir='data/',
+                 split='train',
                  raw_subset_dir='',
                  train_ratio=0.6,
                  val_ratio=0.2,
@@ -48,6 +49,7 @@ class ImageGraphDataset(GeoMXDataset):
         embed (bool): Wether or not to load graphs during runtime or have them loaded in memory
         """
         super().__init__(root_dir=root_dir,
+                        split=split,
                         raw_subset_dir=raw_subset_dir,
                         train_ratio=train_ratio,
                         val_ratio=val_ratio,
@@ -63,12 +65,12 @@ class ImageGraphDataset(GeoMXDataset):
                         transform=transform,
                         use_embed_image=False)
         self.crop_factor = crop_factor
-        self.mean = torch.from_numpy(np.load(self.raw_path, 'mean.npy'))
-        self.std = torch.from_numpy(np.load(self.raw_path, 'std.npy'))
+        self.mean = torch.from_numpy(np.load(os.path.join(self.raw_path, 'mean.npy')))
+        self.std = torch.from_numpy(np.load(os.path.join(self.raw_path, 'std.npy')))
         self.data_path = self.data
         self.data_idx = np.array(list(range(self.data.shape[0])))
         if not embed:
-            self.data = [torch.load(os.path.join(self.processed_dir, graph)) for graph in self.data]
+            self.data = [torch.load(os.path.join(self.processed_dir, graph), weights_only=False) for graph in self.data]
         #TODO: normalize, use other augs
         gausblur = T.GaussianBlur(kernel_size=3, sigma=(0.1, 3.))
         rnd_gausblur = T.RandomApply([gausblur], p=0.5)
@@ -78,11 +80,12 @@ class ImageGraphDataset(GeoMXDataset):
             #T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            RandomBackground(std=self.std, std_frac=0.5),
-            RandomArtefact(),
+            RandomBackground(std=self.std, std_frac=0.1),
+            #RandomArtefact(),
+            T.ConvertImageDtype(torch.float32),
             T.Normalize(mean=self.mean, std=self.std),
-            rnd_gausnoise,
-            rnd_gausblur
+            #rnd_gausnoise,
+            #rnd_gausblur
         ])
     
     def transform(self, data):
@@ -98,6 +101,7 @@ class ImageGraphDataset(GeoMXDataset):
         data.x = torch.from_numpy(data.x).to(torch.int32)
         if self.mode == self.train:
             data.x = self.compose(data.x)
+        data.x = data.x.to(torch.float32)
         
         return super().transform(data)
 

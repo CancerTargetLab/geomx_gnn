@@ -162,7 +162,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 mtype=model_type).to(device, dtype=torch.float32)
         else:
             raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=5e-4)
         train_dataset.setMode(train_dataset.train)
 
         loss = torch.nn.L1Loss()
