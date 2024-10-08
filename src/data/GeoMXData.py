@@ -114,13 +114,17 @@ class GeoMXDataset(Dataset):
             train_map, val_map = torch.utils.data.random_split(torch.arange(total_samples),
                                                                         [train_ratio, val_ratio])
             self.train_map, self.val_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist()
+            if type(self.train_map) == int:
+                self.train_map = [self.train_map]
+            if type(self.val_map) == int:
+                self.val_map = [self.val_map]
 
         if self.subgraphs_per_graph > 0:
             if self.mode == self.test:
                 self.train_map = list(range(total_samples))
                 self.val_map = list(range(total_samples))
             map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, IDs)
-            self.data, self.train_map , self.val_map, IDs = map_tuple
+            self.data, self.train_map, self.val_map, IDs = map_tuple
         
         if self.num_folds > 1:
             self.current_fold = 0
@@ -207,9 +211,9 @@ class GeoMXDataset(Dataset):
                                                 f'{p:03d}'+graph_path.split('/')[-1])
                     new_IDs[g*self.subgraphs_per_graph+p] = IDs[g]
                     if g in train_map:
-                        new_train_map.append(len(new_data)-1)
+                        new_train_map.append(g*self.subgraphs_per_graph+p)
                     elif g in val_map:
-                        new_val_map.append(len(new_data)-1)
+                        new_val_map.append(g*self.subgraphs_per_graph+p)
                     else:
                         raise Exception(f'Index of {graph_path} not in train/val map')
         

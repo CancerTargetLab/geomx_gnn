@@ -107,6 +107,8 @@ def train(raw_subset_dir, label_data, output_name, args):
     for k in range(args['num_folds']):
         if args['num_folds'] > 1:
             output_name_model = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
+        else:
+            output_name_model = output_name
         train_dataset.set_fold_k()
         train_dataset.setMode(train_dataset.train)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)

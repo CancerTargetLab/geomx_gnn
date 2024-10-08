@@ -58,7 +58,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     sc.pp.normalize_total(cluster)
     sc.pp.log1p(cluster)
     cluster.obs['prefix'] = cluster.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
-    adata.obs['cluster'] = cluster.obs['leiden'][cluster.obs['prefix']==name_tiff.split('.')[0]].values
+    adata.obs['cluster'] = cluster.obs['leiden'][cluster.obs['prefix']==name_tiff.split('.')[0]].apply(lambda x: str(x)).values
 
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
         os.makedirs(figure_dir)
