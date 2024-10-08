@@ -79,7 +79,7 @@ def parse_args():
                         help="Ratio of Patients which are used for validation")
     parser.add_argument("--num_folds", type=int, default=1,
                         help="Number of Crossvalidation folds, val_ratio is disregarded, train_ratio is data used for Crossvalidation, 1-train_ratio is ratio of test data used over all folds")
-    parser.add_argument("--node_dropout", type=float, default=0.3,
+    parser.add_argument("--node_dropout", type=float, default=0.0,
                         help="Probability of Graph Node dropout during training")
     parser.add_argument("--edge_dropout", type=float, default=0.5,
                         help="Probability of Graph Edge dropout during training")

@@ -93,13 +93,6 @@ class GeoMXDataset(Dataset):
         for i in range(len(image_name_split)-1):
             self.image_ending = self.image_ending + '.' + image_name_split[i+1]
 
-        # torch.serialization.add_safe_globals([np.array,
-        #                                       np.ndarray,
-        #                                       np.core.multiarray._reconstruct,
-        #                                       torch_geometric.data.data.DataEdgeAttr,
-        #                                       torch_geometric.data.data.DataTensorAttr,
-        #                                       torch_geometric.data.storage.GlobalStorage,
-        #                                       _codecs.encode])
         super().__init__(self.root_dir, self.transform if transform is None else transform, None, None)
 
         self.data = np.array(self.processed_file_names)
@@ -123,6 +116,9 @@ class GeoMXDataset(Dataset):
             self.train_map, self.val_map = np.argwhere(np.isin(IDs, un_IDs[train_map.indices])).squeeze().tolist(), np.argwhere(np.isin(IDs, un_IDs[val_map.indices])).squeeze().tolist()
 
         if self.subgraphs_per_graph > 0:
+            if self.mode == self.test:
+                self.train_map = list(range(total_samples))
+                self.val_map = list(range(total_samples))
             map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, IDs)
             self.data, self.train_map , self.val_map, IDs = map_tuple
         
@@ -206,6 +202,7 @@ class GeoMXDataset(Dataset):
                                                     'subgraphs',
                                                     f'{p:03d}'+graph_path.split('/')[-1]))
                     new_data[g*self.subgraphs_per_graph+p] = os.path.join(graph_path.split('/')[0],
+                                                self.split,
                                                 'subgraphs',
                                                 f'{p:03d}'+graph_path.split('/')[-1])
                     new_IDs[g*self.subgraphs_per_graph+p] = IDs[g]
