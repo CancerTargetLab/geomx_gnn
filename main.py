@@ -99,7 +99,9 @@ def parse_args():
                         help="Multiplier for Cosine Similarity Loss")
     parser.add_argument("--graph_entropy_mult", type=float, default=1.0,
                         help="Multiplier for Entropy Loss")
-    parser.add_argument("--layers_graph", type=int, default=1,
+    parser.add_argument("--lin_layers_graph", type=int, default=1,
+                        help="Number of Layers in Graph")
+    parser.add_argument("--gat_layers_graph", type=int, default=1,
                         help="Number of Layers in Graph")
     parser.add_argument("--num_node_features", type=int, default=256,
                         help="Size of initial Node features")
@@ -107,6 +109,8 @@ def parse_args():
                         help="Size of edge features")
     parser.add_argument("--num_embed_features", type=int, default=128,
                         help="Size to embed initial Node features to")
+    parser.add_argument("--num_gat_features", type=int, default=128,
+                        help="Size to embed embeded Node features for GAT layer")
     parser.add_argument("--heads_graph", type=int, default=1,
                         help="Number of Attention Heads for the Graph NN")
     parser.add_argument("--embed_dropout_graph", type=float, default=0.1,

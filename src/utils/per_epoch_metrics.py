@@ -28,18 +28,22 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
 
         max_train_accs = np.max(train_accs, axis=0)
         min_train_accs = np.min(train_accs, axis=0)
+        std_train_accs = np.std(train_accs, axis=0)
         mean_train_accs = np.mean(train_accs, axis=0)
         max_val_accs = np.max(val_accs, axis=0)
         min_val_accs = np.min(val_accs, axis=0)
+        std_val_accs = np.std(val_accs, axis=0)
         mean_val_accs = np.mean(val_accs, axis=0)
         max_test_accs = np.max(test_accs, axis=0)
         min_test_accs = np.min(test_accs, axis=0)
         mean_test_accs = np.mean(test_accs, axis=0)
         max_train_losses = np.max(train_losses, axis=0)
         min_train_losses = np.min(train_losses, axis=0)
+        std_train_losses = np.std(train_losses, axis=0)
         mean_train_losses = np.mean(train_losses, axis=0)
         max_val_losses = np.max(val_losses, axis=0)
         min_val_losses = np.min(val_losses, axis=0)
+        std_val_losses = np.std(val_losses, axis=0)
         mean_val_losses = np.mean(val_losses, axis=0)
         max_test_losses = np.max(test_losses, axis=0)
         min_test_losses = np.min(test_losses, axis=0)
@@ -67,8 +71,16 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
         plt.plot(mean_train_losses, label="Train", color='red', marker='o')
         plt.plot(mean_val_losses, label='Val', color='blue', marker='o')
         plt.axhline(y=mean_test_losses, label='Test', color='orange', marker='o')
-        plt.fill_between(list(range(mean_train_losses.shape[0])), max_train_losses, min_train_losses, alpha=0.3, color='red')
-        plt.fill_between(list(range(mean_train_losses.shape[0])), max_val_losses, min_val_losses, alpha=0.3, color='blue')
+        plt.fill_between(list(range(mean_train_losses.shape[0])),
+                         mean_train_losses-std_train_losses,
+                         mean_train_losses+std_train_losses,
+                         alpha=0.3,
+                         color='red')
+        plt.fill_between(list(range(mean_train_losses.shape[0])),
+                         mean_val_losses-std_val_losses,
+                         mean_val_losses+std_val_losses,
+                         alpha=0.3,
+                         color='blue')
         #plt.fill_between(list(range(mean_train_losses.shape[0])), max_test_losses, min_test_losses, alpha=0.3, color='orange')
         plt.ylabel('Loss')
         plt.xlabel('Epochs')
@@ -91,12 +103,22 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
             mean_train_losses = np.mean(train_losses, axis=0)
             mean_val_losses = np.mean(val_losses, axis=0)
             mean_test_losses = np.mean(test_losses, axis=0)
+            std_train_losses = np.std(train_losses, axis=0)
+            std_val_losses = np.std(val_losses, axis=0)
 
             plt.plot(mean_train_losses, label="Train", color='red', marker='o')
             plt.plot(mean_val_losses, label='Val', color='blue', marker='o')
             plt.axhline(y=mean_test_losses, label='Test', color='orange', marker='o')
-            plt.fill_between(list(range(mean_train_losses.shape[0])), max_train_losses, min_train_losses, alpha=0.3, color='red')
-            plt.fill_between(list(range(mean_train_losses.shape[0])), max_val_losses, min_val_losses, alpha=0.3, color='blue')
+            plt.fill_between(list(range(mean_train_losses.shape[0])),
+                             mean_train_losses-std_train_losses,
+                             mean_train_losses+std_train_losses,
+                             alpha=0.3, 
+                             color='red')
+            plt.fill_between(list(range(mean_train_losses.shape[0])), 
+                             mean_val_losses-std_val_losses, 
+                             mean_val_losses+std_val_losses, 
+                             alpha=0.3, 
+                             color='blue')
             #plt.fill_between(list(range(mean_train_losses.shape[0])), max_test_losses, min_test_losses, alpha=0.3, color='orange')
 
             plt.ylabel('Total Loss')
@@ -115,10 +137,12 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
             max_val_pcc = np.max(val_pcc, axis=0)
             max_test_pcc = np.max(test_pcc, axis=0)
             min_val_pcc = np.min(val_pcc, axis=0)
+            std_val_pcc = np.std(val_pcc, axis=0)
             min_test_pcc = np.min(test_pcc, axis=0)
             mean_val_pcc = np.mean(val_pcc, axis=0)
             mean_test_pcc = np.mean(test_pcc, axis=0)
             max_val_pval = np.max(val_pval, axis=0)
+            std_val_pval = np.std(val_pval, axis=0)
             max_test_pval = np.max(test_pval, axis=0)
             min_val_pval = np.min(val_pval, axis=0)
             min_test_pval = np.min(test_pval, axis=0)
@@ -127,7 +151,11 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
 
             plt.plot(mean_val_pcc, label='Val', color='blue', marker='o')
             plt.axhline(y=mean_test_pcc, label='Test', color='orange', marker='o')
-            plt.fill_between(list(range(mean_val_pcc.shape[0])), max_val_pcc, min_val_pcc, alpha=0.3, color='blue')
+            plt.fill_between(list(range(mean_val_pcc.shape[0])), 
+                             mean_val_pcc-std_val_pcc, 
+                             mean_val_pcc+std_val_pcc, 
+                             alpha=0.3, 
+                             color='blue')
             #plt.fill_between(list(range(mean_val_pcc.shape[0])), max_test_pcc, min_test_pcc, alpha=0.3, color='orange')
             plt.ylabel('PCC')
             plt.xlabel('Epochs')

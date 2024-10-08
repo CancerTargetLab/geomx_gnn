@@ -122,9 +122,11 @@ def train(raw_subset_dir, label_data, output_name, args):
                                             embed=args['embedding_size_image'],
                                             contrast=args['contrast_size_image'], 
                                             resnet=args['resnet_model'],
-                                            layers=args['layers_graph'],
+                                            lin_layers=args['lin_layers_graph'],
+                                            gat_layers=args['gat_layers_graph'],
                                             num_edge_features=args['num_edge_features'],
                                             num_embed_features=args['num_embed_features'],
+                                            num_gat_features=args['num_gat_features'],
                                             num_out_features=train_dataset.get(0).y.shape[0],
                                             heads=args['heads_graph'],
                                             embed_dropout=args['embed_dropout_graph'],
@@ -133,10 +135,12 @@ def train(raw_subset_dir, label_data, output_name, args):
                                             path_image_model=args['init_image_model'],
                                             path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
         elif 'GAT' in model_type:
-            model = ROIExpression(layers=args['layers_graph'],
+            model = ROIExpression(lin_layers=args['lin_layers_graph'],
+                                gat_layers=args['gat_layers_graph'],
                                 num_node_features=args['num_node_features'],
                                 num_edge_features=args['num_edge_features'],
                                 num_embed_features=args['num_embed_features'],
+                                num_gat_features=args['num_gat_features'],
                                 embed_dropout=args['embed_dropout_graph'],
                                 conv_dropout=args['conv_dropout_graph'],
                                 num_out_features=train_dataset.get(0).y.shape[0],
@@ -147,7 +151,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                             embed=args['embedding_size_image'],
                                             contrast=args['contrast_size_image'], 
                                             resnet=args['resnet_model'],
-                                            layers=args['layers_graph'],
+                                            layers=args['lin_layers_graph'],
                                             num_embed_features=args['num_embed_features'],
                                             num_out_features=train_dataset.get(0).y.shape[0],
                                             embed_dropout=args['embed_dropout_graph'],
@@ -156,7 +160,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                             path_image_model=args['init_image_model'],
                                             path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
         elif 'LIN' in model_type:
-            model = ROIExpression_lin(layers=args['layers_graph'],
+            model = ROIExpression_lin(layers=args['lin_layers_graph'],
                                 num_node_features=args['num_node_features'],
                                 num_embed_features=args['num_embed_features'],
                                 embed_dropout=args['embed_dropout_graph'],
@@ -165,7 +169,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 mtype=model_type).to(device, dtype=torch.float32)
         else:
             raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
+        optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),
                                      lr=lr,
                                      weight_decay=5e-4)
         train_dataset.setMode(train_dataset.train)
@@ -239,7 +243,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             l += 1 * beta - sim
                         running_total_loss += l.item() * out.shape[0]
                         l.backward()
-                        grads = gradfilter_ema(model, grads=grads, alpha=0.98, lamb=2)
+                        grads = gradfilter_ema(model, grads=grads, alpha=0.75, lamb=2)
                         optimizer.step()
 
                     train_acc = running_acc / num_graphs

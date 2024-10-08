@@ -49,7 +49,8 @@ class GATBlock(torch.nn.Module):
     """
     def __init__(self,
                 num_edge_features=1,
-                num_embed_features=10, 
+                num_embed_features=10,
+                num_gat_features=10, 
                 heads=1,
                 conv_dropout=0.1,
                 fill_value=0.0):
@@ -67,12 +68,12 @@ class GATBlock(torch.nn.Module):
         super().__init__()
         self.norm_gat = torch_geometric.nn.norm.LayerNorm(num_embed_features)
         self.gat = GATv2Conv(num_embed_features, 
-                            num_embed_features, 
+                            num_gat_features, 
                             edge_dim=num_edge_features,
                             heads=heads,
                             dropout=conv_dropout,
                             fill_value=fill_value)
-        self.lin_h = torch.nn.Linear(heads*num_embed_features, num_embed_features)
+        self.lin_h = torch.nn.Linear(heads*num_gat_features, num_embed_features)
         self.norm_lin = torch_geometric.nn.norm.LayerNorm(num_embed_features)
         self.ffw = FeedForward(dim=num_embed_features, hidden_dim=num_embed_features*4)
         self.relu = torch.nn.ReLU()
@@ -198,10 +199,12 @@ class GraphLearning(torch.nn.Module):
     A graph learning module using GAT blocks.
     """
     def __init__(self,
-                 layers=1,
+                 lin_layers=1,
+                 gat_layers=1,
                  num_node_features=100, 
                  num_edge_features=1,
                  num_embed_features=10,
+                 num_gat_features=10,
                  heads=1,
                  embed_dropout=0.1,
                  conv_dropout=0.1,):
@@ -225,14 +228,20 @@ class GraphLearning(torch.nn.Module):
         self.node_embed = ProjectionHead(input_dim=num_node_features, 
                                       output_dim=num_embed_features,
                                       num_layers=2)
+        
+        blocks = []
+        for _ in range(lin_layers):
+            blocks.append(LinearBlock(input_dim=num_embed_features))
+        self.lin = torch.nn.Sequential(*blocks)
 
         blocks = []
-        for _ in range(layers):
+        for _ in range(gat_layers):
             blocks.append(GATBlock(num_embed_features=num_embed_features,
-                                    num_edge_features=num_edge_features,
-                                    heads=heads,
-                                    conv_dropout=conv_dropout,
-                                    fill_value=0.0))
+                                   num_gat_features=num_gat_features,
+                                   num_edge_features=num_edge_features,
+                                   heads=heads,
+                                   conv_dropout=conv_dropout,
+                                   fill_value=0.0))
         self.convs = torch.nn.Sequential(*blocks)
         
         self.node_embed.apply(init_weights)
@@ -254,6 +263,8 @@ class GraphLearning(torch.nn.Module):
 
         x = self.node_embed(self.drop(x))
 
+        x = self.lin(x)
+
         for conv in list(range(len(self.convs))):
             x = self.convs[conv](x, edge_index, edge_attr=edge_attr)
 
@@ -265,10 +276,12 @@ class ROIExpression(torch.nn.Module):
     A PyTorch module for predicting sc expressions.
     """
     def __init__(self,
-                 layers=1,
+                 lin_layers=1,
+                 gat_layers=1,
                  num_node_features=256, 
                  num_edge_features=1,
                  num_embed_features=128,
+                 num_gat_features=128,
                  num_out_features=128,
                  heads=1,
                  embed_dropout=0.1,
@@ -300,10 +313,12 @@ class ROIExpression(torch.nn.Module):
         if mtype.endswith('_nb'):
             self.nb = True
 
-        self.gnn = GraphLearning(layers=layers,
+        self.gnn = GraphLearning(lin_layers=lin_layers,
+                                gat_layers=gat_layers,
                                 num_node_features=num_node_features, 
                                 num_edge_features=num_edge_features,
                                 num_embed_features=num_embed_features,
+                                num_gat_features=num_gat_features,
                                 heads=heads,
                                 embed_dropout=embed_dropout,
                                 conv_dropout=conv_dropout,)
@@ -499,9 +514,11 @@ class ROIExpression_Image_gat(torch.nn.Module):
                  contrast=124,
                  mode='train_combined',
                  resnet='101',
-                 layers=1,
+                 lin_layers=1,
+                 gat_layers=1,
                  num_edge_features=1,
                  num_embed_features=128,
+                 num_gat_features=128,
                  num_out_features=128,
                  heads=1,
                  embed_dropout=0.1,
@@ -536,10 +553,12 @@ class ROIExpression_Image_gat(torch.nn.Module):
                                         contrast=contrast,
                                         mode=mode,
                                         resnet=resnet)
-        self.graph = ROIExpression(layers=layers,
+        self.graph = ROIExpression(lin_layers=lin_layers,
+                                gat_layers=1,
                                 num_node_features=embed,
                                 num_edge_features=num_edge_features,
                                 num_embed_features=num_embed_features,
+                                num_gat_features=num_gat_features,
                                 num_out_features=num_out_features,
                                 heads=heads,
                                 embed_dropout=embed_dropout,
@@ -547,8 +566,6 @@ class ROIExpression_Image_gat(torch.nn.Module):
                                 mtype=mtype)
         if path_image_model:
             self.image.load_state_dict(torch.load(path_image_model, weights_only=True)['model'])
-            for param in self.image.parameters():
-                param.requires_grad = False
         if path_graph_model:
             self.graph.load_state_dict(torch.load(path_graph_model, weights_only=True)['model'])
         

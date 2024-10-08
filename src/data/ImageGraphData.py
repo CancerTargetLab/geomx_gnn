@@ -81,7 +81,7 @@ class ImageGraphDataset(GeoMXDataset):
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
             RandomBackground(std=self.std, std_frac=0.1),
-            #RandomArtefact(),
+            RandomArtefact(),
             T.ConvertImageDtype(torch.float32),
             T.Normalize(mean=self.mean, std=self.std),
             #rnd_gausnoise,
