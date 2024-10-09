@@ -113,7 +113,7 @@ def get_bulk_expression_of(value_dict, IDs, exps, key='y'):
     rois.sort()
     rois_np = np.array(rois)
     adata = sc.AnnData(np.zeros((len(rois), value_dict[rois[0]][key].shape[0])))
-    adata.obs['ID'] = -1
+    adata.obs['ID'] = str(-1)
     adata.var_names = exps
     files = np.array([])
 
@@ -123,7 +123,7 @@ def get_bulk_expression_of(value_dict, IDs, exps, key='y'):
         id_keys = rois_np[id_map].tolist()
         for id_key in id_keys:
             adata.X[i] = value_dict[id_key][key]
-            adata.obs['ID'][i] = id
+            adata.obs.loc[i, 'ID'] = id
             files = np.concatenate((files, np.array([id_key])))
             i += 1
     adata.obs['files'] = files
@@ -204,7 +204,6 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
             cell_index = np.random.default_rng(42).choice(np.arange(counts.shape[0]), size=select_cells, replace=False)
         
         adata = sc.AnnData(counts)
-        adata = adata.copy()
         if cell_class is not None:
             cell_class = np.array(cell_class)
             adata.obs['cell_class'] = cell_class
@@ -234,7 +233,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         sc.pp.pca(adata, svd_solver='arpack', n_comps=adata.X.shape[1]-1, chunked=True, chunk_size=50000, use_highly_variable=False)
         sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
         sc.tl.umap(adata)
-        sc.tl.leiden(adata, resolution=0.5)
+        sc.tl.leiden(adata, resolution=0.5, flavor="igraph", n_iterations=2)
 
         sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False, layer='logs')
 
@@ -375,9 +374,9 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     pred = adata_p.X
     y = adata_y.X
 
-    p_statistic, p_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
-    s_statistic, s_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
-    k_statistic, k_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
+    p_statistic, p_pval = per_gene_corr(pred, y, mean=False, method='PEARSONR')
+    s_statistic, s_pval = per_gene_corr(pred, y, mean=False, method='SPEARMANR')
+    k_statistic, k_pval = per_gene_corr(pred, y, mean=False, method='KENDALLTAU')
         
     correlation_data = {
         'Variable': adata_p.var_names.values,

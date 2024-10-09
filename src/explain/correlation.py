@@ -4,9 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from src.utils.stats import per_gene_corr
 
-adata_name = '_crc_lin_sub'
+adata_name = '_crc_gatgrok_long'
 og_df_name = 'CRC_measurements.csv'
-out = 'figures/crc_lin_sub'
+out = 'figures/crc_gat_long'
 
 df = pd.read_csv(os.path.join('data/raw/CRC', og_df_name), header=0, sep=',')
 df['Image'] = df['Image'].apply(lambda x: x.split('.')[0])
@@ -20,14 +20,15 @@ tmp[var_names] = adata.X
 adata = tmp
 adata['files'] = adata['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
 adata = adata.sort_values(by='files').reset_index(drop=True)
-adata = adata[adata['files'].isin(df['Image'])]     #Selects files that exist in pred, in case ofonly investiating test data
+adata = adata[adata['files'].isin(df['Image'])]     #Selects files that exist in pred, in case of only investiating test data
+df = df[df['Image'].isin(adata['files'])]  
 
 pred = adata[adata.columns[1:].values].values
 y = df[df.columns[4:].values].values
 
-p_statistic, p_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
-s_statistic, s_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
-k_statistic, k_pval = per_gene_corr(pred, y, mean=False, method='pearsonr')
+p_statistic, p_pval = per_gene_corr(pred, y, mean=False, method='PEARSONR')
+s_statistic, s_pval = per_gene_corr(pred, y, mean=False, method='SPEARMANR')
+k_statistic, k_pval = per_gene_corr(pred, y, mean=False, method='KENDALLTAU')
     
 correlation_data = {
     'Variable': var_names,
@@ -49,4 +50,4 @@ corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 plt.figure(figsize=(10, 5))
 plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
 plt.axis('off')
-plt.savefig(os.path.join(out, 'corr'+adata_name+'.pdf'))
+plt.savefig(os.path.join(out, 'corr'+adata_name+'.pdf'), bbox_inches='tight')
