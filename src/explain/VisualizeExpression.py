@@ -25,7 +25,7 @@ def get_true_graph_expression_dict(path, output_name=None):
 
     value_dict = {}
     for graph_p in graph_paths:
-        graph = torch.load(os.path.join(path, graph_p), map_location='cpu')
+        graph = torch.load(os.path.join(path, graph_p), map_location='cpu', weights_only=False)
         value_dict[graph_p] = {'y': graph.y.numpy()}
         if 'Class' in graph.to_dict().keys():
             value_dict[graph_p]['cell_class'] =graph.Class
@@ -45,7 +45,9 @@ def get_predicted_graph_expression(value_dict, path):
     path = os.path.join(os.getcwd(), path)
     roi_pred_paths = [p for p in os.listdir(path) if p.startswith('roi_pred')]
     for roi_pred_p in roi_pred_paths:
-        value_dict[roi_pred_p.split('roi_pred_')[1]]['roi_pred'] = torch.load(os.path.join(path, roi_pred_p), map_location='cpu').squeeze().detach().numpy()
+        value_dict[roi_pred_p.split('roi_pred_')[1]]['roi_pred'] = torch.load(os.path.join(path, roi_pred_p), 
+                                                                            map_location='cpu',
+                                                                            weights_only=False).squeeze().detach().numpy()
     return value_dict
 
 def get_predicted_cell_expression(value_dict, path):
@@ -64,9 +66,11 @@ def get_predicted_cell_expression(value_dict, path):
     cell_pred_paths = [p for p in os.listdir(path) if p.startswith('cell_pred')]
     num_cells = 0
     for roi_pred_p in cell_pred_paths:
-        value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'] = torch.load(os.path.join(path, roi_pred_p), map_location='cpu').squeeze().detach().numpy()
+        value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'] = torch.load(os.path.join(path, roi_pred_p),
+                                                                                map_location='cpu',
+                                                                                weights_only=False).squeeze().detach().numpy()
         num_cells += value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'].shape[0]
-    cell_shapes = (num_cells, value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'].shape[1])
+    cell_shapes = (num_cells, value_dict[roi_pred_p.split('cell_pred_')[1]]['cell_pred'].shape[-1])
     return value_dict, cell_shapes
 
 def get_patient_ids(label_data, keys):
@@ -200,6 +204,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
             cell_index = np.random.default_rng(42).choice(np.arange(counts.shape[0]), size=select_cells, replace=False)
         
         adata = sc.AnnData(counts)
+        adata = adata.copy()
         if cell_class is not None:
             cell_class = np.array(cell_class)
             adata.obs['cell_class'] = cell_class
@@ -226,7 +231,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=10, min_disp=0.5)
         
         sc.pp.scale(adata)
-        sc.tl.pca(adata, svd_solver='arpack', n_comps=adata.X.shape[1]-1, chunked=True, chunk_size=50000, use_highly_variable=False)
+        sc.pp.pca(adata, svd_solver='arpack', n_comps=adata.X.shape[1]-1, chunked=True, chunk_size=50000, use_highly_variable=False)
         sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
         sc.tl.umap(adata)
         sc.tl.leiden(adata, resolution=0.5)

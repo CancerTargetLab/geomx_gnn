@@ -176,7 +176,7 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
             plt.close()
 
     else:
-        model_stuff = torch.load(model_path, map_location=torch.device('cpu'))
+        model_stuff = torch.load(model_path, map_location=torch.device('cpu'), weights_only=False)
         train_acc = model_stuff['train_acc']
         val_acc = model_stuff['val_acc']
         train_loss = model_stuff['train_list']

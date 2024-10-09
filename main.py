@@ -129,8 +129,8 @@ def parse_args():
                         help="Wether or not to train the Graph Model")
     parser.add_argument("--embed_gnn_data", action="store_true", default=False,
                         help="Wether or not to embed predicted Cell Expression")
-    parser.add_argument("--embed_graph_test_data", action="store_true", default=True,
-                        help="Wether or not to embed predicted Cell Expression for only test data")
+    parser.add_argument("--embed_graph_train_data", action="store_true", default=False,
+                        help="Wether or not to embed predicted Cell Expression for only train data")
 
 
     parser.add_argument("--deterministic", action="store_true", default=False,

@@ -24,10 +24,10 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     model_type = args['graph_model_type']
     set_seed(SEED)
 
-    if args['embed_graph_test_data']:
-        split = 'test'
-    else:
+    if args['embed_graph_train_data']:
         split = 'train'
+    else:
+        split = 'test'
 
     if 'IMAGE' in model_type:
         dataset = ImageGraphDataset(root_dir=args['graph_dir'],
@@ -67,9 +67,11 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                         embed=args['embedding_size_image'],
                                         contrast=args['contrast_size_image'], 
                                         resnet=args['resnet_model'],
-                                        layers=args['layers_graph'],
+                                        lin_layers=args['lin_layers_graph'],
+                                        gat_layers=args['gat_layers_graph'],
                                         num_edge_features=args['num_edge_features'],
                                         num_embed_features=args['num_embed_features'],
+                                        num_gat_features=args['num_gat_features'],
                                         num_out_features=dataset.get(0).y.shape[0],
                                         heads=args['heads_graph'],
                                         embed_dropout=args['embed_dropout_graph'],
@@ -78,10 +80,12 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                         path_image_model=args['init_image_model'],
                                         path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
     elif 'GAT' in model_type:
-        model = ROIExpression(layers=args['layers_graph'],
+        model = ROIExpression(lin_layers=args['lin_layers_graph'],
+                            gat_layers=args['gat_layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_edge_features=args['num_edge_features'],
                             num_embed_features=args['num_embed_features'],
+                            num_gat_features=args['num_gat_features'],
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
@@ -92,7 +96,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                         embed=args['embedding_size_image'],
                                         contrast=args['contrast_size_image'], 
                                         resnet=args['resnet_model'],
-                                        layers=args['layers_graph'],
+                                        layers=args['lin_layers_graph'],
                                         num_embed_features=args['num_embed_features'],
                                         num_out_features=dataset.get(0).y.shape[0],
                                         embed_dropout=args['embed_dropout_graph'],
@@ -101,7 +105,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                         path_image_model=args['init_image_model'],
                                         path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
     elif 'LIN' in model_type:
-        model = ROIExpression_lin(layers=args['layers_graph'],
+        model = ROIExpression_lin(layers=args['lin_layers_graph'],
                             num_node_features=args['num_node_features'],
                             num_embed_features=args['num_embed_features'],
                             embed_dropout=args['embed_dropout_graph'],
@@ -111,7 +115,7 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     else:
         raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
     model.eval()
-    model.load_state_dict(torch.load(model_name)['model'])
+    model.load_state_dict(torch.load(model_name, weights_only=False)['model'])
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     if 'IMAGE' in model_type:
