@@ -8,8 +8,8 @@ def parse_args():
                         help="Directory in which .tiff files are for preprocessing")
     parser.add_argument("--preprocess_channels", type=str, default="",
                         help="Indices of channels to preprocess, seperated by , and empty if all channels")
-    parser.add_argument("--preprocess_mean_std_dir", type=str, default="",
-                        help="Directory in which to find already calculated mean.npy and std.npy per channel, empty if not used")
+    parser.add_argument("--calc_mean_std", action="store_true", default=False,
+                        help="Wether or not to calculate mean and std of cell cut outs")
     parser.add_argument("--cell_cutout", type=int, default=20,
                         help="Size*Size cutout of cell, centered on Centroid Cell position")
     parser.add_argument("--preprocess_workers", type=int, default=1,
@@ -66,7 +66,6 @@ def parse_args():
                         help="Number of Graphs per Batch")
     parser.add_argument("--epochs_graph", type=int, default=100,
                         help="Number of epochs for which to train")
-    #parser.add_argument("--warmup_epochs_graph", type=int, default=10)
     parser.add_argument("--num_workers_graph", type=int, default=1,
                         help="Number of worker processes to be used(loading data etc)")
     parser.add_argument("--lr_graph", type=float, default=0.005,
@@ -157,6 +156,8 @@ def parse_args():
     # Visualize Image
     parser.add_argument("--visualize_image", action="store_true", default=False,
                         help="Wether or not to Visualize an Image")
+    parser.add_argument("--vis_name_og", type=str, default="",
+                        help="Name of NAME.h5ad containing TRUE single-cell counts(used for validation data)")
     parser.add_argument("--vis_img_raw_subset_dir", type=str, default="TMA1_preprocessed",
                         help="Name of raw/ subsetdir which contains .tiff Images to visualize")
     parser.add_argument("--name_tiff", type=str, default="027-2B27.tiff",
@@ -169,8 +170,6 @@ def parse_args():
                         help="Image x coords, smaller first")
     parser.add_argument("--vis_img_ycoords", nargs='+', type=int, default=[0,0],
                         help="Image y coords, smaller first")
-    parser.add_argument("--vis_channel", type=int, default=0,
-                        help="Image channel to visualize as background")
     parser.add_argument("--vis_all_channels", action="store_true", default=False,
                         help="Wether or not to visualize all Image channels on their own")
 
@@ -194,7 +193,7 @@ def main(**args):
         from src.utils.image_preprocess import image_preprocess as ImagePreprocess
         ImagePreprocess(path=args['preprocess_dir'], 
                         img_channels=args['preprocess_channels'],
-                        path_mean_std=args['preprocess_mean_std_dir'],
+                        do_mean_std=args['calc_mean_std'],
                         cell_cutout=args['cell_cutout'],
                         num_processes=args['preprocess_workers'])
     if args['train_image_model']:
@@ -223,7 +222,6 @@ def main(**args):
     if args['visualize_expression']:
         from src.explain.VisualizeExpression import visualizeExpression
         visualizeExpression(processed_dir=args['processed_subset_dir'],
-                            output_name=None,   #args['output_name_graph'] if args['embed_graph_test_data'] else None,
                             embed_dir=args['embed_dir'],
                             label_data=args['vis_label_data'],
                             figure_dir=args['figure_dir'],

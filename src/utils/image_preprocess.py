@@ -24,11 +24,16 @@ def load_img(path,
     """
 
     if path.endswith(('.tiff', '.tif')):
-        img = io.imread(path, plugin='tifffile')
+        if not type(img_channels) == str:
+            img = io.imread(path, plugin='tifffile', key=tuple(img_channels))
+            if len(img_channels) == 1:
+                img = np.expand_dims(img, axis=-1)
+        else:
+            img = io.imread(path, plugin='tifffile')
+        if len(img.shape) == 2:
+            img = np.expand_dims(img, axis=-1)
         if img.shape[2] < img.shape[1] and img.shape[2] < img.shape[0]:
             img = np.transpose(img, (2,0,1))
-        if not type(img_channels) == str:
-            img = img[img_channels,:,:]
     else:
         file_end = path.split('/')[-1]
         print(f"Do not support opening of files of type {file_end}.")
@@ -181,7 +186,7 @@ def cell_seg(df_path,
 def image_preprocess(path,
                      max_img=2**16,
                      img_channels='',
-                     path_mean_std='',
+                     do_mean_std=False,
                      cell_cutout=20,
                      num_processes=1):
     """
@@ -191,8 +196,7 @@ def image_preprocess(path,
     path (str): Path to image directory
     max_img (int): Max possible pixel intensitiy of images
     img_channels (list): List of indices of image channels to extract
-    path_mean_std (str): Path to dir containing saved numpy array of 
-                         calculated channel-wise mean/std, if empty calculate
+    do_mean_std (Bool): Bool that indicates wether or not to calculate mean and std of cell cutouts
     cell_cutout (int): length/width of cut out
     num_processes (int): number of processes to use
     """
@@ -202,7 +206,7 @@ def image_preprocess(path,
 
     img_channels = img_channels if len(img_channels) == 0 else np.array([int(channel) for channel in img_channels.split(',')])
     cell_seg(df_path, img_paths, img_channels=img_channels, cell_cutout=cell_cutout, num_processes=num_processes)
-    if len(path_mean_std) == 0:
+    if do_mean_std:
         mean, std = calc_mean_std(img_paths, max_img=max_img)
         np.save(os.path.join(raw_dir, 'mean.npy'), mean)
         np.save(os.path.join(raw_dir, 'std.npy'), std)
