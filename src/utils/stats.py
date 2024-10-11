@@ -50,6 +50,31 @@ def per_gene_corr(x, y, mean=True, method='pearsonr'):
     else:
         return statistic, pval
 
+def total_corr(x, y, method='pearsonr'):
+    """
+    Calculate correlation of method between x and y on a gene/protein wise level.
+
+    Parameters:
+    x (np.array): 2D number array
+    y (np.array): 2D number array
+    method (str): String indicating method to be used ('PEARSONR', 'SPEARMANR', 'KENDALLTAU')
+
+    Returns:
+    (Correlation value,  p-value)
+    """
+
+    if method.upper() == 'PEARSONR':
+        corr = pearsonr
+    elif method.upper() == 'SPEARMANR':
+        corr = spearmanr
+    elif  method.upper() == 'KENDALLTAU':
+        corr = kendalltau
+    else:
+        raise Exception(f'Method {method} not one of pearsonr, spearmanr or kendalltau')
+    x, y = x.astype(np.float64).squeeze(), y.astype(np.float64).squeeze()
+    statistic, pval = corr(x, y)
+    return np.mean(statistic), np.mean(pval)
+
 def avg_cell_n(path):
       """
       Calculate average number of cells per graph for graphs in directory.

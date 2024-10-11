@@ -332,10 +332,55 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     }
 
     corr_df = pd.DataFrame(correlation_data)
+    mean_values = corr_df[corr_df.columns[1:]].mean()
+    mean_row = pd.DataFrame({'IDs': 'mean', **mean_values}, index=[0])
+    std_values = corr_df[corr_df.columns[1:]].std()
+    std_row = pd.DataFrame({'IDs': 'std', **std_values}, index=[0])
+    corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
     plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
     plt.axis('off')
     plt.savefig(os.path.join(figure_dir, f'corr_IDs_{name}.pdf'), bbox_inches='tight')
+    plt.close()
+
+    corr_p = np.ndarray(adata_p.obs['files'].unique().shape[0])
+    corr_s = np.ndarray(adata_p.obs['files'].unique().shape[0])
+    corr_k = np.ndarray(adata_p.obs['files'].unique().shape[0])
+    pval_p = np.ndarray(adata_p.obs['files'].unique().shape[0])
+    pval_s = np.ndarray(adata_p.obs['files'].unique().shape[0])
+    pval_k = np.ndarray(adata_p.obs['files'].unique().shape[0])
+    sorted_files = sorted(adata_p.obs['files'].unique().tolist())
+    for i, file in enumerate(sorted_files):
+        corr_p[i], pval_p[i] = total_corr(adata_p.X[adata_p.obs['files']==file],
+                                          adata_y.X[adata_y.obs['files']==file],
+                                          method='PEARSONR')
+        corr_s[i], pval_s[i] = total_corr(adata_p.X[adata_p.obs['files']==file],
+                                          adata_y.X[adata_y.obs['files']==file],
+                                          method='SPEARMANR')
+        corr_k[i], pval_k[i] = total_corr(adata_p.X[adata_p.obs['files']==file],
+                                          adata_y.X[adata_y.obs['files']==file],
+                                          method='KENDALLTAU')
+
+    correlation_data = {
+        'files': sorted_files,
+        'Pearson Correlation Coef.': [corr for corr in corr_p],
+        'Pearson p-value': [corr for corr in pval_p],
+        'Spearman Correlation Coef.': [corr for corr in corr_s],
+        'Spearman p-value': [corr for corr in pval_s],
+        'Kendall Correlation Coef.': [corr for corr in corr_k],
+        'Kendall p-value': [corr for corr in pval_k]
+    }
+
+    corr_df = pd.DataFrame(correlation_data)
+    mean_values = corr_df[corr_df.columns[1:]].mean()
+    mean_row = pd.DataFrame({'files': 'mean', **mean_values}, index=[0])
+    std_values = corr_df[corr_df.columns[1:]].std()
+    std_row = pd.DataFrame({'files': 'std', **std_values}, index=[0])
+    corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
+
+    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
+    plt.axis('off')
+    plt.savefig(os.path.join(figure_dir, f'corr_files_{name}.pdf'), bbox_inches='tight')
     plt.close()
 
     similarity = torch.nn.CosineSimilarity()
