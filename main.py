@@ -140,6 +140,8 @@ def parse_args():
     # Visualize Expression 
     parser.add_argument("--visualize_expression", action="store_true", default=False,
                         help="Wether or not to visualize predicted sc expression")
+    parser.add_argument("--has_expr_data", action="store_true", default=False,
+                        help="Wether or not true Single Cell expression data is in measurements.csv")
     parser.add_argument("--vis_label_data", type=str, default="OC1_all.csv",
                         help="Count data of Images, linked with Patient IDs")
     parser.add_argument("--processed_subset_dir", type=str, default="TMA1_preprocessed",
@@ -227,6 +229,11 @@ def main(**args):
                             figure_dir=args['figure_dir'],
                             name=args['vis_name'],
                             select_cells=args['vis_select_cells'])
+        if args['has_expr_data']:
+            from src.explain.correlation import correlation
+            correlation(raw_subset_dir=args['graph_raw_subset_dir'],
+                        figure_dir=args['figure_dir'],
+                        vis_name=args['vis_name'])
     if args['visualize_image']:
         from src.explain.VisualizeImage import visualizeImage
         visualizeImage(raw_subset_dir=args['vis_img_raw_subset_dir'],
