@@ -11,7 +11,7 @@ def correlation(raw_subset_dir='CRC',
     adata_name = vis_name
     out = figure_dir
 
-    df = pd.read_csv([p for p in os.listdir(os.path.join('data/raw/', raw_subset_dir)) if p.endswith('.csv')],
+    df = pd.read_csv([p for p in os.listdir(os.path.join('data/raw/', raw_subset_dir)) if p.endswith('.csv')][0],
                      header=0,
                      sep=',')
     df['Image'] = df['Image'].apply(lambda x: x.split('.')[0])
