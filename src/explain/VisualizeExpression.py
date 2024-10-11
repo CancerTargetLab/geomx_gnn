@@ -4,7 +4,7 @@ import seaborn as sns
 import numpy as np
 import scanpy as sc
 import pandas as pd
-from src.utils.stats import per_gene_corr
+from src.utils.stats import per_gene_corr, total_corr
 import os
 
 def get_true_graph_expression_dict(path):
@@ -237,7 +237,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
     
     #with plt.rc_context():
     sc.pl.highly_variable_genes(adata, show=False)
-    plt.savefig(os.path.join(figure_dir, f'highly_varible_genes{name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'highly_varible_genes_{name}.png'))
     plt.close()
 
     categories = np.unique(adata.obs['ID'])
@@ -245,30 +245,30 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
     colordict = dict(zip(categories, colors))
     adata.obs['Color'] = adata.obs['ID'].apply(lambda x: colordict[x])
     plt.scatter(adata.obsm['X_umap'][:,0], adata.obsm['X_umap'][:,1], c=adata.obs['Color'], alpha=0.4, cmap='gist_ncar', s=1)
-    plt.savefig(os.path.join(figure_dir, f'umap{name}_ID.png'))
+    plt.savefig(os.path.join(figure_dir, f'umap_{name}_ID.png'))
     plt.close()
 
     sc.pl.umap(adata, color='leiden', show=False)
-    plt.savefig(os.path.join(figure_dir, f'umap{name}_cluster.png'))
+    plt.savefig(os.path.join(figure_dir, f'umap_{name}_cluster.png'))
     plt.close()
     sc.pl.umap(adata, color='leiden',
                show=False, add_outline=True, legend_loc='on data',
                legend_fontsize=12, legend_fontoutline=2,frameon=False)
-    plt.savefig(os.path.join(figure_dir, f'umap{name}_cluster_named.png'))
+    plt.savefig(os.path.join(figure_dir, f'umap_{name}_cluster_named.png'))
     plt.close()
 
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, show=False)
-    plt.savefig(os.path.join(figure_dir, f'rank_genes_group{name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'rank_genes_group_{name}.png'))
     plt.close()
     sc.pl.rank_genes_groups_heatmap(adata, show_gene_labels=True, show=False, layer='logs', n_genes=5)
-    plt.savefig(os.path.join(figure_dir, f'rank_genes_group{name}_heatmap.png'))
+    plt.savefig(os.path.join(figure_dir, f'rank_genes_group_{name}_heatmap.png'))
     plt.close()
 
     sc.pl.heatmap(adata, adata.var_names, groupby='leiden', show=False, layer='logs')
-    plt.savefig(os.path.join(figure_dir, f'heatmap{name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'heatmap_{name}.png'))
     plt.close()
     sc.pl.violin(adata, adata.var['highly_variable'].index[adata.var['highly_variable'].values].values, groupby='leiden', show=False, layer='logs')
-    plt.savefig(os.path.join(figure_dir, f'violin_highly_varible{name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'violin_highly_varible_{name}.png'))
     plt.close()
 
     if 'cell_class' in adata.obs.columns.values.tolist():
@@ -287,7 +287,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         plt.xlabel('Categories')
         plt.ylabel('Leiden Clusters')
         plt.title('Relationship Between predicted Cell Clusters and Categories')
-        plt.savefig(os.path.join(figure_dir, f'Cell_Class_label_heatmap{name}.png'))
+        plt.savefig(os.path.join(figure_dir, f'Cell_Class_label_heatmap_{name}.png'))
 
 def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     """
@@ -302,6 +302,41 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     """
     adata_y = get_bulk_expression_of(value_dict, IDs, exps, key='y')
     adata_p = get_bulk_expression_of(value_dict, IDs, exps, key='roi_pred')
+
+    corr_p = np.ndarray(adata_p.obs['ID'].unique().shape[0])
+    corr_s = np.ndarray(adata_p.obs['ID'].unique().shape[0])
+    corr_k = np.ndarray(adata_p.obs['ID'].unique().shape[0])
+    pval_p = np.ndarray(adata_p.obs['ID'].unique().shape[0])
+    pval_s = np.ndarray(adata_p.obs['ID'].unique().shape[0])
+    pval_k = np.ndarray(adata_p.obs['ID'].unique().shape[0])
+    sorted_ids = sorted(adata_p.obs['ID'].unique().tolist())
+    for i, id in enumerate(sorted_ids):
+        corr_p[i], pval_p[i] = total_corr(adata_p.X[adata_p.obs['ID']==id],
+                                          adata_y.X[adata_y.obs['ID']==id],
+                                          method='PEARSONR')
+        corr_s[i], pval_s[i] = total_corr(adata_p.X[adata_p.obs['ID']==id],
+                                          adata_y.X[adata_y.obs['ID']==id],
+                                          method='SPEARMANR')
+        corr_k[i], pval_k[i] = total_corr(adata_p.X[adata_p.obs['ID']==id],
+                                          adata_y.X[adata_y.obs['ID']==id],
+                                          method='KENDALLTAU')
+
+    correlation_data = {
+        'IDs': sorted_ids,
+        'Pearson Correlation Coef.': [corr for corr in corr_p],
+        'Pearson p-value': [corr for corr in pval_p],
+        'Spearman Correlation Coef.': [corr for corr in corr_s],
+        'Spearman p-value': [corr for corr in pval_s],
+        'Kendall Correlation Coef.': [corr for corr in corr_k],
+        'Kendall p-value': [corr for corr in pval_k]
+    }
+
+    corr_df = pd.DataFrame(correlation_data)
+
+    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
+    plt.axis('off')
+    plt.savefig(os.path.join(figure_dir, f'corr_IDs_{name}.pdf'), bbox_inches='tight')
+    plt.close()
 
     similarity = torch.nn.CosineSimilarity()
 
@@ -329,7 +364,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     plt.title('Boxplots of Cosine Similarity')
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(os.path.join(figure_dir, f'all_boxplot{name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'all_boxplot_{name}.png'))
     plt.close()
 
     plt.figure(figsize=(30, 5))
@@ -338,7 +373,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     plt.ylabel('Cosine Similarity')
     plt.xticks(rotation=90)  # Rotate x-axis labels vertically
     plt.xlabel('IDs')
-    plt.savefig(os.path.join(figure_dir, f'cosine_similarity_IDs{name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'cosine_similarity_IDs__{name}.png'))
     plt.close()
 
     df = pd.DataFrame()
@@ -350,7 +385,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     plt.ylabel('Cosine Similarity')
     plt.xlabel('Slides')
     plt.xticks(rotation=90)  # Rotate x-axis labels vertically
-    plt.savefig(os.path.join(figure_dir, f'cosine_similarity_slides{name}.png'))
+    plt.savefig(os.path.join(figure_dir, f'cosine_similarity_slides_{name}.png'))
     plt.close()
 
 def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
@@ -393,7 +428,7 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
 
     plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
     plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, f'corr_area{name}.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, f'corr_area_{name}.pdf'), bbox_inches='tight')
     plt.close()
 
 def visualizeExpression(processed_dir='TMA1_processed',
