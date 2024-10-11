@@ -86,9 +86,9 @@ def get_patient_ids(label_data, keys):
     exps = df.columns.values[2:]
 
     if len(keys) != IDs.shape[0]:
-        tmp = np.ndarray((len(keys)), dtype=str)
+        tmp = np.ndarray((len(keys)), dtype=object)
         for i_key in range(len(keys)):
-            tmp[i_key] = df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID'].values[0]
+            tmp[i_key] = str(df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID'].values[0])
         IDs = tmp
     return IDs, exps
 
@@ -119,7 +119,7 @@ def get_bulk_expression_of(value_dict, IDs, exps, key='y'):
         id_keys = rois_np[id_map].tolist()
         for id_key in id_keys:
             adata.X[i] = value_dict[id_key][key]
-            adata.obs.loc[i, 'ID'] = id
+            adata.obs.loc[str(i), 'ID'] = str(id)
             files = np.concatenate((files, np.array([id_key])))
             i += 1
     adata.obs['files'] = files
@@ -226,7 +226,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=10, min_disp=0.5)
         
         sc.pp.scale(adata)
-        sc.pp.pca(adata, svd_solver='arpack', n_comps=adata.X.shape[1]-1, chunked=True, chunk_size=50000, use_highly_variable=False)
+        sc.pp.pca(adata, svd_solver='arpack', n_comps=adata.X.shape[1]-1, chunked=True, chunk_size=50000, mask_var=None)
         sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
         sc.tl.umap(adata)
         sc.tl.leiden(adata, resolution=0.5, flavor="igraph", n_iterations=2)
