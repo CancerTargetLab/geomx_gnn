@@ -93,3 +93,44 @@ plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
 plt.axis('off')
 plt.savefig(os.path.join(out, 'corr_cells_'+adata_name+'.pdf'), bbox_inches='tight')
 plt.close()
+
+out = os.path.join(out, 'cell_corr_per_roi')
+if not os.path.exists(out) and not os.path.isdir(out):
+        os.makedirs(out)
+sorted_ids = sorted(adata['files'].unique().tolist())
+for i, id in enumerate(sorted_ids):
+    p_statistic, p_pval = per_gene_corr(adata[adata['files']==id][adata.columns[1:].values].values,
+                                        df[df['Image']==id][adata.columns[1:].values].values,
+                                        method='PEARSONR',
+                                        mean=False)
+    s_statistic, s_pval = per_gene_corr(adata[adata['files']==id][adata.columns[1:].values].values,
+                                        df[df['Image']==id][adata.columns[1:].values].values,
+                                        method='SPEARMANR',
+                                        mean=False)
+    k_statistic, k_pval = per_gene_corr(adata[adata['files']==id][adata.columns[1:].values].values,
+                                        df[df['Image']==id][adata.columns[1:].values].values,
+                                        method='KENDALLTAU',
+                                        mean=False)
+        
+    correlation_data = {
+        'Variable': var_names,
+        'Pearson Correlation Coef.': [corr for corr in p_statistic],
+        'Pearson p-value': [corr for corr in p_pval],
+        'Spearman Correlation Coef.': [corr for corr in s_statistic],
+        'Spearman p-value': [corr for corr in s_pval],
+        'Kendall Correlation Coef.': [corr for corr in k_statistic],
+        'Kendall p-value': [corr for corr in k_pval]
+    }
+
+    corr_df = pd.DataFrame(correlation_data)
+    mean_values = corr_df[corr_df.columns[1:]].mean()
+    mean_row = pd.DataFrame({'Variable': 'mean', **mean_values}, index=[0])
+    std_values = corr_df[corr_df.columns[1:]].std()
+    std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
+    corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
+
+    plt.figure(figsize=(10, 5))
+    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
+    plt.axis('off')
+    plt.savefig(os.path.join(out, f'corr_{id}_'+adata_name+'.pdf'), bbox_inches='tight')
+    plt.close()
