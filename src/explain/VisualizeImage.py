@@ -18,7 +18,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     vis_name: name of .h5ad file to load scanpy.AnnData and add to figure save name
     args (dict): Arguments
     """
-    path = os.path.join('data/raw', raw_subset_dir)
+    path = os.path.join('data/raw', raw_subset_dir.split('/')[0])
     df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
     df = pd.read_csv(df_path, header=0, sep=",")
     df = df[["Image", "Centroid.X.px", "Centroid.Y.px"]] #'Class'
@@ -62,7 +62,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
         cluster_og = sc.read_h5ad(os.path.join('out/', args['vis_name_og']))
         sc.pp.normalize_total(cluster_og)
         sc.pp.log1p(cluster_og)
-        cluster_og.obs['prefix'] = cluster.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
+        cluster_og.obs['prefix'] = cluster_og.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
 
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
         os.makedirs(figure_dir)
@@ -87,31 +87,31 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
         for prt in proteins:
             adata.obs[prt] = cluster.X[:,np.argmax(cluster.var_names.values==prt)][cluster.obs['prefix']==name_tiff.split('.')[0]]
             if len(args['vis_name_og']) > 0:
-                adata.obs[prt+'lin'] = cluster_og.X[:,np.argmax(cluster_og.var_names.values==prt)][cluster_og.obs['prefix']==name_tiff.split('.')[0]]
-                adata.obs[prt+'diff'] = adata.obs[prt].values - adata.obs[prt+'lin'].values
+                adata.obs[prt+'og'] = cluster_og.X[:,np.argmax(cluster_og.var_names.values==prt)][cluster_og.obs['prefix']==name_tiff.split('.')[0]]
+                adata.obs[prt+'diff'] = adata.obs[prt].values - adata.obs[prt+'og'].values
                 sq.pl.spatial_scatter(adata,
                         color=prt,
                         size=25,
                         img_channel=0,
                         img_alpha=0.,
                         crop_coord=crop_coord,
-                        vmin=min(np.min(adata.obs[prt].values), np.min(adata.obs[prt+'lin'].values)),
-                        vmax=max(np.max(adata.obs[prt].values), np.max(adata.obs[prt+'lin'].values)))
+                        vmin=min(np.min(adata.obs[prt].values), np.min(adata.obs[prt+'og'].values)),
+                        vmax=max(np.max(adata.obs[prt].values), np.max(adata.obs[prt+'og'].values)))
                 plt.savefig(os.path.join(prot_dir,
-                                         f'cell_expression_og_{prt}_{vis_name}_{pre_name_tiff}.png'),
+                                         f'cell_expression_pred_{prt}_{vis_name}_{pre_name_tiff}.png'),
                                          bbox_inches='tight')
                 plt.close()
                 sq.pl.spatial_scatter(adata,
-                                    color=prt+'lin',
+                                    color=prt+'og',
                                     size=25,
                                     img_channel=0,
                                     img_alpha=0.,
                                     crop_coord=crop_coord,
-                                    vmin=min(np.min(adata.obs[prt].values), np.min(adata.obs[prt+'lin'].values)),
-                                    vmax=max(np.max(adata.obs[prt].values), np.max(adata.obs[prt+'lin'].values)),
+                                    vmin=min(np.min(adata.obs[prt].values), np.min(adata.obs[prt+'og'].values)),
+                                    vmax=max(np.max(adata.obs[prt].values), np.max(adata.obs[prt+'og'].values)),
                                     title=prt)
                 plt.savefig(os.path.join(prot_dir,
-                                         f'cell_expression_pred_{prt}_{vis_name}_{pre_name_tiff}.png'),
+                                         f'cell_expression_og_{prt}_{vis_name}_{pre_name_tiff}.png'),
                                          bbox_inches='tight')
                 plt.close()
                 sq.pl.spatial_scatter(adata,
