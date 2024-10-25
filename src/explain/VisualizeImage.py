@@ -53,6 +53,8 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                                                           "spot_diameter_fullres": 0.5,}
 
     cluster = sc.read_h5ad(os.path.join('out/', vis_name))
+    if not vis_name.endswith('_all.h5ad'):
+        cluster.X = cluster.layers['counts'].copy()
     sc.pp.normalize_total(cluster)
     sc.pp.log1p(cluster)
     cluster.obs['prefix'] = cluster.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])

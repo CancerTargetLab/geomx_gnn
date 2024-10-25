@@ -311,14 +311,14 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     pval_k = np.ndarray(adata_p.obs['ID'].unique().shape[0])
     sorted_ids = sorted(adata_p.obs['ID'].unique().tolist())
     for i, id in enumerate(sorted_ids):
-        corr_p[i], pval_p[i] = total_corr(adata_p.X[adata_p.obs['ID']==id],
-                                          adata_y.X[adata_y.obs['ID']==id],
+        corr_p[i], pval_p[i] = total_corr(adata_p.X[adata_p.obs['ID']==id].flatten(),
+                                          adata_y.X[adata_y.obs['ID']==id].flatten(),
                                           method='PEARSONR')
-        corr_s[i], pval_s[i] = total_corr(adata_p.X[adata_p.obs['ID']==id],
-                                          adata_y.X[adata_y.obs['ID']==id],
+        corr_s[i], pval_s[i] = total_corr(adata_p.X[adata_p.obs['ID']==id].flatten(),
+                                          adata_y.X[adata_y.obs['ID']==id].flatten(),
                                           method='SPEARMANR')
-        corr_k[i], pval_k[i] = total_corr(adata_p.X[adata_p.obs['ID']==id],
-                                          adata_y.X[adata_y.obs['ID']==id],
+        corr_k[i], pval_k[i] = total_corr(adata_p.X[adata_p.obs['ID']==id].flatten(),
+                                          adata_y.X[adata_y.obs['ID']==id].flatten(),
                                           method='KENDALLTAU')
 
     correlation_data = {
