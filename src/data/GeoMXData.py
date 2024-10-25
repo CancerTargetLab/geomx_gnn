@@ -56,7 +56,7 @@ class GeoMXDataset(Dataset):
         self.label_data = label_data
         self.raw_subset_dir = raw_subset_dir
 
-        self.num_folds = num_folds
+        self.num_folds = num_folds if num_folds > 1 else 1
         self.node_dropout = node_dropout
         self.edge_dropout = edge_dropout
         self.pixel_pos_jitter = pixel_pos_jitter

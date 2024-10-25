@@ -104,7 +104,8 @@ def train(raw_subset_dir, label_data, output_name, args):
                             num_hops=args['num_hops_subgraph'],
                             label_data=label_data)
 
-    for k in range(args['num_folds']):
+    num_folds = args['num_folds'] if args['num_folds'] > 1 else 1
+    for k in range(num_folds):
         if args['num_folds'] > 1:
             output_name_model = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
         else:
@@ -245,7 +246,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             l += 1 * beta - sim
                         running_total_loss += l.item() * out.shape[0]
                         l.backward()
-                        grads = gradfilter_ema(model, grads=grads, alpha=0.75, lamb=2)
+                        #grads = gradfilter_ema(model, grads=grads, alpha=0.75, lamb=2)
                         optimizer.step()
 
                     train_acc = running_acc / num_graphs
