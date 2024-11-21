@@ -84,24 +84,16 @@ class ContrastiveLearning(torch.nn.Module):
             from torchvision.models import resnet18
             self.res = resnet18()
         self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=1, padding='same', bias=False)
-        self.embed = nn.Sequential(
+        self.res.fc = nn.Sequential(
             nn.Linear(self.res.fc.in_features, self.res.fc.in_features),
             nn.BatchNorm1d(self.res.fc.in_features),
             nn.ReLU(),
             nn.Linear(self.res.fc.in_features, embed),#bias False,
-            nn.BatchNorm1d(embed)
             )
-        self.head = ProjectionHead(embed, contrast)
-        # self.res.fc = nn.Sequential(
-        #     nn.Linear(self.res.fc.in_features, self.res.fc.in_features),
-        #     nn.BatchNorm1d(self.res.fc.in_features),
-        #     nn.ReLU(),
-        #     nn.Linear(self.res.fc.in_features, embed),#bias False,
-        #     )
-        # self.head = nn.Sequential(
-        #     nn.BatchNorm1d(embed),
-        #     ProjectionHead(embed, contrast)
-        #     )
+        self.head = nn.Sequential(
+            #nn.BatchNorm1d(embed),
+            ProjectionHead(embed, contrast)
+            )
 
     def forward(self, data):
         """
@@ -125,9 +117,7 @@ class ContrastiveLearning(torch.nn.Module):
         data = data.squeeze()
         if len(data.shape) == 1:
             data = data.unsqueeze(0)
-        # embed = self.embed(data)    #TODO: make this a projection head as well?
-        embed = self.embed[3](self.embed[2](self.embed[1](self.embed[0](data)))    )
-        # embed = self.res.fc(data)
+        embed = self.res.fc(data)
         if self.mode == 'train':
             out = self.head(embed)
             return out
