@@ -26,6 +26,43 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
         val_losses = [model['val_list'] for model in models]
         test_losses = [model['test_list'] for model in models]
 
+        max_len = []
+        [max_len.append(len(t_accs)) for t_accs in train_accs]
+        max_len = max(max_len)
+        empty_array = np.zeros(max_len)
+        for m in range(len(models)):
+            length = len(train_accs[m])
+            
+            tmp_train_accs = empty_array.copy()
+            tmp_train_accs[:length] = train_accs[m]
+            tmp_train_accs[length:] = train_accs[m][-1]
+            train_accs[m] = tmp_train_accs
+
+            tmp_val_accs = empty_array.copy()
+            tmp_val_accs[:length] = val_accs[m]
+            tmp_val_accs[length:] = val_accs[m][-1]
+            val_accs[m] = tmp_val_accs
+
+            # tmp_test_accs = empty_array.copy()
+            # tmp_test_accs[:length] = test_accs[m]
+            # tmp_test_accs[length:] = test_accs[m][-1]
+            # test_accs[m] = tmp_test_accs
+
+            tmp_train_losses = empty_array.copy()
+            tmp_train_losses[:length] = train_losses[m]
+            tmp_train_losses[length:] = train_losses[m][-1]
+            train_losses[m] = tmp_train_losses
+
+            tmp_val_losses = empty_array.copy()
+            tmp_val_losses[:length] = val_losses[m]
+            tmp_val_losses[length:] = val_losses[m][-1]
+            val_losses[m] = tmp_val_losses
+
+            # tmp_test_losses = empty_array.copy()
+            # tmp_test_losses[:length] = test_losses[m]
+            # tmp_test_losses[length:] = test_losses[m][-1]
+            # test_losses[m] = tmp_test_losses
+
         max_train_accs = np.max(train_accs, axis=0)
         min_train_accs = np.min(train_accs, axis=0)
         std_train_accs = np.std(train_accs, axis=0)
@@ -94,6 +131,28 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
             val_losses = [model['val_total_list'] for model in models]
             test_losses = [model['test_total_list'] for model in models]
 
+            max_len = []
+            [max_len.append(len(t_accs)) for t_accs in train_losses]
+            max_len = max(max_len)
+            empty_array = np.zeros(max_len)
+            for m in range(len(models)):
+                length = len(train_losses[m])
+
+                tmp_train_losses = empty_array.copy()
+                tmp_train_losses[:length] = train_losses[m]
+                tmp_train_losses[length:] = train_losses[m][-1]
+                train_losses[m] = tmp_train_losses
+
+                tmp_val_losses = empty_array.copy()
+                tmp_val_losses[:length] = val_losses[m]
+                tmp_val_losses[length:] = val_losses[m][-1]
+                val_losses[m] = tmp_val_losses
+
+                # tmp_test_losses = empty_array.copy()
+                # tmp_test_losses[:length] = test_losses[m]
+                # tmp_test_losses[length:] = test_losses[m][-1]
+                # test_losses[m] = tmp_test_losses
+
             max_train_losses = np.max(train_losses, axis=0)
             max_val_losses = np.max(val_losses, axis=0)
             max_test_losses = np.max(test_losses, axis=0)
@@ -133,6 +192,33 @@ def epochMetrics(model_path, figure_dir, is_cs, name):
             test_pcc = [model['test_pcc_statistic_list'] for model in models]
             val_pval = [model['val_pcc_pval_list'] for model in models]
             test_pval = [model['test_pcc_pval_list'] for model in models]
+
+            max_len = []
+            [max_len.append(len(t_accs)) for t_accs in val_pcc]
+            max_len = max(max_len)
+            empty_array = np.zeros(max_len)
+            for m in range(len(models)):
+                length = len(val_pcc[m])
+
+                tmp_val_pcc = empty_array.copy()
+                tmp_val_pcc[:length] = val_pcc[m]
+                tmp_val_pcc[length:] = val_pcc[m][-1]
+                val_pcc[m] = tmp_val_pcc
+
+                # tmp_test_pcc = empty_array.copy()
+                # tmp_test_pcc[:length] = test_pcc[m]
+                # tmp_test_pcc[length:] = test_pcc[m][-1]
+                # test_pcc[m] = tmp_test_pcc
+
+                tmp_val_pval = empty_array.copy()
+                tmp_val_pval[:length] = val_pval[m]
+                tmp_val_pval[length:] = val_pval[m][-1]
+                val_pval[m] = tmp_val_pval
+
+                # tmp_test_pval = empty_array.copy()
+                # tmp_test_pval[:length] = test_pval[m]
+                # tmp_test_pval[length:] = test_pval[m][-1]
+                # test_pval[m] = tmp_test_pval
 
             max_val_pcc = np.max(val_pcc, axis=0)
             max_test_pcc = np.max(test_pcc, axis=0)
