@@ -116,7 +116,7 @@ def train(raw_subset_dir, label_data, output_name, args):
         train_dataset.setMode(train_dataset.val)
         val_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
         test_dataset.setMode(test_dataset.test)
-        test_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
         grads = None
 
