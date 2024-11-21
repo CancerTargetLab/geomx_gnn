@@ -10,7 +10,7 @@ def load(path, save_keys, device='cpu'):
     device (str): Location to load torch save dict to
     """
     
-    save = torch.load(path, map_location=device)
+    save = torch.load(path, map_location=device, weights_only=False)
     if type(save_keys) == list and  type(save) == dict:
         out = {}
         for key in save_keys:
