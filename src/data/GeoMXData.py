@@ -398,8 +398,7 @@ class GeoMXDataset(Dataset):
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
                 for graph_path in data:
                     graph = torch.load(os.path.join(self.processed_dir, graph_path), weights_only=False)
-                    roi_pred = model(graph.to(device))
-                    roi_pred = roi_pred[0] if isinstance(roi_pred, tuple) else roi_pred
                     cell_pred = model(graph.to(device), return_cells=True, return_mean=return_mean)
+                    roi_pred = torch.sum(cell_pred, axis=0)
                     torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path.split('/')[-1]))
                     torch.save(cell_pred, os.path.join(path, 'cell_pred_'+graph_path.split('/')[-1]))
