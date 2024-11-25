@@ -149,7 +149,7 @@ def visualize_bulk_expression(value_dict, IDs, exps, name, key='y'):
     sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False)
     sc.pl.rank_genes_groups(adata, n_genes=25, sharey=False, save=name+'.png', show=False)
 
-def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shapes, select_cells=50000):
+def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shapes, spearman_genes, select_cells=50000):
     """
     Create scanpy.AnnData obj of sc expressions, perform analysis and save plots.
 
@@ -207,6 +207,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         adata.obs['files'] = files
         adata.obs['leiden'] = -1
         adata.var_names = exps
+        adata.var['spearman_genes'] = adata.var_names.isin(spearman_genes)
         adata.write('out/'+name+'_all.h5ad')
 
         adata = sc.AnnData(counts[cell_index])
@@ -216,6 +217,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         adata.obs['ID'] = ids[cell_index]
         adata.obs['files'] = files[cell_index]
         adata.var_names = exps
+        adata.var['spearman_genes'] = adata.var_names.isin(spearman_genes)
         
         adata.layers['counts'] = adata.X.copy()
         sc.pp.log1p(adata)
@@ -223,15 +225,29 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         adata.X = adata.layers['counts'].copy()
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
-        sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=10, min_disp=0.5)
+        sc.pp.highly_variable_genes(adata,
+                                    min_mean=0.0125,
+                                    max_mean=10,            # CRC dataset can have very high means bc counts are image based
+                                    min_disp=0.5,
+                                    n_top_genes=20 if 20 < adata.var_names.shape[0] else adata.var_names.shape[0])
         
         sc.pp.scale(adata)
-        sc.pp.pca(adata, svd_solver='arpack', n_comps=adata.X.shape[1]-1, chunked=True, chunk_size=50000, mask_var=None)
+        sc.pp.pca(adata,
+                  svd_solver='arpack', 
+                  n_comps=np.sum(adata.var['spearman_genes'].values)-1,
+                  chunked=True,
+                  chunk_size=50000,
+                  mask_var=adata.var['spearman_genes'].values)
         sc.pp.neighbors(adata, n_neighbors=10, n_pcs=adata.varm['PCs'].shape[1])
         sc.tl.umap(adata)
         sc.tl.leiden(adata, resolution=0.5, flavor="igraph", n_iterations=2)
 
-        sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon', show=False, layer='logs')
+        sc.tl.rank_genes_groups(adata,
+                                'leiden',
+                                method='wilcoxon',
+                                show=False,
+                                layer='logs',
+                                mask_var=adata.var['spearman_genes'])
 
         adata.write('out/'+name+'.h5ad')
     
@@ -384,14 +400,11 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     plt.close()
 
     similarity = torch.nn.CosineSimilarity()
-
     adata_p.obs['cs'] = similarity(torch.from_numpy(adata_p.X), torch.from_numpy(adata_y.X)).squeeze().detach().numpy()
 
-    outlier_map = adata_p.obs['cs'] < 0.78
-    outlier_cs = adata_p.obs['cs'][outlier_map]
-    outlier_f = adata_p.obs['files'][outlier_map]
-    for i in range(outlier_cs.shape[0]):
-        print(f'ROI: {outlier_f[i]}; Cosine Similarity: {outlier_cs[i]:.4f}')
+    pd.DataFrame({'ID': adata_p.obs['ID'].values,
+                  'files': adata_p.obs['files'].values,
+                  'cosine_similarity': adata_p.obs['cs'].values}).to_csv(os.path.join(figure_dir, f'cosine_similarity_{name}.csv'))  
     
     plt.close('all')
     boxplot = plt.boxplot(adata_p.obs['cs'],)# labels=[category])
@@ -447,8 +460,8 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     adata_y = get_bulk_expression_of(value_dict, IDs, exps, key='y')
     adata_p = get_bulk_expression_of(value_dict, IDs, exps, key='roi_pred')
 
-    pred = adata_p.X
-    y = adata_y.X
+    pred = adata_p.X#[adata_p.obs['files'].str.contains('X-').values]       # Filter out some files when no known bulk data
+    y = adata_y.X#[adata_p.obs['files'].str.contains('X-').values]
 
     p_statistic, p_pval = per_gene_corr(pred, y, mean=False, method='PEARSONR')
     s_statistic, s_pval = per_gene_corr(pred, y, mean=False, method='SPEARMANR')
@@ -476,6 +489,44 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     plt.savefig(os.path.join(figure_dir, f'corr_area_{name}.pdf'), bbox_inches='tight')
     plt.close()
 
+    correlation_data = {
+        'Variable': adata_p.var_names.values[p_pval < 0.05],
+        'Pearson Correlation Coef.': [p_statistic[i] for i in range(p_statistic.shape[0]) if p_pval[i] < 0.05],
+        'Pearson p-value': [p_pval[i] for i in range(p_pval.shape[0]) if p_pval[i] < 0.05]
+    }
+
+    corr_df = pd.DataFrame(correlation_data)
+    mean_values = corr_df[corr_df.columns[1:]].mean()
+    mean_row = pd.DataFrame({'Variable': 'mean', **mean_values}, index=[0])
+    std_values = corr_df[corr_df.columns[1:]].std()
+    std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
+    corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
+
+    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
+    plt.axis('off')
+    plt.savefig(os.path.join(figure_dir, f'corr_area_pearson_filter_{name}.pdf'), bbox_inches='tight')
+    plt.close()
+
+    correlation_data = {
+        'Variable': adata_p.var_names.values[s_pval < 0.05],
+        'Spearman Correlation Coef.': [s_statistic[i] for i in range(s_statistic.shape[0]) if s_pval[i] < 0.05],
+        'Spearman p-value': [s_pval[i] for i in range(s_pval.shape[0]) if s_pval[i] < 0.05]
+    }
+
+    corr_df = pd.DataFrame(correlation_data)
+    mean_values = corr_df[corr_df.columns[1:]].mean()
+    mean_row = pd.DataFrame({'Variable': 'mean', **mean_values}, index=[0])
+    std_values = corr_df[corr_df.columns[1:]].std()
+    std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
+    corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
+
+    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
+    plt.axis('off')
+    plt.savefig(os.path.join(figure_dir, f'corr_area_spearman_filter_{name}.pdf'), bbox_inches='tight')
+    plt.close()
+
+    return adata_p.var_names.values[s_pval < 0.05]
+
 def visualizeExpression(processed_dir='TMA1_processed',
                         embed_dir='out/',
                         label_data='label_data.csv',
@@ -498,6 +549,7 @@ def visualizeExpression(processed_dir='TMA1_processed',
         os.makedirs(figure_dir)
     # visualize_bulk_expression(value_dict, IDs, exps, '_true', key='y')
     # visualize_bulk_expression(value_dict, IDs, exps, '_pred', key='roi_pred')
-    visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shapes, select_cells)
     visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir)
-    visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir)
+    spearman_genes = visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir)
+    visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shapes, spearman_genes, select_cells)
+    

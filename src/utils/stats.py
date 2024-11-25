@@ -91,5 +91,28 @@ def avg_cell_n(path):
       files = [os.path.join(path, file) for file in os.listdir(path) if file.endswith('.pt')]
       num_cells = 0
       for file in files:
-            num_cells += torch.load(file).x.shape[0]
+            num_cells += torch.load(file, weights_only=False).x.shape[0]
       return num_cells/len(files)
+
+def avg_roi_area(path):
+      """
+      Calculate average number of cells per graph for graphs in directory.
+
+      Parameters:
+      path (str): String path to directory containing torch graphs
+
+      Returns:
+      float: Average number of cells per graph
+      """
+      
+      import os
+      import torch
+      files = [os.path.join(path, file) for file in os.listdir(path) if file.endswith('.pt')]
+      area = 0
+      area_list = []
+      for file in files:
+            graph = torch.load(file, weights_only=False)
+            tmp = (torch.max(graph.pos[:,0])-torch.min(graph.pos[:,0]))*(torch.max(graph.pos[:,1])-torch.min(graph.pos[:,1]))
+            area += tmp
+            area_list.append(tmp.item())
+      return area/len(files), torch.median(torch.tensor(area_list))

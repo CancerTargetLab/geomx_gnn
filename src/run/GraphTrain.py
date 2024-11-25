@@ -274,7 +274,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                     running_zinb = 0
                     num_graphs = 0
                     model.eval()
-                    train_dataset.setMode("val")
+                    train_dataset.setMode(train_dataset.val)
 
                     with tqdm(val_loader, total=len(val_loader), desc=f"Validation epoch {epoch} of Fold {k}") as val_loader:
                         running_y = torch.Tensor().to(device)
