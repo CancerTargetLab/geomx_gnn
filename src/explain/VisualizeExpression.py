@@ -24,7 +24,7 @@ def get_true_graph_expression_dict(path):
         graph = torch.load(os.path.join(path, graph_p), map_location='cpu', weights_only=False)
         value_dict[graph_p] = {'y': graph.y.numpy()}
         if 'Class' in graph.to_dict().keys():
-            value_dict[graph_p]['cell_class'] =graph.Class
+            value_dict[graph_p]['cell_class'] = graph.Class
     return value_dict
 
 def get_predicted_graph_expression(value_dict, path):
@@ -183,7 +183,6 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
             for id_key in id_keys:
                 tmp_counts = value_dict[id_key][key]
                 counts[num_cells:num_cells+tmp_counts.shape[0],:] = tmp_counts
-                num_cells += tmp_counts.shape[0]
                 if num_cells != 0:
                     if ('cell_class' in value_dict[id_key].keys()) and cell_class is not None:
                         cell_class = np.concatenate((cell_class, value_dict[id_key]['cell_class']))
@@ -192,6 +191,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
                         cell_class = value_dict[id_key]['cell_class']
                 ids = np.concatenate((ids, np.array([id]*value_dict[id_key][key].shape[0])))
                 files = np.concatenate((files, np.array([id_key]*value_dict[id_key][key].shape[0])))
+                num_cells += tmp_counts.shape[0]
                 i += 1
         counts = np.array(counts)
 

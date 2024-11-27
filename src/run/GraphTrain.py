@@ -440,5 +440,6 @@ def train(raw_subset_dir, label_data, output_name, args):
                             "test_list": geo_loss,
                             "test_acc": test_acc,
                             "test_pcc_statistic_list": statistic,
-                            "test_pcc_pval_list": pval
+                            "test_pcc_pval_list": pval,
+                            "args": args
                         }, output_name_model)
