@@ -226,9 +226,6 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata,
-                                    min_mean=0.0125,
-                                    max_mean=10,            # CRC dataset can have very high means bc counts are image based
-                                    min_disp=0.5,
                                     n_top_genes=20 if 20 < adata.var_names.shape[0] else adata.var_names.shape[0])
         
         sc.pp.scale(adata)
@@ -256,11 +253,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
     plt.savefig(os.path.join(figure_dir, f'highly_varible_genes_{name}.png'))
     plt.close()
 
-    categories = np.unique(adata.obs['ID'])
-    colors = np.linspace(0, 1, len(categories))
-    colordict = dict(zip(categories, colors))
-    adata.obs['Color'] = adata.obs['ID'].apply(lambda x: colordict[x])
-    plt.scatter(adata.obsm['X_umap'][:,0], adata.obsm['X_umap'][:,1], c=adata.obs['Color'], alpha=0.4, cmap='gist_ncar', s=1)
+    sc.pl.umap(adata, color='ID', show=False, legend_loc=None)
     plt.savefig(os.path.join(figure_dir, f'umap_{name}_ID.png'))
     plt.close()
 

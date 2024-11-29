@@ -75,6 +75,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                             color="cluster",
                             size=25,
                             img_channel=0,
+                            img_alpha=0.,
                             crop_coord=crop_coord)
     plt.savefig(os.path.join(figure_dir,
                              f'cluster_{vis_name}_{pre_name_tiff}.png'),
@@ -90,7 +91,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
             adata.obs[prt] = cluster.X[:,np.argmax(cluster.var_names.values==prt)][cluster.obs['prefix']==name_tiff.split('.')[0]]
             if len(args['vis_name_og']) > 0:
                 adata.obs[prt+'og'] = cluster_og.X[:,np.argmax(cluster_og.var_names.values==prt)][cluster_og.obs['prefix']==name_tiff.split('.')[0]]
-                adata.obs[prt+'diff'] = adata.obs[prt].values - adata.obs[prt+'og'].values
+                adata.obs[prt+'diff'] = adata.obs[prt+'og'].values - adata.obs[prt].values
                 sq.pl.spatial_scatter(adata,
                         color=prt,
                         size=25,
@@ -146,6 +147,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                         edges_width=1,
                         size=25,
                         img_channel=0,
+                        img_alpha=0.,
                         crop_coord=crop_coord)
     plt.savefig(os.path.join(figure_dir,
                              f'cluster_graph_{vis_name}_{pre_name_tiff}.png'),

@@ -98,7 +98,7 @@ def correlation(raw_subset_dir='CRC',
 
     plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
     plt.axis('off')
-    plt.savefig(os.path.join(out, 'corr_cells_'+adata_name+'.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(out, 'corr_files_'+adata_name+'.pdf'), bbox_inches='tight')
     plt.close()
 
     out = os.path.join(out, 'cell_corr_per_roi')
