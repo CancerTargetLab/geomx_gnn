@@ -7,6 +7,7 @@ import squidpy as sq
 import scanpy as sc
 from anndata import AnnData
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     """
@@ -36,7 +37,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     crop_coord = [(args['vis_img_xcoords'][0], args['vis_img_ycoords'][0],
                    args['vis_img_xcoords'][1], args['vis_img_ycoords'][1])]
     if sum(crop_coord[0]) == 0:
-        crop_coord = [(0, 0, img.shape[0], img.shape[1])]
+        crop_coord = [(0, 0, img.shape[1], img.shape[0])]
 
     counts = np.random.default_rng(42).integers(0, 15, size=(df.shape[0], 1))
     coordinates = np.column_stack((df["Centroid.X.px"].to_numpy(), df["Centroid.Y.px"].to_numpy()))
@@ -71,17 +72,28 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
 
     pre_name_tiff = name_tiff.split('.')[0]
 
-    sq.pl.spatial_scatter(adata,
+    ax = sq.pl.spatial_scatter(adata,
                             color="cluster",
                             size=25,
                             img_channel=0,
                             img_alpha=0.,
-                            crop_coord=crop_coord)
+                            crop_coord=crop_coord,
+                            title=None,
+                            colorbar=True,
+                            frameon=False,
+                            return_ax=True)
+    ax.xaxis.set_major_locator(ticker.NullLocator())
+    ax.yaxis.set_major_locator(ticker.NullLocator())
+    ax.title.set_visible(False)
+    plt.legend(ncol=1,
+               frameon=False,
+                loc="center left",
+                bbox_to_anchor=(1, 0.5),)
     plt.savefig(os.path.join(figure_dir,
                              f'cluster_{vis_name}_{pre_name_tiff}.png'),
-                             bbox_inches='tight')
+                             bbox_inches='tight', dpi=600)
     plt.close()
-
+    
     if len(args['vis_protein']) > 0:
         prot_dir = os.path.join(figure_dir, pre_name_tiff+'_prediction')
         if not os.path.exists(prot_dir) and not os.path.isdir(prot_dir):
@@ -92,19 +104,28 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
             if len(args['vis_name_og']) > 0:
                 adata.obs[prt+'og'] = cluster_og.X[:,np.argmax(cluster_og.var_names.values==prt)][cluster_og.obs['prefix']==name_tiff.split('.')[0]]
                 adata.obs[prt+'diff'] = adata.obs[prt+'og'].values - adata.obs[prt].values
-                sq.pl.spatial_scatter(adata,
+                ax = sq.pl.spatial_scatter(adata,
                         color=prt,
                         size=25,
                         img_channel=0,
                         img_alpha=0.,
                         crop_coord=crop_coord,
                         vmin=min(np.min(adata.obs[prt].values), np.min(adata.obs[prt+'og'].values)),
-                        vmax=max(np.max(adata.obs[prt].values), np.max(adata.obs[prt+'og'].values)))
+                        vmax=max(np.max(adata.obs[prt].values), np.max(adata.obs[prt+'og'].values)),
+                        title=None,
+                        colorbar=True,
+                        frameon=False,
+                        return_ax=True)
+                
+                import matplotlib.ticker as ticker
+                ax.xaxis.set_major_locator(ticker.NullLocator())
+                ax.yaxis.set_major_locator(ticker.NullLocator())
+                ax.title.set_visible(False)
                 plt.savefig(os.path.join(prot_dir,
                                          f'cell_expression_pred_{prt}_{vis_name}_{pre_name_tiff}.png'),
                                          bbox_inches='tight')
                 plt.close()
-                sq.pl.spatial_scatter(adata,
+                ax = sq.pl.spatial_scatter(adata,
                                     color=prt+'og',
                                     size=25,
                                     img_channel=0,
@@ -112,7 +133,13 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                                     crop_coord=crop_coord,
                                     vmin=min(np.min(adata.obs[prt].values), np.min(adata.obs[prt+'og'].values)),
                                     vmax=max(np.max(adata.obs[prt].values), np.max(adata.obs[prt+'og'].values)),
-                                    title=prt)
+                                    title=None,
+                                    colorbar=True,
+                                    frameon=False,
+                                    return_ax=True)
+                ax.xaxis.set_major_locator(ticker.NullLocator())
+                ax.yaxis.set_major_locator(ticker.NullLocator())
+                ax.title.set_visible(False)
                 plt.savefig(os.path.join(prot_dir,
                                          f'cell_expression_og_{prt}_{vis_name}_{pre_name_tiff}.png'),
                                          bbox_inches='tight')
@@ -129,12 +156,19 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                                          bbox_inches='tight')
                 plt.close()
             else:
-                sq.pl.spatial_scatter(adata,
+                ax = sq.pl.spatial_scatter(adata,
                             color=prt,
                             size=25,
                             img_channel=0,
                             img_alpha=0.,
-                            crop_coord=crop_coord)
+                            crop_coord=crop_coord,
+                            title=None,
+                            colorbar=True,
+                            frameon=False,
+                            return_ax=True)
+                ax.xaxis.set_major_locator(ticker.NullLocator())
+                ax.yaxis.set_major_locator(ticker.NullLocator())
+                ax.title.set_visible(False)
                 plt.savefig(os.path.join(prot_dir,
                                          f'cell_expression_pred_{prt}_{vis_name}_{pre_name_tiff}.png'),
                                          bbox_inches='tight')
@@ -173,9 +207,15 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
             adata.uns[spatial_key][library_id]["images"] = {"hires": img}
             adata.uns[spatial_key][library_id]["scalefactors"] = {"tissue_hires_scalef": 1,
                                                                   "spot_diameter_fullres": 0.5,}
-            sq.pl.spatial_scatter(adata,
+            ax = sq.pl.spatial_scatter(adata,
                                 img_channel=0,
-                                crop_coord=crop_coord)
+                                crop_coord=crop_coord,
+                                return_ax=True,
+                                colorbar=True,
+                                frameon=False)
+            ax.xaxis.set_major_locator(ticker.NullLocator())
+            ax.yaxis.set_major_locator(ticker.NullLocator())
+            ax.title.set_visible(False)
             plt.savefig(os.path.join(channel_dir,
                                      f'{vis_name}_channel_{channel}_{pre_name_tiff}.png'),
                                      bbox_inches='tight')
