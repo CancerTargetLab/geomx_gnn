@@ -16,6 +16,17 @@ def per_gene_pcc(x, y, mean=True):
 
     #print(f'Use src.utils.stats.per_gene_corr instead of this')
     return per_gene_corr(x, y, mean=mean, method='pearsonr')
+
+def _get_method(method):
+    if method.upper() == 'PEARSONR':
+        corr = pearsonr
+    elif method.upper() == 'SPEARMANR':
+        corr = spearmanr
+    elif  method.upper() == 'KENDALLTAU':
+        corr = kendalltau
+    else:
+        raise Exception(f'Method {method} not one of pearsonr, spearmanr or kendalltau')
+    return corr
     
 def per_gene_corr(x, y, mean=True, method='pearsonr'):
     """
@@ -31,14 +42,7 @@ def per_gene_corr(x, y, mean=True, method='pearsonr'):
     (Correlation value,  p-value)
     """
 
-    if method.upper() == 'PEARSONR':
-        corr = pearsonr
-    elif method.upper() == 'SPEARMANR':
-        corr = spearmanr
-    elif  method.upper() == 'KENDALLTAU':
-        corr = kendalltau
-    else:
-        raise Exception(f'Method {method} not one of pearsonr, spearmanr or kendalltau')
+    corr =  _get_method(method)
     x, y = x.astype(np.float64), y.astype(np.float64)
     statistic = np.ndarray(x.shape[-1])
     pval = np.ndarray(x.shape[-1])
@@ -63,17 +67,33 @@ def total_corr(x, y, method='pearsonr'):
     (Correlation value,  p-value)
     """
 
-    if method.upper() == 'PEARSONR':
-        corr = pearsonr
-    elif method.upper() == 'SPEARMANR':
-        corr = spearmanr
-    elif  method.upper() == 'KENDALLTAU':
-        corr = kendalltau
-    else:
-        raise Exception(f'Method {method} not one of pearsonr, spearmanr or kendalltau')
+    corr =  _get_method(method)
     x, y = x.astype(np.float64).squeeze(), y.astype(np.float64).squeeze()
     statistic, pval = corr(x, y)
     return np.mean(statistic), np.mean(pval)
+
+def corr_all2all(adata, method='pearsonr'):
+    """
+    Calculate correlation of method between x and y on a gene/protein wise level.
+
+    Parameters:
+    adata (sc.AnnData): AnnData obj
+    method (str): String indicating method to be used ('PEARSONR', 'SPEARMANR', 'KENDALLTAU')
+
+    Returns:
+    (Correlation value,  p-value)
+    """
+
+    corr =  _get_method(method)
+    statistic = np.zeros((adata.var_names.values.shape[0],adata.var_names.values.shape[0]))
+    pval = np.zeros((adata.var_names.values.shape[0],adata.var_names.values.shape[0]))
+    for i in range(statistic.shape[0]):
+        for j in range(statistic.shape[0]):
+            if j >= i:
+                statistic[i,j], pval[i,j] = corr(adata.X[i], adata.X[j])
+            else:
+                statistic[i,j], pval[i,j] = statistic[j,i], pval[j,i]
+    return statistic, pval
 
 def avg_cell_n(path):
       """
@@ -94,15 +114,37 @@ def avg_cell_n(path):
             num_cells += torch.load(file, weights_only=False).x.shape[0]
       return num_cells/len(files)
 
-def avg_roi_area(path):
+def avg_edge_len(path):
       """
-      Calculate average number of cells per graph for graphs in directory.
+      Calculate average number of edge lengths per graph for graphs in directory.
 
       Parameters:
       path (str): String path to directory containing torch graphs
 
       Returns:
       float: Average number of cells per graph
+      """
+      
+      import os
+      import torch
+      files = [os.path.join(path, file) for file in os.listdir(path) if file.endswith('.pt')]
+      num_edges = 0
+      edge_sum = 0
+      for file in files:
+            graph = torch.load(file, weights_only=False)
+            num_edges += graph.edge_attr.shape[0]
+            edge_sum += torch.sum(graph.edge_attr)
+      return edge_sum/num_edges
+
+def avg_roi_area(path):
+      """
+      Calculate average number of area per graph for graphs in directory. Needs work to be correct.
+
+      Parameters:
+      path (str): String path to directory containing torch graphs
+
+      Returns:
+      float: Average number of area per graph
       """
       
       import os
