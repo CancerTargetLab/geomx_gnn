@@ -315,14 +315,13 @@ class ROIExpression(torch.nn.Module):
         self.norm = torch.nn.LayerNorm(num_embed_features)
         self.mean_act = MeanAct()
 
-    def forward(self, data, return_cells=False, return_mean=False):#x, edge_index, edge_attr, batch):
+    def forward(self, data, return_cells=False):
         """
         Forward pass of the ROIExpression module.
 
         Parameters:
         data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
         return_cells (bool): Flag indicating whether to return cell-wise outputs.
-        return_mean (bool): Flag indicating whether to return mean outputs.
 
         Returns:
         (torch.Tensor|tuple): Output tensor/tesnor tuple after applying the ROI expression module.
@@ -398,21 +397,20 @@ class ROIExpression_Image(torch.nn.Module):
         if path_graph_model:
             self.graph.load_state_dict(torch.load(path_graph_model, weights_only=True)['model'])
         
-    def forward(self, data, return_cells=False, return_mean=False):
+    def forward(self, data, return_cells=False):
         """
         Forward pass of the ROIExpression_Image_gat module.
 
         Parameters:
         data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
         return_cells (bool): Flag indicating whether to return cell-wise outputs.
-        return_mean (bool): Flag indicating whether to return mean outputs.
 
         Returns:
         Output tensor after applying the ROI expression module.
         """
 
         data.x = self.image.forward(data.x)
-        return self.graph.forward(data, return_cells=return_cells, return_mean=return_mean)
+        return self.graph.forward(data, return_cells=return_cells)
 
 
 class Lin(torch.nn.Module):

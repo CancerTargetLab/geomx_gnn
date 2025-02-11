@@ -384,21 +384,20 @@ class GeoMXDataset(Dataset):
         else:
             return torch.load(os.path.join(self.processed_dir, self.data[idx]), weights_only=False)
     
-    def embed(self, model, path, device='cpu', return_mean=False):
+    def embed(self, model, path, device='cpu'):
         """
         Save model sc expression of all cells per ROI.
 
         model (torch.Module): model
         path (str): Dir to save ROI sc expression to
         device (str): device to operate on
-        return_mean (bool): Wether or not ZINB/NB models return predicted mean of Genes/Proteins per cell
         """
         with torch.no_grad():
             model = model.to(device)
             with tqdm(self.data.tolist(), total=self.data.shape[0], desc='Creating ROI embeddings') as data:
                 for graph_path in data:
                     graph = torch.load(os.path.join(self.processed_dir, graph_path), weights_only=False)
-                    cell_pred = model(graph.to(device), return_cells=True, return_mean=return_mean)
+                    cell_pred = model(graph.to(device), return_cells=True)
                     roi_pred = torch.sum(cell_pred, axis=0)
                     torch.save(roi_pred, os.path.join(path, 'roi_pred_'+graph_path.split('/')[-1]))
                     torch.save(cell_pred, os.path.join(path, 'cell_pred_'+graph_path.split('/')[-1]))
