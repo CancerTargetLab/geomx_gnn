@@ -99,6 +99,6 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     if 'IMAGE' in model_type:
-        dataset.embed(model, output_dir, device=device, batch_size=args['batch_size_image'], return_mean='mean' in model_type)
+        dataset.embed(model, output_dir, device=device, batch_size=args['batch_size_image'])
     else:
-        dataset.embed(model, output_dir, device='cpu', return_mean='mean' in model_type)
+        dataset.embed(model, output_dir, device='cpu')
