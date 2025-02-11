@@ -1,6 +1,6 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.data.ImageGraphData import ImageGraphDataset
-from src.models.GraphModel import ROIExpression,ROIExpression_Image
+from src.models.GraphModel import ROIExpression,ROIExpression_Image, Lin
 from src.utils.setSeed import set_seed
 import torch
 import os
@@ -89,6 +89,9 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
                             heads=args['heads_graph']).to(device, dtype=torch.float32)
+    elif 'LIN' in model_type:
+            model = Lin(num_node_features=args['num_node_features'],
+                        num_out_features=dataset.get(0).y.shape[0]).to(device, dtype=torch.float32)
     else:
         raise Exception(f'{model_type} not a valid model type, must be one of Image2Count, IMAGEImage2Count, LIN')
     model.eval()
