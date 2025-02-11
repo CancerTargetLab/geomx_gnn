@@ -1,6 +1,6 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.data.ImageGraphData import ImageGraphDataset
-from src.models.GraphModel import ROIExpression, ROIExpression_Image
+from src.models.GraphModel import ROIExpression, ROIExpression_Image, Lin
 from src.optimizer.grokfast import gradfilter_ema
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
 from src.loss.zinb import ZINBLoss, NBLoss
@@ -32,7 +32,6 @@ def train(raw_subset_dir, label_data, output_name, args):
     is_log = args['data_use_log_graph']
     alpha = args['graph_mse_mult']
     beta = args['graph_cos_sim_mult']
-    theta = args['graph_entropy_mult']
 
     if EPOCH > 900: # Weird bug, when running for more then 982 epochs we get an recursion error
         import sys
@@ -147,6 +146,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 conv_dropout=args['conv_dropout_graph'],
                                 num_out_features=train_dataset.get(0).y.shape[0],
                                 heads=args['heads_graph']).to(device, dtype=torch.float32)
+        elif 'LIN' in model_type:
+            model = Lin(num_node_features=args['num_node_features'],
+                        num_out_features=train_dataset.get(0).y.shape[0]).to(device, dtype=torch.float32)
         else:
             raise Exception(f'{model_type} Image2Count, IMAGEImage2Count, LIN')
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),

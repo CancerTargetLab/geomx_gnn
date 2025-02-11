@@ -1,7 +1,6 @@
 import torch
-from torch_geometric.nn import GATv2Conv, Sequential
+from torch_geometric.nn import GATv2Conv
 import torch_geometric
-from collections import OrderedDict
 from src.models.CellContrastModel import ContrastiveLearning
 
 
@@ -414,3 +413,44 @@ class ROIExpression_Image(torch.nn.Module):
 
         data.x = self.image.forward(data.x)
         return self.graph.forward(data, return_cells=return_cells, return_mean=return_mean)
+
+
+class Lin(torch.nn.Module):
+    """
+    A PyTorch module for predicting sc expressions.
+    """
+    def __init__(self,
+                 num_node_features=128,
+                 num_out_features=128):
+        """
+        Initializes the ROIExpression module with the specified parameters.
+
+        Parameters:
+        num_out_features (int): Number of output features.
+        """
+
+        super().__init__()
+
+        self.pool = torch_geometric.nn.pool.global_add_pool
+        self.project = ProjectionHead(input_dim=num_node_features, 
+                                      output_dim=num_out_features,
+                                      num_layers=1)
+        self.mean_act = MeanAct()
+
+    def forward(self, data, return_cells=False):
+        """
+        Forward pass of the ROIExpression module.
+
+        Parameters:
+        data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
+        return_cells (bool): Flag indicating whether to return cell-wise outputs.
+
+        Returns:
+        (torch.Tensor|tuple): Output tensor/tesnor tuple after applying the ROI expression module.
+        """
+
+        pred = self.project(data.x)
+        if return_cells:
+            return self.mean_act(pred)
+        else:
+            return self.pool(self.mean_act(pred), batch=data.batch)
