@@ -7,7 +7,6 @@ import squidpy as sq
 import scanpy as sc
 from anndata import AnnData
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 
 def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     """
@@ -120,8 +119,6 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                         colorbar=True,
                         frameon=False,
                         return_ax=True)
-                
-                import matplotlib.ticker as ticker
                 ax.xaxis.set_major_locator(ticker.NullLocator())
                 ax.yaxis.set_major_locator(ticker.NullLocator())
                 ax.title.set_visible(False)
