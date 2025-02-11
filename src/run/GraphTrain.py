@@ -1,6 +1,6 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.data.ImageGraphData import ImageGraphDataset
-from src.models.GraphModel import ROIExpression, ROIExpression_lin, ROIExpression_Image_gat, ROIExpression_Image_lin
+from src.models.GraphModel import ROIExpression, ROIExpression_Image
 from src.optimizer.grokfast import gradfilter_ema
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
 from src.loss.zinb import ZINBLoss, NBLoss
@@ -120,8 +120,8 @@ def train(raw_subset_dir, label_data, output_name, args):
 
         grads = None
 
-        if 'IMAGEGAT' in model_type:
-            model = ROIExpression_Image_gat(channels=train_dataset.get(0).x.shape[1],
+        if 'IMAGE' in model_type:
+            model = ROIExpression_Image(channels=train_dataset.get(0).x.shape[1],
                                             embed=args['embedding_size_image'],
                                             contrast=args['contrast_size_image'], 
                                             resnet=args['resnet_model'],
@@ -134,10 +134,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                                             heads=args['heads_graph'],
                                             embed_dropout=args['embed_dropout_graph'],
                                             conv_dropout=args['conv_dropout_graph'],
-                                            mtype=model_type,
                                             path_image_model=args['init_image_model'],
                                             path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
-        elif 'GAT' in model_type:
+        elif 'Image2Count' in model_type:
             model = ROIExpression(lin_layers=args['lin_layers_graph'],
                                 gat_layers=args['gat_layers_graph'],
                                 num_node_features=args['num_node_features'],
@@ -147,31 +146,9 @@ def train(raw_subset_dir, label_data, output_name, args):
                                 embed_dropout=args['embed_dropout_graph'],
                                 conv_dropout=args['conv_dropout_graph'],
                                 num_out_features=train_dataset.get(0).y.shape[0],
-                                heads=args['heads_graph'],
-                                mtype=model_type).to(device, dtype=torch.float32)
-        elif 'IMAGELIN' in model_type:
-            model = ROIExpression_Image_lin(channels=train_dataset.get(0).x.shape[1],
-                                            embed=args['embedding_size_image'],
-                                            contrast=args['contrast_size_image'], 
-                                            resnet=args['resnet_model'],
-                                            layers=args['lin_layers_graph'],
-                                            num_embed_features=args['num_embed_features'],
-                                            num_out_features=train_dataset.get(0).y.shape[0],
-                                            embed_dropout=args['embed_dropout_graph'],
-                                            conv_dropout=args['conv_dropout_graph'],
-                                            mtype=model_type,
-                                            path_image_model=args['init_image_model'],
-                                            path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
-        elif 'LIN' in model_type:
-            model = ROIExpression_lin(layers=args['lin_layers_graph'],
-                                num_node_features=args['num_node_features'],
-                                num_embed_features=args['num_embed_features'],
-                                embed_dropout=args['embed_dropout_graph'],
-                                conv_dropout=args['conv_dropout_graph'],
-                                num_out_features=train_dataset.get(0).y.shape[0],
-                                mtype=model_type).to(device, dtype=torch.float32)
+                                heads=args['heads_graph']).to(device, dtype=torch.float32)
         else:
-            raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
+            raise Exception(f'{model_type} Image2Count, IMAGEImage2Count, LIN')
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),
                                      lr=lr,
                                      weight_decay=5e-4)
@@ -179,11 +156,6 @@ def train(raw_subset_dir, label_data, output_name, args):
 
         loss = torch.nn.L1Loss()
         similarity = torch.nn.CosineSimilarity()
-        zinb = ZINBLoss(ridge_lambda=0.0, device=device)
-        nb = NBLoss(device=device)
-
-        #scale factor, TODO:rm
-        sf = train_dataset.sf.to(device)
 
         train_acc_list = []
         train_loss_list = []
@@ -205,8 +177,6 @@ def train(raw_subset_dir, label_data, output_name, args):
             running_loss = 0
             running_total_loss = 0
             running_acc = 0
-            running_ph_entropy = 0
-            running_zinb = 0
             num_graphs = 0
             model.train()
             train_dataset.setMode(train_dataset.train)
@@ -216,17 +186,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                     for idx, batch in enumerate(train_loader):
                         batch = batch.to(device)
                         optimizer.zero_grad()
-                        if model_type.endswith('_ph'):
-                            out = model(batch)
-                            ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
-                        elif model_type.endswith('_zinb'):
-                            out, pred, mean, disp, drop = model(batch)
-                            loss_zinb = zinb(pred, mean, disp, drop)  * theta
-                        elif model_type.endswith('_nb'):
-                            out, pred, mean, disp = model(batch)
-                            loss_zinb = nb(pred, mean, disp)  * theta
-                        else:
-                            out = model(batch)
+                        out = model(batch)
                         if is_log:
                             l = loss(torch.log(out+1), torch.log(batch.y.view(out.shape[0], out.shape[1])+1))
                         else:
@@ -236,14 +196,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                         running_loss += l.item() * out.shape[0]
                         running_acc += sim.item() * out.shape[0]
                         num_graphs += out.shape[0]
-                        if model_type.endswith('_ph'):
-                            running_ph_entropy += ph.item() * out.shape[0]
-                            l += 1 * beta - sim + ph
-                        elif model_type.endswith('_zinb'):
-                            running_zinb += loss_zinb.item() * out.shape[0]
-                            l += 1 * beta - sim + loss_zinb
-                        else: 
-                            l += 1 * beta - sim
+                        l += 1 * beta - sim
                         running_total_loss += l.item() * out.shape[0]
                         l.backward()
                         #grads = gradfilter_ema(model, grads=grads, alpha=0.75, lamb=2)
@@ -255,23 +208,12 @@ def train(raw_subset_dir, label_data, output_name, args):
                     train_loss_list.append(geo_loss)
                     epoch_loss = running_total_loss / num_graphs
                     train_total_loss_list.append(epoch_loss)
-                    if model_type.endswith('_ph'):
-                        ph_entropy = running_ph_entropy / num_graphs
-                        train_ph_entropy_list.append(ph_entropy)
-                        print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train Phenotype Entropy: {ph_entropy:.4f}")
-                    elif model_type.endswith('_zinb') or model_type.endswith('_nb'):
-                        zinb_loss = running_zinb / num_graphs
-                        train_zinb_list.append(zinb_loss)
-                        print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}, Train ZINB Loss: {zinb_loss:.4f}")
-                    else: 
-                        print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}")
+                    print(f"Train Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Train Cosine Sim: {train_acc:.4f}")
 
                 with torch.no_grad():
                     running_loss = 0
                     running_total_loss = 0
                     running_acc = 0
-                    running_ph_entropy = 0
-                    running_zinb = 0
                     num_graphs = 0
                     model.eval()
                     train_dataset.setMode(train_dataset.val)
@@ -281,17 +223,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                         running_out = torch.Tensor().to(device)
                         for idx, batch in enumerate(val_loader):
                             batch = batch.to(device)
-                            if model_type.endswith('_ph'):
-                                out = model(batch)
-                                ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
-                            elif model_type.endswith('_zinb'):
-                                out, pred, mean, disp, drop = model(batch)
-                                loss_zinb = zinb(pred, mean, disp, drop)  * theta
-                            elif model_type.endswith('_nb'):
-                                out, pred, mean, disp = model(batch)
-                                loss_zinb = nb(pred, mean, disp)  * theta
-                            else: 
-                                out = model(batch)
+                            out = model(batch)
                             running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
                             running_out = torch.concatenate((running_out, out))
                             if is_log:
@@ -303,14 +235,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                             running_loss += l.item() * out.shape[0]
                             running_acc += sim.item() * out.shape[0]
                             num_graphs += out.shape[0]
-                            if model_type.endswith('_ph'):
-                                running_ph_entropy += ph.item() * out.shape[0]
-                                l += 1 * beta - sim + ph
-                            elif model_type.endswith('_zinb'):
-                                running_zinb += loss_zinb.item() * out.shape[0]
-                                l += 1 * beta - sim + loss_zinb
-                            else:
-                                l += 1 * beta - sim
+                            l += 1 * beta - sim
                             running_total_loss += l.item() * out.shape[0]
 
                         val_acc = running_acc / num_graphs
@@ -323,16 +248,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                         val_pcc_statistic_list.append(statistic)
                         val_pcc_pval_list.append(pval)
 
-                        if model_type.endswith('_ph'):
-                            ph_entropy = running_ph_entropy / num_graphs
-                            val_ph_entropy_list.append(ph_entropy)                           
-                            print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
-                        elif model_type.endswith('_zinb') or model_type.endswith('_nb'):
-                            zinb_loss = running_zinb / num_graphs
-                            val_zinb_list.append(zinb_loss)
-                            print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, Val ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
-                        else:
-                            print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                        print(f"Val Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Val Cosine Sim: {val_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
 
                         if epoch_loss < best_acc:
                             best_acc = epoch_loss
@@ -361,8 +277,6 @@ def train(raw_subset_dir, label_data, output_name, args):
             running_loss = 0
             running_total_loss = 0
             running_acc = 0
-            running_ph_entropy = 0
-            running_zinb = 0
             num_graphs = 0
             save_data = torch.load(output_name_model, weights_only=False)
             model.load_state_dict(save_data['model'])
@@ -374,17 +288,7 @@ def train(raw_subset_dir, label_data, output_name, args):
                 running_out = torch.Tensor().to(device)
                 for idx, batch in enumerate(test_loader):
                     batch = batch.to(device)
-                    if model_type.endswith('_ph'):
-                        out = model(batch)
-                        ph = phenotype_entropy_loss(torch.softmax(out.permute(1, 0), 1)) * theta
-                    elif model_type.endswith('_zinb'):
-                        out, pred, mean, disp, drop = model(batch)
-                        loss_zinb = zinb(pred, mean, disp, drop)  * theta
-                    elif model_type.endswith('_nb'):
-                        out, pred, mean, disp = model(batch)
-                        loss_zinb = nb(pred, mean, disp)  * theta
-                    else:
-                        out = model(batch)
+                    out = model(batch)
                     running_y = torch.concatenate((running_y, batch.y.view(out.shape[0], out.shape[1])))
                     running_out = torch.concatenate((running_out, out))
                     if is_log:
@@ -396,28 +300,14 @@ def train(raw_subset_dir, label_data, output_name, args):
                     running_loss += l.item() * out.shape[0]
                     running_acc += sim.item() * out.shape[0]
                     num_graphs += out.shape[0]
-                    if model_type.endswith('_ph'):
-                        running_ph_entropy += ph.item() * out.shape[0]
-                        l += 1 * beta - sim + ph
-                    elif model_type.endswith('_zinb'):
-                        running_zinb += loss_zinb.item() * out.shape[0]
-                        l += 1 * beta - sim + loss_zinb
-                    else:
-                        l += 1 * beta - sim
+                    l += 1 * beta - sim
                     running_total_loss += l.item() * out.shape[0]
 
                 test_acc = running_acc / num_graphs
                 geo_loss = running_loss / num_graphs
                 epoch_loss = running_total_loss / num_graphs
                 statistic, pval = per_gene_pcc(running_out.to('cpu').numpy(), running_y.to('cpu').numpy(), mean=True)
-                if model_type.endswith('_ph'):
-                    ph_entropy = running_ph_entropy / num_graphs
-                    print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, Test Phenotype Entropy: {ph_entropy:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
-                elif model_type.endswith('_zinb') or model_type.endswith('_nb'):
-                    zinb_loss = running_zinb / num_graphs
-                    print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {val_acc:.4f}, Test ZINB Loss: {zinb_loss:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
-                else:
-                    print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
+                print(f"Test Loss: {epoch_loss:.4f}, MSE Loss: {geo_loss:.4f}, Test Cosine Sim: {test_acc:.4f}, PCC: {statistic:.4f}, PVAL: {pval:.4f}")
                 
                 torch.save({
                             "model": model.state_dict(),

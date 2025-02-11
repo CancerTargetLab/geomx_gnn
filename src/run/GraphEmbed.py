@@ -1,6 +1,6 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.data.ImageGraphData import ImageGraphDataset
-from src.models.GraphModel import ROIExpression, ROIExpression_lin, ROIExpression_Image_gat, ROIExpression_Image_lin
+from src.models.GraphModel import ROIExpression,ROIExpression_Image
 from src.utils.setSeed import set_seed
 import torch
 import os
@@ -62,8 +62,8 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                             label_data=label_data,
                             output_name=None)
 
-    if 'IMAGEGAT' in model_type:
-        model = ROIExpression_Image_gat(channels=dataset.get(0).x.shape[1],
+    if 'IMAGE' in model_type:
+        model = ROIExpression_Image(channels=dataset.get(0).x.shape[1],
                                         embed=args['embedding_size_image'],
                                         contrast=args['contrast_size_image'], 
                                         resnet=args['resnet_model'],
@@ -76,10 +76,9 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                                         heads=args['heads_graph'],
                                         embed_dropout=args['embed_dropout_graph'],
                                         conv_dropout=args['conv_dropout_graph'],
-                                        mtype=model_type,
                                         path_image_model=args['init_image_model'],
                                         path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
-    elif 'GAT' in model_type:
+    elif 'Image2Count' in model_type:
         model = ROIExpression(lin_layers=args['lin_layers_graph'],
                             gat_layers=args['gat_layers_graph'],
                             num_node_features=args['num_node_features'],
@@ -89,31 +88,9 @@ def embed(raw_subset_dir, label_data, model_name, output_dir, args):
                             embed_dropout=args['embed_dropout_graph'],
                             conv_dropout=args['conv_dropout_graph'],
                             num_out_features=dataset.get(0).y.shape[0],
-                            heads=args['heads_graph'],
-                            mtype=model_type).to(device, dtype=torch.float32)
-    elif 'IMAGELIN' in model_type:
-        model = ROIExpression_Image_lin(channels=dataset.get(0).x.shape[1],
-                                        embed=args['embedding_size_image'],
-                                        contrast=args['contrast_size_image'], 
-                                        resnet=args['resnet_model'],
-                                        layers=args['lin_layers_graph'],
-                                        num_embed_features=args['num_embed_features'],
-                                        num_out_features=dataset.get(0).y.shape[0],
-                                        embed_dropout=args['embed_dropout_graph'],
-                                        conv_dropout=args['conv_dropout_graph'],
-                                        mtype=model_type,
-                                        path_image_model=args['init_image_model'],
-                                        path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
-    elif 'LIN' in model_type:
-        model = ROIExpression_lin(layers=args['lin_layers_graph'],
-                            num_node_features=args['num_node_features'],
-                            num_embed_features=args['num_embed_features'],
-                            embed_dropout=args['embed_dropout_graph'],
-                            conv_dropout=args['conv_dropout_graph'],
-                            num_out_features=dataset.get(0).y.shape[0],
-                            mtype=model_type).to(device, dtype=torch.float32)
+                            heads=args['heads_graph']).to(device, dtype=torch.float32)
     else:
-        raise Exception(f'{model_type} not a valid model type, must be one of GAT, GAT_ph, LIN, LIN_ph')
+        raise Exception(f'{model_type} not a valid model type, must be one of Image2Count, IMAGEImage2Count, LIN')
     model.eval()
     model.load_state_dict(torch.load(model_name, weights_only=False)['model'])
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):

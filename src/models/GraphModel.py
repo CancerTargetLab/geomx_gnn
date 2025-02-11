@@ -78,7 +78,7 @@ class GATBlock(torch.nn.Module):
         self.ffw = FeedForward(dim=num_embed_features, hidden_dim=num_embed_features*4)
         self.relu = torch.nn.ReLU()
     
-    def forward(self, x, edge_index, edge_attr):
+    def forward(self, data):
         """
         Forward pass of the GATBlock.
 
@@ -90,10 +90,10 @@ class GATBlock(torch.nn.Module):
         Returns:
         torch.Tensor: The output tensor after processing through the GAT block.
         """
-         
+        x, edge_index, edge_attr = data['x'], data['edge_index'], data['edge_attr']
         x = x + self.lin_h(self.gat(self.relu(self.norm_gat(x)), edge_index, edge_attr=edge_attr))
         x = x + self.ffw(self.relu(self.norm_lin(x)))
-        return x
+        return {'x': x, 'edge_index': edge_index, 'edge_attr': edge_attr}
 
 class ProjectionHead(torch.nn.Module):
     """
@@ -262,11 +262,8 @@ class GraphLearning(torch.nn.Module):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         x = self.node_embed(self.drop(x))
-
         x = self.lin(x)
-
-        for conv in list(range(len(self.convs))):
-            x = self.convs[conv](x, edge_index, edge_attr=edge_attr)
+        x = self.convs({'x': x, 'edge_index': edge_index, 'edge_attr':edge_attr})['x']
 
         return x
 
@@ -285,8 +282,7 @@ class ROIExpression(torch.nn.Module):
                  num_out_features=128,
                  heads=1,
                  embed_dropout=0.1,
-                 conv_dropout=0.1,
-                 mtype=False):
+                 conv_dropout=0.1):
         """
         Initializes the ROIExpression module with the specified parameters.
 
@@ -299,19 +295,9 @@ class ROIExpression(torch.nn.Module):
         heads (int): Number of attention heads.
         embed_dropout (float): Dropout rate for the embedding layers.
         conv_dropout (float): Dropout rate for the convolutional layers.
-        mtype (bool): Model type indicating whether or not to use zero-inflated negative binomial (ZINB) or negative binomial (NB) distribution.
         """
 
         super().__init__()
-
-        self.mtype = mtype
-        self.nb = False
-        self.zinb = False
-        if mtype.endswith('_zinb'):
-            self.zinb = True
-            self.nb = True
-        if mtype.endswith('_nb'):
-            self.nb = True
 
         self.gnn = GraphLearning(lin_layers=lin_layers,
                                 gat_layers=gat_layers,
@@ -324,38 +310,11 @@ class ROIExpression(torch.nn.Module):
                                 conv_dropout=conv_dropout,)
         
         self.pool = torch_geometric.nn.pool.global_add_pool
-
         self.project = ProjectionHead(input_dim=num_embed_features, 
                                       output_dim=num_out_features,
                                       num_layers=2)
         self.norm = torch.nn.LayerNorm(num_embed_features)
-        
         self.mean_act = MeanAct()
-
-        if self.nb:
-            self.mean = torch.nn.Sequential(
-                OrderedDict([
-                ('linear_m', torch.nn.Linear(num_embed_features, num_out_features)),
-                ('meanact', MeanAct())
-                ]))
-
-            self.disp = torch.nn.Sequential(
-                OrderedDict([
-                ('linear_di', torch.nn.Linear(num_embed_features, num_out_features)),
-                ('dispact', DispAct())
-                ]))
-            
-            self.mean.apply(init_weights)
-            self.disp.apply(init_weights)
-
-        if self.zinb: 
-            self.drop = torch.nn.Sequential(
-                OrderedDict([
-                ('linear_dr', torch.nn.Linear(num_embed_features, num_out_features)),
-                ('sigmoid', torch.nn.Sigmoid())
-                ]))
-            
-            self.drop.apply(init_weights)
 
     def forward(self, data, return_cells=False, return_mean=False):#x, edge_index, edge_attr, batch):
         """
@@ -373,138 +332,12 @@ class ROIExpression(torch.nn.Module):
         x = self.gnn(data)#x, edge_index, edge_attr)
         pred = self.project(self.norm(x))
         if return_cells:
-            if self.nb and return_mean:
-                return self.mean(x)
             return self.mean_act(pred)
         else:
-            if self.nb:
-                mean = self.mean(x)
-                disp = self.disp(x)
-            if self.zinb:
-                drop = self.drop(x)
-            
-            if self.nb and not self.zinb:
-                return self.pool(self.mean_act(pred), batch=data.batch), self.mean_act(pred), mean, disp
-            elif self.zinb and self.nb:
-                return self.pool(self.mean_act(pred), batch=data.batch), self.mean_act(pred), mean, disp, drop
-            else:
-                return self.pool(self.mean_act(pred), batch=data.batch)
-
-
-class ROIExpression_lin(torch.nn.Module):
-    """
-    A PyTorch module for predicting sc expressions.
-    """
-    def __init__(self,
-                layers=1,
-                num_node_features=256,
-                num_embed_features=128,
-                num_out_features=128,
-                embed_dropout=0.1,
-                conv_dropout=0.1,
-                mtype=False):
-        """
-        Initializes the ROIExpression_lin module with the specified parameters.
-
-        Parameters:
-        layers (int): Number of linear blocks.
-        num_node_features (int): Number of node features.
-        num_embed_features (int): Number of embedding features.
-        num_out_features (int): Number of output features.
-        embed_dropout (float): Dropout rate for the embedding layers.
-        conv_dropout (float): Dropout rate for the convolutional layers.
-        mtype (bool): Model type indicating whether or not to use zero-inflated negative binomial (ZINB) or negative binomial (NB) distribution.
-        """
-
-        super().__init__()
-
-        self.mtype = mtype
-        self.nb = False
-        self.zinb = False
-        if mtype.endswith('_zinb'):
-            self.zinb = True
-            self.nb = True
-        if mtype.endswith('_nb'):
-            self.nb = True
-
-        self.drop = torch.nn.Dropout(p=embed_dropout, inplace=True)
-        self.node_embed = ProjectionHead(input_dim=num_node_features, 
-                                      output_dim=num_embed_features,
-                                      num_layers=2)
-        
-        blocks = []
-        for _ in range(layers):
-            blocks.append(LinearBlock(input_dim=num_embed_features))
-        self.lin = torch.nn.Sequential(*blocks)
-        
-        self.project = ProjectionHead(input_dim=num_embed_features, 
-                                      output_dim=num_out_features,
-                                      num_layers=2)
-        
-        self.pool = torch_geometric.nn.pool.global_add_pool
-
-        self.mean_act = MeanAct()
-
-        if self.nb:
-            self.mean = torch.nn.Sequential(
-                OrderedDict([
-                ('linear_m', torch.nn.Linear(num_embed_features, num_out_features)),
-                ('meanact', MeanAct())
-                ]))
-
-            self.disp = torch.nn.Sequential(
-                OrderedDict([
-                ('linear_di', torch.nn.Linear(num_embed_features, num_out_features)),
-                ('dispact', DispAct())
-                ]))
-            
-            self.mean.apply(init_weights)
-            self.disp.apply(init_weights)
-
-        if self.zinb: 
-            self.drop = torch.nn.Sequential(
-                OrderedDict([
-                ('linear_dr', torch.nn.Linear(num_embed_features, num_out_features)),
-                ('sigmoid', torch.nn.Sigmoid())
-                ]))
-            
-            self.drop.apply(init_weights)
-    
-    def forward(self, data, return_cells=False, return_mean=False):
-        """
-        Forward pass of the ROIExpression_lin module.
-
-        Parameters:
-        data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
-        return_cells (bool): Flag indicating whether to return cell-wise outputs.
-        return_mean (bool): Flag indicating whether to return mean outputs.
-
-        Returns:
-        (torch.Tensor|tuple): Output tensor/tesnor tuple after applying the ROI expression module.
-        """
-
-        x = self.lin(self.node_embed(self.drop(data.x)))
-        pred = self.project(x)
-        if return_cells:
-            if self.nb and return_mean:
-                return self.mean(x)
-            return self.mean_act(pred)
-        else:
-            if self.nb:
-                mean = self.mean(x)
-                disp = self.disp(x)
-            if self.zinb:
-                drop = self.drop(x)
-            
-            if self.nb and not self.zinb:
-                return self.pool(self.mean_act(pred), batch=data.batch), self.mean_act(pred), mean, disp
-            elif self.zinb and self.nb:
-                return self.pool(self.mean_act(pred), batch=data.batch), self.mean_act(pred), mean, disp, drop
-            else:
-                return self.pool(self.mean_act(pred), batch=data.batch)
+            return self.pool(self.mean_act(pred), batch=data.batch)
         
 
-class ROIExpression_Image_gat(torch.nn.Module):
+class ROIExpression_Image(torch.nn.Module):
     """
     A PyTorch module combining image-based learning and GAT-based graph learning for predicting sc expressions.
     """
@@ -523,7 +356,6 @@ class ROIExpression_Image_gat(torch.nn.Module):
                  heads=1,
                  embed_dropout=0.1,
                  conv_dropout=0.1,
-                 mtype=False,
                  path_image_model='',
                  path_graph_model='') -> None:
         """
@@ -542,7 +374,6 @@ class ROIExpression_Image_gat(torch.nn.Module):
         heads (int): Number of attention heads.
         embed_dropout (float): Dropout rate for the embedding layers.
         conv_dropout (float): Dropout rate for the convolutional layers.
-        mtype (bool): Model type indicating whether to use zero-inflated negative binomial (ZINB) or negative binomial (NB) distribution.
         path_image_model (str): Path to the pretrained image model.
         path_graph_model (str): Path to the pretrained graph model.
         """
@@ -554,7 +385,7 @@ class ROIExpression_Image_gat(torch.nn.Module):
                                         mode=mode,
                                         resnet=resnet)
         self.graph = ROIExpression(lin_layers=lin_layers,
-                                gat_layers=1,
+                                gat_layers=gat_layers,
                                 num_node_features=embed,
                                 num_edge_features=num_edge_features,
                                 num_embed_features=num_embed_features,
@@ -562,8 +393,7 @@ class ROIExpression_Image_gat(torch.nn.Module):
                                 num_out_features=num_out_features,
                                 heads=heads,
                                 embed_dropout=embed_dropout,
-                                conv_dropout=conv_dropout,
-                                mtype=mtype)
+                                conv_dropout=conv_dropout)
         if path_image_model:
             self.image.load_state_dict(torch.load(path_image_model, weights_only=True)['model'])
         if path_graph_model:
@@ -584,76 +414,3 @@ class ROIExpression_Image_gat(torch.nn.Module):
 
         data.x = self.image.forward(data.x)
         return self.graph.forward(data, return_cells=return_cells, return_mean=return_mean)
-
-
-class ROIExpression_Image_lin(torch.nn.Module):
-    """
-    A PyTorch module combining image-based learning and linear block-based graph learning for predicting sc expressions.
-    """
-    def __init__(self,
-                 channels,
-                 embed=256,
-                 contrast=124,
-                 mode='train_combined',
-                 resnet='101',
-                 layers=1,
-                 num_embed_features=128,
-                 num_out_features=128,
-                 embed_dropout=0.1,
-                 conv_dropout=0.1,
-                 mtype=False,
-                 path_image_model='',
-                 path_graph_model='') -> None:
-        """
-        Initializes the ROIExpression_Image_lin module with the specified parameters.
-
-        Parameters:
-        channels (int): Number of input channels for the image model.
-        embed (int): Embedding size for the image model.
-        contrast (int): Contrastive size for the image model.
-        mode (str): Mode of the image model (e.g., 'train_combined').
-        resnet (str): ResNet model variant (e.g., '101').
-        layers (int): Number of linear blocks.
-        num_embed_features (int): Number of embedding features.
-        num_out_features (int): Number of output features.
-        embed_dropout (float): Dropout rate for the embedding layers.
-        conv_dropout (float): Dropout rate for the convolutional layers.
-        mtype (bool): Model type indicating whether to use zero-inflated negative binomial (ZINB) or negative binomial (NB) distribution.
-        path_image_model (str): Path to the pretrained image model.
-        path_graph_model (str): Path to the pretrained graph model.
-        """
-
-        super().__init__()
-        self.image = ContrastiveLearning(channels=channels,
-                                        embed=embed,
-                                        contrast=contrast,
-                                        mode=mode,
-                                        resnet=resnet)
-        self.graph = ROIExpression_lin(layers=layers,
-                                        num_node_features=embed,
-                                        num_embed_features=num_embed_features,
-                                        num_out_features=num_out_features,
-                                        embed_dropout=embed_dropout,
-                                        conv_dropout=conv_dropout,
-                                        mtype=mtype)
-        if path_image_model:
-            self.image.load_state_dict(torch.load(path_image_model)['model'])
-        if path_graph_model:
-            self.graph.load_state_dict(torch.load(path_graph_model)['model'])
-        
-    def forward(self, data, return_cells=False, return_mean=False):
-        """
-        Forward pass of the ROIExpression_Image_lin module.
-
-        Parameters:
-        data (torch_geometric.data.Data): Graph data containing node features, edge indices, and edge attributes.
-        return_cells (bool): Flag indicating whether to return cell-wise outputs.
-        return_mean (bool): Flag indicating whether to return mean outputs.
-
-        Returns:
-        torch.Tensor: Output tensor after applying the ROI expression module.
-        """
-        
-        data.x = self.image.forward(data.x)
-        return self.graph.forward(data, return_cells=return_cells, return_mean=return_mean)
-        
