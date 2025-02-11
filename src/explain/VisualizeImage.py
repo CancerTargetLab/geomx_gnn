@@ -72,6 +72,9 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
 
     pre_name_tiff = name_tiff.split('.')[0]
 
+    # import matplotlib
+    # cols = ['#fa0505','#5c0303','#757474','#fc7114','#faea0c','#74ff38','#0a8504','#2afae9','#0a4f8f','#0839fc','#b650fa','#df03fc']
+    # custom_cmap = matplotlib.colors.ListedColormap(cols)
     ax = sq.pl.spatial_scatter(adata,
                             color="cluster",
                             size=25,
@@ -81,14 +84,15 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                             title=None,
                             colorbar=True,
                             frameon=False,
-                            return_ax=True)
+                            return_ax=True)#, palette=custom_cmap)
+    import matplotlib.ticker as ticker
     ax.xaxis.set_major_locator(ticker.NullLocator())
     ax.yaxis.set_major_locator(ticker.NullLocator())
     ax.title.set_visible(False)
     plt.legend(ncol=1,
                frameon=False,
                 loc="center left",
-                bbox_to_anchor=(1, 0.5),)
+                bbox_to_anchor=(1, 0.5), fontsize = 'x-small')
     plt.savefig(os.path.join(figure_dir,
                              f'cluster_{vis_name}_{pre_name_tiff}.png'),
                              bbox_inches='tight', dpi=600)
