@@ -27,9 +27,9 @@ class GeoMXDataset(Dataset):
                  subgraphs_per_graph=0,
                  num_hops=10,
                  label_data='label_data.csv',
-                 output_name='out/models/',
                  transform=None,
-                 use_embed_image=True):
+                 use_embed_image=True,
+                 **kwargs):
         """
         Init dataset.
 

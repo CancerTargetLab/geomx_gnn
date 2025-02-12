@@ -3,7 +3,6 @@ from src.data.ImageGraphData import ImageGraphDataset
 from src.models.GraphModel import ROIExpression, ROIExpression_Image, Lin
 from src.optimizer.grokfast import gradfilter_ema
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
-from src.loss.zinb import ZINBLoss, NBLoss
 from src.utils.setSeed import set_seed
 from src.utils.stats import per_gene_pcc
 from torch_geometric.loader import DataLoader
@@ -11,7 +10,7 @@ import torch
 import os
 from tqdm import tqdm
 
-def train(raw_subset_dir, label_data, output_name, args):
+def train(**args):
     """
     Train model to predict sc expression of cells.
 
@@ -22,13 +21,15 @@ def train(raw_subset_dir, label_data, output_name, args):
     args (dict): Arguments
     """
 
-    EPOCH = args['epochs_graph']
+    output_name = args['output_name']
+
+    EPOCH = args['epochs']
     SEED = args['seed']
-    model_type = args['graph_model_type']
-    batch_size = args['batch_size_graph']
-    lr = args['lr_graph']
-    num_workers = args['num_workers_graph']
-    early_stopping = args['early_stopping_graph']
+    model_type = args['model_type']
+    batch_size = args['batch_size']
+    lr = args['lr']
+    num_workers = args['num_workers']
+    early_stopping = args['early_stopping']
     is_log = args['data_use_log_graph']
     alpha = args['graph_mse_mult']
     beta = args['graph_cos_sim_mult']
@@ -37,7 +38,7 @@ def train(raw_subset_dir, label_data, output_name, args):
         import sys
         sys.setrecursionlimit(100000)
     
-    if args['num_folds'] > 1 and not os.path.isdir(os.path.join(output_name.split('.')[0])):
+    if args['num_cfolds'] > 1 and not os.path.isdir(os.path.join(output_name.split('.')[0])):
         os.makedirs(os.path.join(output_name.split('.')[0]))
 
     # move to GPU (if available)
@@ -47,65 +48,23 @@ def train(raw_subset_dir, label_data, output_name, args):
 
     #Wether to train together with image model
     if 'IMAGE' in model_type:
-        train_dataset = ImageGraphDataset(root_dir=args['graph_dir'],
-                                    split='train',
-                                    raw_subset_dir=raw_subset_dir,
-                                    train_ratio=args['train_ratio_graph'],
-                                    val_ratio=args['val_ratio_graph'],
-                                    num_folds=args['num_folds'],
-                                    node_dropout=args['node_dropout'],
-                                    edge_dropout=args['edge_dropout'],
-                                    pixel_pos_jitter=args['cell_pos_jitter'],
-                                    n_knn=args['cell_n_knn'],
-                                    subgraphs_per_graph=args['subgraphs_per_graph'],
-                                    num_hops=args['num_hops_subgraph'],
-                                    label_data=label_data,
-                                    crop_factor=args['crop_factor'])
-        test_dataset = ImageGraphDataset(root_dir=args['graph_dir'],
-                                    split='test',
-                                    raw_subset_dir=raw_subset_dir,
-                                    train_ratio=args['train_ratio_graph'],
-                                    val_ratio=args['val_ratio_graph'],
+        train_dataset = ImageGraphDataset(split='train',
+                                    num_folds=args['num_cfolds'],
+                                    **args)
+        test_dataset = ImageGraphDataset(split='test',
                                     num_folds=1,
-                                    node_dropout=args['node_dropout'],
-                                    edge_dropout=args['edge_dropout'],
-                                    pixel_pos_jitter=args['cell_pos_jitter'],
-                                    n_knn=args['cell_n_knn'],
-                                    subgraphs_per_graph=args['subgraphs_per_graph'],
-                                    num_hops=args['num_hops_subgraph'],
-                                    label_data=label_data,
-                                    crop_factor=args['crop_factor'])
+                                    **args)
     else:
-        train_dataset = GeoMXDataset(root_dir=args['graph_dir'],
-                            split='train',
-                            raw_subset_dir=raw_subset_dir,
-                            train_ratio=args['train_ratio_graph'],
-                            val_ratio=args['val_ratio_graph'],
-                            num_folds=args['num_folds'],
-                            node_dropout=args['node_dropout'],
-                            edge_dropout=args['edge_dropout'],
-                            pixel_pos_jitter=args['cell_pos_jitter'],
-                            n_knn=args['cell_n_knn'],
-                            subgraphs_per_graph=args['subgraphs_per_graph'],
-                            num_hops=args['num_hops_subgraph'],
-                            label_data=label_data,)
-        test_dataset = GeoMXDataset(root_dir=args['graph_dir'],
-                            split='test',
-                            raw_subset_dir=raw_subset_dir,
-                            train_ratio=args['train_ratio_graph'],
-                            val_ratio=args['val_ratio_graph'],
+        train_dataset = GeoMXDataset(split='train',
+                            num_folds=args['num_cfolds'],
+                            **args)
+        test_dataset = GeoMXDataset(split='test',
                             num_folds=1,
-                            node_dropout=args['node_dropout'],
-                            edge_dropout=args['edge_dropout'],
-                            pixel_pos_jitter=args['cell_pos_jitter'],
-                            n_knn=args['cell_n_knn'],
-                            subgraphs_per_graph=args['subgraphs_per_graph'],
-                            num_hops=args['num_hops_subgraph'],
-                            label_data=label_data)
+                            **args)
 
-    num_folds = args['num_folds'] if args['num_folds'] > 1 else 1
+    num_folds = args['num_cfolds'] if args['num_cfolds'] > 1 else 1
     for k in range(num_folds):
-        if args['num_folds'] > 1:
+        if args['num_cfolds'] > 1:
             output_name_model = os.path.join(output_name.split('.')[0], f'{k}'+'.'+output_name.split('.')[-1])
         else:
             output_name_model = output_name
@@ -121,34 +80,14 @@ def train(raw_subset_dir, label_data, output_name, args):
 
         if 'IMAGE' in model_type:
             model = ROIExpression_Image(channels=train_dataset.get(0).x.shape[1],
-                                            embed=args['embedding_size_image'],
-                                            contrast=args['contrast_size_image'], 
-                                            resnet=args['resnet_model'],
-                                            lin_layers=args['lin_layers_graph'],
-                                            gat_layers=args['gat_layers_graph'],
-                                            num_edge_features=args['num_edge_features'],
-                                            num_embed_features=args['num_embed_features'],
-                                            num_gat_features=args['num_gat_features'],
-                                            num_out_features=train_dataset.get(0).y.shape[0],
-                                            heads=args['heads_graph'],
-                                            embed_dropout=args['embed_dropout_graph'],
-                                            conv_dropout=args['conv_dropout_graph'],
-                                            path_image_model=args['init_image_model'],
-                                            path_graph_model=args['init_graph_model']).to(device, dtype=torch.float32)
+                                        num_out_features=train_dataset.get(0).y.shape[0],
+                                        **args).to(device, dtype=torch.float32)
         elif 'Image2Count' in model_type:
-            model = ROIExpression(lin_layers=args['lin_layers_graph'],
-                                gat_layers=args['gat_layers_graph'],
-                                num_node_features=args['num_node_features'],
-                                num_edge_features=args['num_edge_features'],
-                                num_embed_features=args['num_embed_features'],
-                                num_gat_features=args['num_gat_features'],
-                                embed_dropout=args['embed_dropout_graph'],
-                                conv_dropout=args['conv_dropout_graph'],
-                                num_out_features=train_dataset.get(0).y.shape[0],
-                                heads=args['heads_graph']).to(device, dtype=torch.float32)
+            model = ROIExpression(num_out_features=train_dataset.get(0).y.shape[0],
+                                **args).to(device, dtype=torch.float32)
         elif 'LIN' in model_type:
-            model = Lin(num_node_features=args['num_node_features'],
-                        num_out_features=train_dataset.get(0).y.shape[0]).to(device, dtype=torch.float32)
+            model = Lin(num_out_features=train_dataset.get(0).y.shape[0],
+                        **args).to(device, dtype=torch.float32)
         else:
             raise Exception(f'{model_type} Image2Count, IMAGEImage2Count, LIN')
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),

@@ -57,10 +57,12 @@ class EmbedDataset(Dataset):
     """
 
     def __init__(self,
-                 root_dir="data/raw",
+                 root_dir='data/raw',
+                 raw_subset_dir='',
                  split='train',
                  crop_factor=0.5,
-                 n_clusters=1):
+                 n_clusters=1,
+                 **kwargs):
         """
         Init dataset.
 
@@ -72,8 +74,8 @@ class EmbedDataset(Dataset):
         n_clusters (int): Number of KMeans clusters to calculate pseudo labels to balance sampling, ignored when 1
         """
         assert split in ['train', 'test'], f'split must be either train or test, but is {split}'
-        self.root_dir = os.path.join(os.getcwd(), root_dir)
-        self.work_dir = os.path.join(os.getcwd(), root_dir, split)
+        self.root_dir = os.path.join(os.getcwd(), root_dir, 'raw', raw_subset_dir)
+        self.work_dir = os.path.join(os.getcwd(), root_dir, 'raw', raw_subset_dir, split)
         self.crop_factor = crop_factor
 
         self.cells_path = [os.path.join(self.work_dir, p) for p in os.listdir(self.work_dir) if p.endswith('_cells.npy')] #TODO: to pt when saving torch uint16 is supported

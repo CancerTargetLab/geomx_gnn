@@ -7,7 +7,7 @@ from src.loss.ContrastiveLoss import add_contrastive_loss
 from src.optimizer.LARC import LARC
 from src.utils.setSeed import set_seed
 
-def train(image_dir, output_name, args):
+def train(**args):
     """
     Train Image model to learn visual representations.
 
@@ -16,11 +16,12 @@ def train(image_dir, output_name, args):
     args (dict): Arguments
     """
 
-    batch_size = args['batch_size_image']
-    lr = args['lr_image']
-    warmup_epochs = args['warmup_epochs_image']
-    EPOCH = args['epochs_image']
-    num_workers = args['num_workers_image']
+    output_name = args['output_name']
+    batch_size = args['batch_size']
+    lr = args['lr']
+    warmup_epochs = args['warmup_epochs']
+    EPOCH = args['epochs']
+    num_workers = args['num_workers']
     seed = args['seed']
 
     if EPOCH > 900: # Weird bug, when running for more then 982 epochs we get an recursion error
@@ -32,18 +33,14 @@ def train(image_dir, output_name, args):
     if args['deterministic']:
         set_seed(seed)
 
-    train_dataset = EmbedDataset(root_dir=image_dir,
-                           split='train' ,
-                           crop_factor=args['crop_factor'],
-                           n_clusters=args['n_clusters_image'])
-    test_dataset = EmbedDataset(root_dir=image_dir,
-                           split='test' ,
-                           crop_factor=args['crop_factor'],
-                           n_clusters=1)
+    train_dataset = EmbedDataset(split='train',
+                                n_clusters=args['n_clusters_image'],
+                                **args)
+    test_dataset = EmbedDataset(split='test',
+                                n_clusters=1,
+                                **args)
     model = ContrastiveLearning(channels=train_dataset.__getitem__(0)[0].shape[0],
-                                embed=args['embedding_size_image'],
-                                contrast=args['contrast_size_image'], 
-                                resnet=args['resnet_model']).to(device, dtype=torch.float32)
+                                **args).to(device, dtype=torch.float32)
 
     train_loader = DataLoader(train_dataset,
                               batch_size=batch_size,
@@ -59,9 +56,7 @@ def train(image_dir, output_name, args):
                             drop_last=True,
                             pin_memory=True)
 
-    #TODO: lr scheduling
     #sc_lr = lr * batch_size / 256
-    #warmup_steps = int(round(warmup_epochs*len(dataset)/batch_size))
     optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-6, momentum=0.9)
     #optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-6)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
