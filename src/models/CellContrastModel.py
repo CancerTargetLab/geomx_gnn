@@ -54,7 +54,13 @@ class ContrastiveLearning(torch.nn.Module):
     embed (nn.Sequential): The embedding layer.
     head (ProjectionHead): The projection head for contrastive learning.
     """
-    def __init__(self, channels, embed=256, contrast=124, mode='train', resnet='101'):
+    def __init__(self,
+                 channels,
+                 embed=256,
+                 contrast=124,
+                 mode='train',
+                 resnet='101',
+                 **kwargs):
         """
         Initializes the ContrastiveLearning model with the given parameters.
 

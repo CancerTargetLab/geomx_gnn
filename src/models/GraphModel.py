@@ -281,7 +281,8 @@ class ROIExpression(torch.nn.Module):
                  num_out_features=128,
                  heads=1,
                  embed_dropout=0.1,
-                 conv_dropout=0.1):
+                 conv_dropout=0.1,
+                 **kwargs):
         """
         Initializes the ROIExpression module with the specified parameters.
 
@@ -355,7 +356,8 @@ class ROIExpression_Image(torch.nn.Module):
                  embed_dropout=0.1,
                  conv_dropout=0.1,
                  path_image_model='',
-                 path_graph_model='') -> None:
+                 path_graph_model='',
+                 **kwargs) -> None:
         """
         Initializes the ROIExpression_Image_gat module with the specified parameters.
 
@@ -419,7 +421,8 @@ class Lin(torch.nn.Module):
     """
     def __init__(self,
                  num_node_features=128,
-                 num_out_features=128):
+                 num_out_features=128,
+                 **kwargs):
         """
         Initializes the ROIExpression module with the specified parameters.
 
