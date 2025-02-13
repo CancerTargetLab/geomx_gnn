@@ -201,7 +201,7 @@ def main(**args):
                             select_cells=args['vis_select_cells'])
         if args['has_expr_data']:
             from src.explain.correlation import correlation
-            correlation(raw_subset_dir=args['graph_raw_subset_dir'],
+            correlation(raw_subset_dir=args['raw_subset_dir'],
                         figure_dir=args['figure_dir'],
                         vis_name=args['vis_name'])
     if args['visualize_image']:
