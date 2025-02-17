@@ -19,6 +19,7 @@ def train(**args):
     output_name = args['output_name']
     batch_size = args['batch_size']
     lr = args['lr']
+    weight_decay = args['weight_decay']
     warmup_epochs = args['warmup_epochs']
     EPOCH = args['epochs']
     num_workers = args['num_workers']
@@ -57,7 +58,10 @@ def train(**args):
                             pin_memory=True)
 
     #sc_lr = lr * batch_size / 256
-    optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-6, momentum=0.9)
+    optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                                lr=lr,
+                                weight_decay=weight_decay,
+                                momentum=0.9)
     #optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-6)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
                                                     max_lr=lr, 
