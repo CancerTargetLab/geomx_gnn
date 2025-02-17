@@ -28,6 +28,7 @@ def train(**args):
     model_type = args['model_type']
     batch_size = args['batch_size']
     lr = args['lr']
+    weight_decay = args['weight_decay']
     num_workers = args['num_workers']
     early_stopping = args['early_stopping']
     is_log = args['data_use_log_graph']
@@ -92,7 +93,7 @@ def train(**args):
             raise Exception(f'{model_type} Image2Count, IMAGEImage2Count, LIN')
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),
                                      lr=lr,
-                                     weight_decay=5e-4)
+                                     weight_decay=weight_decay)
         train_dataset.setMode(train_dataset.train)
 
         loss = torch.nn.L1Loss()

@@ -34,6 +34,8 @@ def parse_args():
                         help="Number of worker processes to be used(loading data etc)")
     parser.add_argument("--lr", type=float, default=0.1,
                         help="Learning rate of model")
+    parser.add_argument("--weight_decay", type=float, default=5e-6,
+                        help="Weight decay of optimizer")
     parser.add_argument("--early_stopping", type=int, default=100,
                         help="Number of epochs after which to stop model run without improvement to val loss")
     parser.add_argument("--output_name", type=str, default="out/models/image_contrast.pt",
