@@ -54,7 +54,7 @@ def embed(**args):
     else:
         raise Exception(f'{model_type} not a valid model type, must be one of Image2Count, IMAGEImage2Count, LIN')
     model.eval()
-    model.load_state_dict(torch.load(model_name, weights_only=False)['model'])
+    model.load_state_dict(torch.load(model_name, weights_only=False, map_location=device)['model'])
     if not os.path.exists(output_dir) and not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     if 'IMAGE' in model_type:
