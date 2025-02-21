@@ -23,7 +23,7 @@ def load_img(path,
     np.array, Image
     """
 
-    if path.endswith(('.tiff', '.tif')):
+    if path.lower().endswith(('.tiff', '.tif')):
         if not type(img_channels) == str:
             img = io.imread(path, plugin='tifffile', key=tuple(img_channels))
             if len(img_channels) == 1:
