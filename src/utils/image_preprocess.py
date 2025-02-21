@@ -141,7 +141,7 @@ def cell_seg(df_path,
     num_processes (int): number of processes to use
     """
 
-    df = pd.read_csv(df_path, header=0, sep=',')
+    df = pd.read_csv(df_path, header=0, sep=',', usecols=['Image', 'Centroid.X.px', 'Centroid.Y.px'])
     df['Centroid.X.px'] = df['Centroid.X.px'].round().astype(int)
     df['Centroid.Y.px'] = df['Centroid.Y.px'].round().astype(int)
     for image in tqdm(image_paths, desc='Segmenting Cells'):
