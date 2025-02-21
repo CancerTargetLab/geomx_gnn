@@ -202,7 +202,7 @@ def image_preprocess(path,
     """
     raw_dir = os.path.abspath(os.path.join(path, '..'))
     df_path = [os.path.join(raw_dir, p) for p in os.listdir(raw_dir) if p.endswith(('.csv'))][0]
-    img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.tiff', '.tif'))]
+    img_paths = [os.path.join(path, p) for p in os.listdir(path) if p.lower().endswith(('.tiff', '.tif'))]
 
     img_channels = img_channels if len(img_channels) == 0 else np.array([int(channel) for channel in img_channels.split(',')])
     cell_seg(df_path, img_paths, img_channels=img_channels, cell_cutout=cell_cutout, num_processes=num_processes)
