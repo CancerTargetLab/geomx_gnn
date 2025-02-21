@@ -78,15 +78,15 @@ class EmbedDataset(Dataset):
         self.work_dir = os.path.join(os.getcwd(), root_dir, 'raw', raw_subset_dir, split)
         self.crop_factor = crop_factor
 
-        self.cells_path = [os.path.join(self.work_dir, p) for p in os.listdir(self.work_dir) if p.endswith('_cells.npy')] #TODO: to pt when saving torch uint16 is supported
+        self.cells_path = [os.path.join(self.work_dir, p) for p in os.listdir(self.work_dir) if p.endswith('_cells.npy')]
         self.cells_path.sort()
 
         csv_path = [os.path.join(self.root_dir, p) for p in os.listdir(self.root_dir) if p.endswith('.csv')][0]
-        img_names = [p for p in os.listdir(self.work_dir) if p.endswith(('.tiff', '.tif'))]
-        df = pd.read_csv(csv_path, header=0, sep=',')
+        img_names = [p for p in os.listdir(self.work_dir) if p.lower().endswith(('.tiff', '.tif'))]
+        df = pd.read_csv(csv_path, header=0, sep=',', usecols=['Image'])
         self.cell_number = df[df['Image'].isin(img_names)].shape[0]
         del df
-        #img = torch.load(self.cells_path[0]).to(torch.uint16)
+
         img = torch.from_numpy(np.load(self.cells_path[0]))
         img_shape = img.shape
         self.data = torch.zeros((self.cell_number, img_shape[1], img_shape[2], img_shape[3]), dtype=img.dtype)
@@ -95,7 +95,6 @@ class EmbedDataset(Dataset):
         last_idx = 0
         for cells in self.cells_path:
             data = torch.from_numpy(np.load(cells)).to(self.data.dtype)
-            #data = torch.load(cells).to(torch.uint16)
             self.data[last_idx:data.shape[0]+last_idx] = data
             last_idx += data.shape[0]
         
@@ -121,7 +120,13 @@ class EmbedDataset(Dataset):
 
         if n_clusters > 1:
             from sklearn.cluster import KMeans
-            means = self.data[:,:,int(img_shape[-2]/2),int(img_shape[-1]/2)].numpy()
+            if img_shape[-1] > 50:
+                _xcenter_p = int(img_shape[-2]*0.15)
+                _ycenter_p = int(img_shape[-1]*0.15)
+                means = np.max(self.data[:,:,int(img_shape[-2]/2)-_xcenter_p:int(img_shape[-2]/2)+_xcenter_p:,int(img_shape[-1]/2)-_ycenter_p:int(img_shape[-1]/2)+_ycenter_p].numpy(),
+                                                    axis=(-2,-1))
+            else:
+                means = self.data[:,:,int(img_shape[-2]/2),int(img_shape[-1]/2)].numpy()
             print('Calculate KMeans...')
             kmeans = KMeans(n_clusters=n_clusters, n_init=10).fit(means)
             np.save(os.path.join(self.root_dir,'kmeans_cluster_centers.npy'), kmeans.cluster_centers_)

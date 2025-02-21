@@ -89,7 +89,10 @@ class ContrastiveLearning(torch.nn.Module):
         elif resnet == '18':
             from torchvision.models import resnet18
             self.res = resnet18()
-        self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=1, padding='same', bias=False)
+        if resnet in ['18', '34']:
+            self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(3, 3), stride=1, padding='same', bias=False)
+        else:
+            self.res.conv1 = torch.nn.Conv2d(channels, 64, kernel_size=(7, 7), stride=(2,2), padding=(3,3), bias=False)
         self.res.fc = nn.Sequential(
             nn.Linear(self.res.fc.in_features, self.res.fc.in_features),
             nn.BatchNorm1d(self.res.fc.in_features),
@@ -115,6 +118,8 @@ class ContrastiveLearning(torch.nn.Module):
         data = self.res.conv1(data)
         data = self.res.bn1(data)
         data = self.res.relu(data)
+        if self.resnet_model not in ['18', '34']:
+            data = self.res.maxpool(data)
         data = self.res.layer1(data)
         data = self.res.layer2(data)
         data = self.res.layer3(data)
