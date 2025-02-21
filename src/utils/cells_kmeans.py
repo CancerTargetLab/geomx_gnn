@@ -20,15 +20,21 @@ if not os.path.isdir(figure_dir):
 
 paths = [os.path.join('data/raw', raw_dir, split, p) for p in os.listdir(os.path.join('data/raw', raw_dir, split)) if p.endswith('_cells.npy')]
 csv_path = [os.path.join('data/raw', raw_dir, p) for p in os.listdir(os.path.join('data/raw', raw_dir)) if p.endswith('.csv')][0]
-cell_number = pd.read_csv(csv_path, header=0, sep=',').shape[0]
+cell_number = pd.read_csv(csv_path, header=0, sep=',', usecols=['Centroid.X.px']).shape[0]
 img_shape = np.load(paths[0]).shape
 x = np.zeros((cell_number, img_shape[1]), dtype=np.float32)
+_xcenter_p = int(img_shape[-2]*0.15)
+_ycenter_p = int(img_shape[-1]*0.15)
 
 last_idx = 0
 with tqdm(paths, total=len(paths), desc='Load Channels Means...') as paths:
     for path in paths:
         tmp = np.load(path)
-        x[last_idx:tmp.shape[0]+last_idx] = tmp[:,:,int(tmp.shape[-2]/2),int(tmp.shape[-1]/2)]
+        if tmp.shape[-1] > 50:
+            x[last_idx:tmp.shape[0]+last_idx] = np.max(tmp[:,:,int(tmp.shape[-2]/2)-_xcenter_p:int(tmp.shape[-2]/2)+_xcenter_p:,int(tmp.shape[-1]/2)-_ycenter_p:int(tmp.shape[-1]/2)+_ycenter_p],
+                                                    axis=(-2,-1))
+        else:
+            x[last_idx:tmp.shape[0]+last_idx] = tmp[:,:,int(tmp.shape[-2]/2),int(tmp.shape[-1]/2)]
         last_idx += tmp.shape[0]
         del tmp
 
