@@ -1,7 +1,7 @@
 from src.data.GeoMXData import GeoMXDataset
 from src.data.ImageGraphData import ImageGraphDataset
 from src.models.GraphModel import ROIExpression,ROIExpression_Image, Lin
-from src.utils.setSeed import set_seed
+from src.utils.utils import set_seed
 import torch
 import os
 

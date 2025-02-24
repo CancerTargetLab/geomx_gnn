@@ -3,8 +3,8 @@ from src.data.ImageGraphData import ImageGraphDataset
 from src.models.GraphModel import ROIExpression, ROIExpression_Image, Lin
 from src.optimizer.grokfast import gradfilter_ema
 from src.loss.CellEntropyLoss import phenotype_entropy_loss
-from src.utils.setSeed import set_seed
-from src.utils.stats import per_gene_pcc
+from src.utils.utils import set_seed
+from src.utils.utils import per_gene_pcc
 from torch_geometric.loader import DataLoader
 import torch
 import os

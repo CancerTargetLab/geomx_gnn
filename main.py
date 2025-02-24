@@ -1,4 +1,5 @@
 import argparse
+import os
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments for image and GNN models")
@@ -135,6 +136,8 @@ def parse_args():
                         help="Path to predicted single cell data per Graph/Image")
     parser.add_argument("--vis_select_cells", type=int, default=0,
                         help="Number of cells to perform dim reduction on. If 0, then all cells get reduced")
+    parser.add_argument("--merge", action="store_true", default=False,
+                        help="Wether or not to merge predictions of models in embed_dir")
     parser.add_argument("--vis_name", type=str, default="_cells",
                         help="Name added to figures name, saves processed data as NAME.h5ad")   #alo for visualize image
 
@@ -195,6 +198,10 @@ def main(**args):
         GraphEmbed(**args)
     if args['visualize_expression']:
         from src.explain.VisualizeExpression import visualizeExpression
+        if args['merge']:
+            from src.utils.utils import merge
+            merge(args['embed_dir'])
+            args['embed_dir'] = os.path.join(args['embed_dir'], 'mean')
         visualizeExpression(processed_dir=args['processed_subset_dir'],
                             embed_dir=args['embed_dir'],
                             label_data=args['vis_label_data'],

@@ -1,8 +1,8 @@
 import torch
 from src.data.CellContrastData import EmbedDataset
 from src.models.CellContrastModel import ContrastiveLearning
-from src.utils.load import load
-from src.utils.setSeed import set_seed
+from src.utils.utils import load
+from src.utils.utils import set_seed
 
 def embed(image_dir, model_name, args):
     """

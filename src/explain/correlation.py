@@ -3,7 +3,7 @@ import scanpy as sc
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from src.utils.stats import per_gene_corr, total_corr
+from src.utils.utils import per_gene_corr, total_corr
 
 def correlation(raw_subset_dir='CRC',
                 figure_dir='figures/crc_gat_test',

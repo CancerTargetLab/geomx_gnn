@@ -1,4 +1,7 @@
 import numpy as np
+import random
+import torch
+import os
 from scipy.stats import pearsonr, spearmanr, kendalltau
 
 def per_gene_pcc(x, y, mean=True):
@@ -158,3 +161,81 @@ def avg_roi_area(path):
             area += tmp
             area_list.append(tmp.item())
       return area/len(files), torch.median(torch.tensor(area_list))
+
+def set_seed(seed, cuda_reproduce=True):
+    """
+    Set seed for random,  numpy, torch and sklearn.
+    
+    Parameters:
+    seed (int): Seed
+    cuda_reproduce (bool): Wether or not to use cuda reproducibility
+    """
+    
+    # Set seed for Python's random module
+    random.seed(seed)
+    
+    # Set seed for NumPy
+    np.random.seed(seed)
+    
+    # Set seed for PyTorch
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # For CUDA devices, if available
+    
+    # Additional settings for reproducibility
+    if cuda_reproduce:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+def merge(save_dir):
+    result_dirs = [result_dir for result_dir in  os.listdir(save_dir)  if result_dir != 'merged' and result_dir != 'mean' and not '_' in result_dir and not result_dir.endswith('.pt')]
+    result_files = [os.listdir(os.path.join(save_dir, result_dir)) for result_dir in result_dirs]
+
+    list(map(lambda x: x.sort(), result_files))
+
+    if not os.path.exists(os.path.join(save_dir, 'mean')):
+        os.makedirs(os.path.join(save_dir, 'mean'))
+
+    for file in range(len(result_files[0])):
+        if result_files[0][file].startswith('cell'):
+            file_contents = []
+            for result_dir in range(len(result_dirs)):
+                file_contents.append(torch.load(os.path.join(save_dir, result_dirs[result_dir], result_files[result_dir][file]), weights_only=True, map_location='cpu'))
+            merged = torch.zeros((len(result_files), file_contents[0].shape[0], file_contents[0].shape[1]))
+            for i in range(len(result_files)):
+                merged[i] = file_contents[i]
+            merged = torch.mean(merged, dim=0, keepdim=True)[0].squeeze()
+            torch.save(merged, os.path.join(save_dir, 'mean', result_files[0][file]))
+            torch.save(torch.sum(merged, dim=0), os.path.join(save_dir, 'mean', result_files[0][file]).replace('cell_', 'roi_'))
+
+def load(path, save_keys, device='cpu'):
+    """
+    Load metrics of torch save dict.
+
+    Parameters:
+    path (str): Path to torch save dict
+    save_keys (list): list containing keys for metrics to extract
+    device (str): Location to load torch save dict to
+    """
+    
+    save = torch.load(path, map_location=device, weights_only=False)
+    if type(save_keys) == list and  type(save) == dict:
+        out = {}
+        for key in save_keys:
+            if key in save.keys():
+                out[key] = save[key]
+            else:
+                print(f'{key} not found in in save {path}')
+    elif type(save_keys) == str:
+        out = save[save_keys]
+    return out
+
+def insert_coords(adata, df):
+    adata.obs['Image'] = adata.obs['files'].apply(lambda x: x.split('graph_')[-1].split('.pt')[0]+'.tiff')
+
+    adata.obs['x'] = np.nan
+    adata.obs['y'] = np.nan
+
+    for img in adata.obs['Image'].unique().tolist():
+        adata.obs.loc[adata.obs['Image']==img, ['x', 'y']] = df.loc[df['Image'].isin([img]), ['Centroid.X.px', 'Centroid.Y.px']].values
+    
+    return adata
