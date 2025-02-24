@@ -2,7 +2,7 @@ from torch_geometric.explain import Explainer, GNNExplainer
 from torch_geometric.loader import DataLoader
 from src.data.GeoMXData import GeoMXDataset
 from src.models.GraphModel import ROIExpression
-from src.utils.load import load
+from src.utils.utils import load
 from typing import Any, Optional
 from math import sqrt
 import torch

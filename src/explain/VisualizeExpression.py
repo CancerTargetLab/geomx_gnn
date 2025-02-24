@@ -4,7 +4,7 @@ import seaborn as sns
 import numpy as np
 import scanpy as sc
 import pandas as pd
-from src.utils.stats import per_gene_corr, total_corr
+from src.utils.utils import per_gene_corr, total_corr
 import os
 
 def get_true_graph_expression_dict(path):
