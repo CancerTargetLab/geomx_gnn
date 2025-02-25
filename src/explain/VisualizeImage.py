@@ -124,7 +124,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                 ax.title.set_visible(False)
                 plt.savefig(os.path.join(prot_dir,
                                          f'cell_expression_pred_{prt}_{vis_name}_{pre_name_tiff}.png'),
-                                         bbox_inches='tight')
+                                         bbox_inches='tight', dpi=400)
                 plt.close()
                 ax = sq.pl.spatial_scatter(adata,
                                     color=prt+'og',
@@ -143,7 +143,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                 ax.title.set_visible(False)
                 plt.savefig(os.path.join(prot_dir,
                                          f'cell_expression_og_{prt}_{vis_name}_{pre_name_tiff}.png'),
-                                         bbox_inches='tight')
+                                         bbox_inches='tight', dpi=400)
                 plt.close()
                 sq.pl.spatial_scatter(adata,
                                     color=prt+'diff',
@@ -154,7 +154,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                                     title=prt + ' Actual - Prediction')
                 plt.savefig(os.path.join(prot_dir,
                                          f'cell_expression_diff_{prt}_{vis_name}_{pre_name_tiff}.png'),
-                                         bbox_inches='tight')
+                                         bbox_inches='tight', dpi=400)
                 plt.close()
             else:
                 ax = sq.pl.spatial_scatter(adata,
@@ -172,7 +172,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                 ax.title.set_visible(False)
                 plt.savefig(os.path.join(prot_dir,
                                          f'cell_expression_pred_{prt}_{vis_name}_{pre_name_tiff}.png'),
-                                         bbox_inches='tight')
+                                         bbox_inches='tight', dpi=400)
                 plt.close()
 
     sq.pl.spatial_scatter(adata,
@@ -186,7 +186,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
                         crop_coord=crop_coord)
     plt.savefig(os.path.join(figure_dir,
                              f'cluster_graph_{vis_name}_{pre_name_tiff}.png'),
-                             bbox_inches='tight')
+                             bbox_inches='tight', dpi=400)
     plt.close()
 
     if args['vis_all_channels']:
@@ -219,5 +219,5 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
             ax.title.set_visible(False)
             plt.savefig(os.path.join(channel_dir,
                                      f'{vis_name}_channel_{channel}_{pre_name_tiff}.png'),
-                                     bbox_inches='tight')
+                                     bbox_inches='tight', dpi=400)
             plt.close()
