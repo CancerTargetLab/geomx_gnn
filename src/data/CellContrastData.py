@@ -4,7 +4,27 @@ import numpy as np
 import torch
 import os
 import torchvision.transforms.v2 as T
+import torchvision.transforms.functional as TF
 from tqdm import tqdm
+
+class ChannelColorJitter(torch.nn.Module):
+    def __init__(self,
+                  brightness=(0.5, 2.0),
+                  contrast=(0.5, 2.0),
+                  p=0.8):
+        super().__init__()
+        self.brightness = brightness
+        self.contrast = contrast
+        self.p = p
+    
+    def forward(self, img):
+        if torch.rand(1) < self.p:
+            brightness = self.brightness[0] + torch.rand(1) * (self.brightness[1] - self.brightness[0])
+            contrast = self.contrast[0] + torch.rand(1) * (self.contrast[1] - self.contrast[0])
+            for channel in range(img.shape[-3]):
+                img[channel,:,:] = TF.adjust_brightness(img[channel,:,:], brightness)
+                img[channel,:,:] = TF.adjust_contrast(img[channel,:,:].unsqueeze(0), contrast)
+        return img
 
 class RandomArtefact(T.RandomErasing):
     def __init__(self,
@@ -110,9 +130,10 @@ class EmbedDataset(Dataset):
             T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
+            ChannelColorJitter(),
             RandomBackground(std=self.std, std_frac=0.5),
             RandomArtefact(),
-            #T.ConvertImageDtype(torch.float32),
+            T.ToDtype(torch.float32),
             T.Normalize(mean=self.mean, std=self.std),
             rnd_gausnoise,
             rnd_gausblur
@@ -146,7 +167,7 @@ class EmbedDataset(Dataset):
         torch.Tensor: Cell Image 1 transformed
         torch.Tensor: Cell Image 2 transformed
         """
-        return self.compose(data.to(torch.float32)), self.compose(data.to(torch.float32))
+        return self.compose(data.to(torch.int32)), self.compose(data.to(torch.int32))
 
     def __len__(self):
         """
