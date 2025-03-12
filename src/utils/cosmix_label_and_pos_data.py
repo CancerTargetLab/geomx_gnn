@@ -4,15 +4,17 @@ import glob
 
 tif_files = glob.glob('RawFiles/*/*/CellStatsDir/Morphology2D/*.TIF')
 
-df = pd.read_csv('cosmix_measurements.csv')
+experiment_name_path_idx = 1
 
-tif_set = set(map((lambda x: x.split('/')[1]), tif_files))
+df = pd.read_csv('cosmix_measurements_data.csv')
+
+tif_set = set(map((lambda x: x.split('/')[experiment_name_path_idx]), tif_files))
 tif_dict = {}
 for exp in tif_set:
     tif_dict[exp] = {}
 
 for file in tif_files:
-    tif_dict[file.split('/')[1]][int(file.split('/')[-1].split('.')[0].split('F')[-1])] = file.split('/')[-1]
+    tif_dict[file.split('/')[experiment_name_path_idx]][int(file.split('/')[-1].split('.')[0].split('F')[-1])] = file.split('/')[-1]
 
 def get_file_name(exp, fov):
     if exp in tif_dict.keys():
@@ -38,16 +40,16 @@ del measurements
 label = pd.DataFrame()
 for tif in df['Image'].unique().tolist():
     tmp = pd.DataFrame()
-    tmp['ROI'] = tif.split('.')[0]
+    tmp['ROI'] = [tif.split('.')[0]]
     tmp_df = df[df['Image']==tif]
     exp_name  = tmp_df['experiment'].unique().tolist()[0]
     if exp_name in tif_dict.keys():
         tmp['Patient_ID'] = exp_name
-        tmp = pd.concat([tmp, pd.DataFrame(data=np.sum(tmp_df[gene_names].values, axis=0), columns=gene_names)], axis=1)
+        tmp[gene_names] = np.sum(tmp_df[gene_names].values, axis=0)	#concat instead maybe
         if label.shape[0] > 0:
             label = pd.concat([label, tmp], ignore_index=True)
         else:
-            label = tmp.copy()
+            label = tmp.copy(deep=True)
     else:
         print(f'{exp_name} in measurements not in tiff files!')
 
