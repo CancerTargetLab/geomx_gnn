@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument("--raw_subset_dir", type=str, default="TMA1_preprocessed",
                         help="How the subdir in raw/ and processed/ is called")
     parser.add_argument("--batch_size", type=int, default=256,
-                        help="Number of Cell Images per Batch")
+                        help="Number of elements per Batch")
     parser.add_argument("--epochs", type=int, default=100,
                         help="Number of epochs for which to train")
     parser.add_argument("--num_workers", type=int, default=1,
@@ -66,11 +66,11 @@ def parse_args():
     parser.add_argument("--data_use_log_graph", action="store_true", default=False,
                         help="Wether or not to log count data when calulating loss")
     parser.add_argument("--train_ratio", type=float, default=0.6,
-                        help="Ratio of Patients used for training")
+                        help="Ratio of Patients used for training in train/")
     parser.add_argument("--val_ratio", type=float, default=0.2,
-                        help="Ratio of Patients which are used for validation")
+                        help="Ratio of Patients which are used for validation in train/")
     parser.add_argument("--num_cfolds", type=int, default=1,
-                        help="Number of Crossvalidation folds, val_ratio is disregarded, train_ratio is data used for Crossvalidation, 1-train_ratio is ratio of test data used over all folds")
+                        help="Number of Crossvalidation folds split over patients in train/")
     parser.add_argument("--node_dropout", type=float, default=0.0,
                         help="Probability of Graph Node dropout during training")
     parser.add_argument("--edge_dropout", type=float, default=0.5,
@@ -83,8 +83,8 @@ def parse_args():
                         help="Number of Subgraphs per Graph to use for training. If 0, train with entire graph")
     parser.add_argument("--num_hops", type=int, default=10,
                         help="Number of hops to create subgraph neighborhoods")
-    parser.add_argument("--model_type", type=str, default="GAT",
-                        help="Type of Model to train, one of {IMAGE}GAT+{_ph , _NB , _ZINB}, {IMAGE}LINT+{_ph , _nb , _zinb}. When IMAGE in name, then model is trained together with an Image Model. When _ph, _nb, _zinb or name, entropy Loss, NB Loss or ZiNB Loss gets calculated on predicted Cell Expression.")
+    parser.add_argument("--model_type", type=str, default="Image2Count",
+                        help="Type of Model to train, one of [Image2Count/LIN]. When IMAGE in name, then model is trained together with an Image Model.")
     parser.add_argument("--graph_mse_mult", type=float, default=1.0,
                         help="Multiplier for MSE Loss")
     parser.add_argument("--graph_cos_sim_mult", type=float, default=1.0,
@@ -116,7 +116,7 @@ def parse_args():
     parser.add_argument("--train_gnn", action="store_true", default=False,
                         help="Wether or not to train the Graph Model")
     parser.add_argument("--embed_gnn_data", action="store_true", default=False,
-                        help="Wether or not to embed predicted Cell Expression")
+                        help="Wether or not to embed predicted Cell Expression of test data")
     parser.add_argument("--embed_graph_train_data", action="store_true", default=False,
                         help="Wether or not to embed predicted Cell Expression for only train data")
 
