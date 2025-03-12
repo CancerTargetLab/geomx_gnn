@@ -1,0 +1,53 @@
+Download [data](https://nanostring.com/products/cosmx-spatial-molecular-imager/ffpe-dataset/nsclc-ffpe-dataset/) from nanostring:
+```sh
+mdkir data/raw/cosmx/raw/
+cd data/raw/cosmx/raw/
+wget https://nanostring-public-share.s3.us-west-2.amazonaws.com/SMI-Compressed/All+SMI+data.tar.gz
+tar -xvzf All+SMI+data.tar.gz
+rm All+SMI+data.tar.gz
+```
+
+Next we remove some image files that are either from an unseccuseful CosMx run, or do not have cell positions/transcript counts:
+```sh
+rm Lung9_Rep2/*Raw*/20210811*
+rm */*/20210907_180607_S2_C902_P99_N99_F031_Z00*.TIF
+rm */*/20210907_180607_S2_C902_P99_N99_F032_Z00*.TIF
+rm Lung5*/*/*F031_Z00*.TIF
+rm Lung5*/*/*F032_Z00*.TIF
+```
+
+We want to now create the files necessary to run Image2Count. For that we modify `src/utils/prepare_cosmix.py` in line 5-10:
+```py
+tif_files = glob.glob(' */*Raw*/*_Z001.TIF')
+exprMat_files = glob.glob('*/*Flat_files_and_images/*exprMat_file*')
+metdaData_files = glob.glob('*/*Flat_files_and_images/*metadata_file*')
+
+experiment_name_path_idx = 0
+ignore_cell_id = [0]
+```
+and `src/utils/cosmix_label_and_pos_data.py` in line 5 to 7 to:
+```py
+tif_files = glob.glob('*/*Raw*/*_Z001.TIF')
+
+experiment_name_path_idx = 0
+```
+and line 18 to:
+```py
+    tif_dict[file.split('/')[experiment_name_path_idx]][int(file.split('/')[-1].split('.')[0].split('F')[-1].split('_')[0])] = file.split('/')[-1]
+```
+
+We can now create `cosmix_measurements.csv` and `cosmix_label.csv` and create the functioning experiment folder utilizing images from only the first layer of the Z-Stack:
+```sh
+python ../../../../src/utils/prepare_cosmix.py
+python ../../../../src/utils/cosmix_label_and_pos_data.py
+cd ../../../../
+mkdir data/raw/cosmx/train
+mdkir data/raw/cosmx/test
+ln -s path/to/data/raw/cosmx/raw/cosmix_measurements.csv path/to/data/raw/cosmx/
+ln -s path/to/data/raw/cosmx/raw/cosmix_label.csv path/to/data/raw/cosmx/
+ln -s path/to/data/raw/cosmx/raw/Lung6/*/*_Z001.TIF path/to/data/raw/cosmx/test/
+ln -s path/to/data/raw/cosmx/raw/Lung13/*/*_Z001.TIF path/to/data/raw/cosmx/test/
+ln -s path/to/data/raw/cosmx/raw/Lung5*/*/*_Z001.TIF path/to/data/raw/cosmx/train/
+ln -s path/to/data/raw/cosmx/raw/Lung9*/*/*_Z001.TIF path/to/data/raw/cosmx/train/
+ln -s path/to/data/raw/cosmx/raw/Lung12*/*/*_Z001.TIF path/to/data/raw/cosmx/train/
+```
