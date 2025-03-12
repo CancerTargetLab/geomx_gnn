@@ -182,7 +182,7 @@ Wether or not Cosine Similarity is used or Contrast Loss.
 
 The predicted single cell Expression can be visualized:
 ```sh
-python -m main --visualize_expression --vis_label_data '{label}.csv' --processed_subset_dir '{EXPERIMENT NAME}' --figure_dir 'figures/graph_model/' --embed_dir 'out/graph_model/' --vis_select_cells 50000 --vis_name '_graph_model' --has_expr_data --merge
+python -m main --visualize_expression --vis_label_data '{label}.csv' --processed_subset_dir '{EXPERIMENT NAME}/test' --figure_dir 'figures/graph_model/' --embed_dir 'out/graph_model/' --vis_select_cells 50000 --vis_name '_graph_model' --has_expr_data --merge
 ```
 
 - `--visualize_expression`:  
@@ -190,7 +190,7 @@ Wether or not to visualize predicted sc expression.
 - `--vis_label_data`:  
 Count data of Images, linked with Patient IDs.
 - `--processed_subset_dir`:  
-Subset directory of processed/ and raw/ of data.
+Subset `train/test{/subgraphs}` directory of processed/ and raw/ of data.
 - `--figure_dir`:  
 Path to save images to.
 - `--embed_dir`:  
@@ -208,7 +208,7 @@ Wether or not to merge predictions of multiple models in seperate dirs in embed_
 
 The predicted single cell Expression can be also visualized on the Images themselfs:  
 ```sh
-python -m main --visualize_image --vis_img_raw_subset_dir '{EXPERIMENT NAME}' --name_tiff 'CRC02.ome.tif' --figure_img_dir 'figures/graph_model/' --vis_protein 'CD45,CD8,Keratin,Ki67,Fibronectin,Some.Name' --vis_img_xcoords 0 0 --vis_img_ycoords 0 0 --vis_all_channels --vis_name '_graph_model' --vis_name_og 'original_data.h5ad'
+python -m main --visualize_image --vis_img_raw_subset_dir '{EXPERIMENT NAME}' --name_tiff 'CRC02.ome.tif' --figure_img_dir 'figures/graph_model/' --vis_protein 'CD45,CD8,Keratin,Ki67,Fibronectin,Some.Name' --vis_img_xcoords 0 0 --vis_img_ycoords 0 0 --vis_all_channels --vis_name '_graph_model.h5ad' --vis_name_og 'original_data.h5ad'
 ```
 
 - `--visualize_image`:  
@@ -228,7 +228,7 @@ Image y coords, smaller first.
 - `--vis_all_channels`:  
 Wether or not to visualize all Image channels on their own.
 - `--vis_name`:  
-Name of `out/{NAME}.h5ad` produced via visualizing expression, needs to be given.
+Name of `out/{NAME}` produced via visualizing expression, needs to be given.
 - `--vis_name_og`:  
 Name of `out/{NAME}` of original single-cell expression data, manualy created for a dataset if given data present. Contrasts predicted expression with observed expression.
 
