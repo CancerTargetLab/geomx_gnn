@@ -4,7 +4,7 @@ from src.models.CellContrastModel import ContrastiveLearning
 from src.utils.utils import load
 from src.utils.utils import set_seed
 
-def embed(image_dir, model_name, args):
+def embed(**args):
     """
     Embed visual representations of cells.
 
@@ -28,7 +28,7 @@ def embed(image_dir, model_name, args):
 
     model = ContrastiveLearning(channels=train_dataset.__getitem__(0)[0].shape[0],
                                 **args).to(device, torch.float32)
-    model.load_state_dict(load(model_name, save_keys='model', device=device))
+    model.load_state_dict(load(args['output_name'], save_keys='model', device=device))
     model.eval()
     model.mode = 'embed'
 
