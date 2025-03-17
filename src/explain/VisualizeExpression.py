@@ -168,7 +168,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         rois = list(value_dict.keys())
         rois.sort() # VERY IMPORTANT!!! IDs correspond to sorted value_dict keys
         rois_np = np.array(rois)
-        counts = np.zeros(cell_shapes, dtype=np.float32)
+        counts = np.empty(cell_shapes, dtype=np.float32)
         cell_class = None
         ids = np.array([])
         files = np.array([])

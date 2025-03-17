@@ -200,7 +200,7 @@ def merge(save_dir):
             file_contents = []
             for result_dir in range(len(result_dirs)):
                 file_contents.append(torch.load(os.path.join(save_dir, result_dirs[result_dir], result_files[result_dir][file]), weights_only=True, map_location='cpu'))
-            merged = torch.zeros((len(result_files), file_contents[0].shape[0], file_contents[0].shape[1]))
+            merged = torch.empty((len(result_files), file_contents[0].shape[0], file_contents[0].shape[1]), dtype=file_contents[0].dtype)
             for i in range(len(result_files)):
                 merged[i] = file_contents[i]
             merged = torch.mean(merged, dim=0, keepdim=True)[0].squeeze()
