@@ -7,7 +7,7 @@ tar -xvzf All+SMI+data.tar.gz
 rm All+SMI+data.tar.gz
 ```
 
-Next we remove some image files that are either from an unseccuseful CosMx run, or do not have cell positions/transcript counts:
+Next we remove some image files that are either from an unsuccessful CosMx run, or do not have cell positions/transcript counts:
 ```sh
 rm Lung9_Rep2/*Raw*/20210811*
 rm */*/20210907_180607_S2_C902_P99_N99_F031_Z00*.TIF
