@@ -146,7 +146,7 @@ class ImageGraphDataset(GeoMXDataset):
             with tqdm(self.data_path, total=len(self.data_path), desc='Save Image embedings') as data_path:
                 for i, dpath in enumerate(data_path):
                     data = torch.load(os.path.join(self.processed_dir, dpath))
-                    embed = torch.zeros((data.x.shape[0], model.image.embed_size), dtype=torch.float32)
+                    embed = torch.empty((data.x.shape[0], model.image.embed_size), dtype=torch.float32)
                     num_batches = (data.x.shape[0] // batch_size) + 1
                     for batch_idx in range(num_batches):
                         if batch_idx < num_batches - 1:

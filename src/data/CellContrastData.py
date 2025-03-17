@@ -82,6 +82,7 @@ class EmbedDataset(Dataset):
                  split='train',
                  crop_factor=0.5,
                  n_clusters=1,
+                 save_embed_data=False,
                  **kwargs):
         """
         Init dataset.
@@ -109,14 +110,16 @@ class EmbedDataset(Dataset):
 
         img = torch.from_numpy(np.load(self.cells_path[0]))
         img_shape = img.shape
-        self.data = torch.zeros((self.cell_number, img_shape[1], img_shape[2], img_shape[3]), dtype=img.dtype)
+        img_dtype = img.dtype
         del img
+        if not save_embed_data:
+            self.data = torch.empty((self.cell_number, img_shape[1], img_shape[2], img_shape[3]), dtype=img_dtype)
 
-        last_idx = 0
-        for cells in self.cells_path:
-            data = torch.from_numpy(np.load(cells)).to(self.data.dtype)
-            self.data[last_idx:data.shape[0]+last_idx] = data
-            last_idx += data.shape[0]
+            last_idx = 0
+            for cells in self.cells_path:
+                data = torch.from_numpy(np.load(cells)).to(self.data.dtype)
+                self.data[last_idx:data.shape[0]+last_idx] = data
+                last_idx += data.shape[0]
         
         self.mean = torch.from_numpy(np.load(os.path.join(self.root_dir, 'mean.npy')))
         self.std = torch.from_numpy(np.load(os.path.join(self.root_dir, 'std.npy')))
@@ -127,7 +130,7 @@ class EmbedDataset(Dataset):
         rnd_gausnoise = T.RandomApply([gausnoise], p=0.2)
     
         self.compose = T.Compose([
-            T.RandomResizedCrop(size=(data.shape[-1], data.shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
+            T.RandomResizedCrop(size=(img_shape[-1], img_shape[-2]), scale=(self.crop_factor, 1.0), antialias=True),
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
             ChannelColorJitter(),
@@ -202,7 +205,7 @@ class EmbedDataset(Dataset):
                 for path in cells_path:
                     data = T.Normalize(mean=self.mean, std=self.std)(torch.from_numpy(np.load((os.path.join(path)))).to(torch.float32))#TODO: rm np when torch supports needed ops for uint16
                     #data = T.Normalize(mean=self.mean, std=self.std)(torch.load(os.path.join(path)))
-                    embed = torch.zeros((data.shape[0], model.embed_size), dtype=torch.float32)
+                    embed = torch.empty((data.shape[0], model.embed_size), dtype=torch.float32)
                     num_batches = (data.shape[0] // batch_size) + 1
                     for batch_idx in range(num_batches):
                         if batch_idx < num_batches - 1:
