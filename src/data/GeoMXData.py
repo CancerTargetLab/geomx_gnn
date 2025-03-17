@@ -303,6 +303,8 @@ class GeoMXDataset(Dataset):
         # Deduplicate identical cell position: ~ is not op, first selects duplicates, second selects non first duplicates, | is or op
         mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
         df = df[mask]
+        if df.shape[0] < 6:
+            raise Exception(f'{file_prefix} has less than 6 cells!')
 
         counts = np.zeros((df.shape[0], 1))
         coordinates = np.column_stack((df["Centroid.X.px"].to_numpy(), df["Centroid.Y.px"].to_numpy()))
