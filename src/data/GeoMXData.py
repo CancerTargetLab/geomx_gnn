@@ -123,7 +123,7 @@ class GeoMXDataset(Dataset):
             if self.mode == self.test:
                 self.train_map = list(range(total_samples))
                 self.val_map = list(range(total_samples))
-            map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, IDs)
+            map_tuple = self._create_subgraphs(self.data, self.train_map , self.val_map, IDs, un_IDs)
             self.data, self.train_map, self.val_map, IDs = map_tuple
         
         if self.num_folds > 1:
@@ -143,7 +143,7 @@ class GeoMXDataset(Dataset):
         processed_filename = []
         for i, path in enumerate(self.raw_files):
             i += 1
-            appendix = path.split('/')[-1].split('_')[0]
+            appendix = path.split('/')[-1].split('_cells_embed')[0]
             if len(self.raw_subset_dir) > 0:
                 processed_filename.append(os.path.join(self.raw_subset_dir, self.split, f'graph_{appendix}.pt'))
             else:
@@ -151,7 +151,7 @@ class GeoMXDataset(Dataset):
         processed_filename.sort()
         return processed_filename
 
-    def _create_subgraphs(self, data, train_map, val_map, IDs):
+    def _create_subgraphs(self, data, train_map, val_map, IDs, un_IDs):
         """
         Create somewhat equally distributed square number of subgraphs of all ROIs and save.
 
@@ -160,6 +160,7 @@ class GeoMXDataset(Dataset):
         train_map (list): 0 or 1 depending if ROI for training
         val_map (list): 0 or 1 depending if ROI for validation
         IDs (np.array): Patient ID of sample
+        un_IDs (np.array): unique Patient IDs of sample
 
         Return:
         data (np.array): Array of file names of subgraphs
@@ -210,9 +211,10 @@ class GeoMXDataset(Dataset):
                                                 'subgraphs',
                                                 f'{p:03d}'+graph_path.split('/')[-1])
                     new_IDs[g*self.subgraphs_per_graph+p] = IDs[g]
-                    if g in train_map:
+                    un_ID_idx = np.where(IDs[g]==un_IDs)[0][0]
+                    if un_ID_idx in train_map:
                         new_train_map.append(g*self.subgraphs_per_graph+p)
-                    elif g in val_map:
+                    elif un_ID_idx in val_map:
                         new_val_map.append(g*self.subgraphs_per_graph+p)
                     else:
                         raise Exception(f'Index of {graph_path} not in train/val map')
@@ -296,7 +298,7 @@ class GeoMXDataset(Dataset):
         df (pandas.DataFrame): DataFrame containing Cell postions of files
         label (pandas.DataFrame): DataFrmae containing label information of ROI
         """
-        file_prefix = file.split('/')[-1].split('_')[0]
+        file_prefix = file.split('/')[-1].split('_cells_embed')[0]
         df = df[df['Image']==file_prefix+self.image_ending]
         # Deduplicate identical cell position: ~ is not op, first selects duplicates, second selects non first duplicates, | is or op
         mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
