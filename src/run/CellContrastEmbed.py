@@ -22,8 +22,10 @@ def embed(**args):
     set_seed(seed)
 
     train_dataset = EmbedDataset(split='train',
+                                 save_embed_data=True,
                                  **args)
     test_dataset = EmbedDataset(split='test',
+                                save_embed_data=True,
                                 **args)
 
     model = ContrastiveLearning(channels=train_dataset.__getitem__(0)[0].shape[0],
