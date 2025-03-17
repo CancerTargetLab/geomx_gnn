@@ -100,7 +100,7 @@ class ContrastiveLearning(torch.nn.Module):
             nn.Linear(self.res.fc.in_features, embed),#bias False,
             )
         self.head = nn.Sequential(
-            #nn.BatchNorm1d(embed),
+            nn.BatchNorm1d(embed),
             ProjectionHead(embed, contrast)
             )
 

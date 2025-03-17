@@ -273,5 +273,7 @@ def train(**args):
                             "test_acc": test_acc,
                             "test_pcc_statistic_list": statistic,
                             "test_pcc_pval_list": pval,
+                            "current_fold": train_dataset.current_fold,
+                            "folds": train_dataset.folds,
                             "args": args
                         }, output_name_model)
