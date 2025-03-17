@@ -14,6 +14,7 @@ rm */*/20210907_180607_S2_C902_P99_N99_F031_Z00*.TIF
 rm */*/20210907_180607_S2_C902_P99_N99_F032_Z00*.TIF
 rm Lung5*/*/*F031_Z00*.TIF
 rm Lung5*/*/*F032_Z00*.TIF
+rm -r Lung5_Rep2/*Raw*/20210823_175820_S1_C902_P99_N99_F006_Z00*
 ```
 
 We want to now create the files necessary to run Image2Count. For that we modify `src/utils/prepare_cosmix.py` in line 5-10:

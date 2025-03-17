@@ -31,21 +31,21 @@ python -m main --model_type LIN --raw_subset_dir CRC_2c_1p --batch_size 64 --epo
 for m in '0' '1' '2' '3' '4' '5' '6' '7' '8' '9';
 do
 
-    python -m main --model_type Image2Count --raw_subset_dir CRC_2c_1p --batch_size_graph 64 --num_workers_graph 8 --num_node_features 32 \
+    python -m main --model_type Image2Count --raw_subset_dir CRC_2c_1p --batch_size 64 --num_workers 8 --num_node_features 32 \
         --num_embed_features 128  --lin_layers 35 --gat_layers 0 --output_name out/models/crc_2c_1p_35_0/$m.pt --output_graph_embed out/crc_2c_1p_35_0/$m/ \
         --label_data CRC_1p_label.csv --subgraphs_per_graph 0 --data_use_log_graph --embed_gnn_data --num_cfolds 0
     python -m main --vis_select_cells 50000 --vis_label_data CRC_1p_label.csv --processed_subset_dir CRC_2c_1p/test --figure_dir figures/crc_2c_1p/24_6/$m/ \
             --embed_dir out/crc_2c_1p_35_0/$m/ --vis_name crc_2c_1p_35_0_$m --visualize_expression --has_expr_data --raw_subset_dir CRC_2c_1p
     python -m main --visualize_model_run --model_path out/models/crc_2c_1p_35_0/$m.pt --output_model_name CRC_2c_1p_"$m"_35_0 --figure_model_dir figures/crc_2c_1p/35_0/$m/
 
-    python -m main --model_type Image2Count --raw_subset_dir CRC_2c_1p --batch_size_graph 64 --num_workers_graph 8 --num_node_features 32 --num_gat_features 32 \
+    python -m main --model_type Image2Count --raw_subset_dir CRC_2c_1p --batch_size 64 --num_workers 8 --num_node_features 32 --num_gat_features 32 \
         --num_embed_features 128  --lin_layers 24 --gat_layers 6 --output_name out/models/crc_2c_1p_24_06/$m.pt --output_graph_embed out/crc_2c_1p_24_6/$m/ \
         --label_data CRC_1p_label.csv --heads 8 --subgraphs_per_graph 0 --data_use_log_graph --embed_gnn_data --num_cfolds 0
     python -m main --vis_select_cells 50000 --vis_label_data CRC_1p_label.csv --processed_subset_dir CRC_2c_1p/test --figure_dir figures/crc_2c_1p/24_6/$m/ \
             --embed_dir out/crc_2c_1p_24_6/$m/ --vis_name crc_2c_1p_24_6_$m --visualize_expression --has_expr_data --raw_subset_dir CRC_2c_1p
     python -m main --visualize_model_run --model_path out/models/crc_2c_1p_24_6/$m.pt --output_model_name CRC_2c_1p_"$m"_24_6 --figure_model_dir figures/crc_2c_1p/24_6/$m/
 
-    python -m main --model_type LIN --raw_subset_dir CRC_2c_1p --batch_size_graph 64 --num_workers_graph 8 --num_node_features 32 \
+    python -m main --model_type LIN --raw_subset_dir CRC_2c_1p --batch_size 64 --num_workers 8 --num_node_features 32 \
         --output_name out/models/crc_2c_1p_lin/$m.pt --output_graph_embed out/crc_2c_1p_lin/$m/ \
         --label_data CRC_1p_label.csv --subgraphs_per_graph 0 --data_use_log_graph --embed_gnn_data --num_cfolds 0
     python -m main --vis_select_cells 50000 --vis_label_data CRC_1p_label.csv --processed_subset_dir CRC_2c_1p/test --figure_dir figures/crc_2c_1p/lin/$m/ \

@@ -30,21 +30,21 @@ python -m main --model_type LIN --raw_subset_dir hkgmh3_74_30 --batch_size 64 --
 for m in '0' '1' '2' '3' '4' '5' '6' '7' '8' '9';
 do
 
-    python -m main --model_type Image2Count --raw_subset_dir hkgmh3_74_30 --batch_size_graph 64 --num_workers_graph 8 --num_node_features 32 \
+    python -m main --model_type Image2Count --raw_subset_dir hkgmh3_74_30 --batch_size 64 --num_workers 8 --num_node_features 32 \
         --num_embed_features 32  --lin_layers 7 --gat_layers 0 --output_name out/models/hkgmh3_74_30_7_0/$m.pt --output_graph_embed out/hkgmh3_74_30_7_0/$m/ \
         --label_data hkgmh3_74_30_label.csv --subgraphs_per_graph 0 --data_use_log_graph --embed_gnn_data --num_cfolds 0
     python -m main --vis_select_cells 50000 --vis_label_data hkgmh3_74_30_label.csv --processed_subset_dir hkgmh3_74_30/test --figure_dir figures/hkgmh3_74_30/3_3/$m/ \
             --embed_dir out/hkgmh3_74_30_7_0/$m/ --vis_name hkgmh3_74_30_7_0_$m --visualize_expression --raw_subset_dir hkgmh3_74_30
     python -m main --visualize_model_run --model_path out/models/hkgmh3_74_30_7_0/$m.pt --output_model_name hkgmh3_74_30_"$m"_7_0 --figure_model_dir figures/hkgmh3_74_30/7_0/$m/
 
-    python -m main --model_type Image2Count --raw_subset_dir hkgmh3_74_30 --batch_size_graph 64 --num_workers_graph 8 --num_node_features 32 --num_gat_features 8 \
+    python -m main --model_type Image2Count --raw_subset_dir hkgmh3_74_30 --batch_size 64 --num_workers 8 --num_node_features 32 --num_gat_features 8 \
         --num_embed_features 32  --lin_layers 3 --gat_layers 3 --output_name out/models/hkgmh3_74_30_24_06/$m.pt --output_graph_embed out/hkgmh3_74_30_3_3/$m/ \
         --label_data hkgmh3_74_30_label.csv --heads 2 --subgraphs_per_graph 0 --data_use_log_graph --embed_gnn_data --num_cfolds 0
     python -m main --vis_select_cells 50000 --vis_label_data hkgmh3_74_30_label.csv --processed_subset_dir hkgmh3_74_30/test --figure_dir figures/hkgmh3_74_30/3_3/$m/ \
             --embed_dir out/hkgmh3_74_30_3_3/$m/ --vis_name hkgmh3_74_30_3_3_$m --visualize_expression --raw_subset_dir hkgmh3_74_30
     python -m main --visualize_model_run --model_path out/models/hkgmh3_74_30_3_3/$m.pt --output_model_name hkgmh3_74_30_"$m"_3_3 --figure_model_dir figures/hkgmh3_74_30/3_3/$m/
 
-    python -m main --model_type LIN --raw_subset_dir hkgmh3_74_30 --batch_size_graph 64 --num_workers_graph 8 --num_node_features 32 \
+    python -m main --model_type LIN --raw_subset_dir hkgmh3_74_30 --batch_size 64 --num_workers 8 --num_node_features 32 \
         --output_name out/models/hkgmh3_74_30_lin/$m.pt --output_graph_embed out/hkgmh3_74_30_lin/$m/ \
         --label_data hkgmh3_74_30_label.csv --subgraphs_per_graph 0 --data_use_log_graph --embed_gnn_data --num_cfolds 0
     python -m main --vis_select_cells 50000 --vis_label_data hkgmh3_74_30_label.csv --processed_subset_dir hkgmh3_74_30/test --figure_dir figures/hkgmh3_74_30/lin/$m/ \
