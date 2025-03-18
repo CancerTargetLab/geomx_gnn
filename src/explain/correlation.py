@@ -25,7 +25,7 @@ def correlation(raw_subset_dir='CRC',
     tmp['files'] = adata.obs['files'].values
     tmp[var_names] = adata.X
     adata = tmp
-    adata['files'] = adata['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
+    adata['files'] = adata['files'].apply(lambda x: x.split('graph_')[-1].split('.')[0])
     adata = adata[adata['files'].isin(df['Image'])]     #Selects files that exist in pred, in case of only investiating test data
     df = df[df['Image'].isin(adata['files'])]
     adata = adata.sort_values(by='files', kind='stable', ignore_index=True)

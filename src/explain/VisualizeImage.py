@@ -57,14 +57,14 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
         cluster.X = cluster.layers['counts'].copy()
     sc.pp.normalize_total(cluster)
     sc.pp.log1p(cluster)
-    cluster.obs['prefix'] = cluster.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
+    cluster.obs['prefix'] = cluster.obs['files'].apply(lambda x: x.split('graph_')[-1].split('.')[0])
     adata.obs['cluster'] = cluster.obs['leiden'][cluster.obs['prefix']==name_tiff.split('.')[0]].apply(lambda x: str(x)).values
 
     if len(args['vis_name_og']) > 0:
         cluster_og = sc.read_h5ad(os.path.join('out/', args['vis_name_og']))
         sc.pp.normalize_total(cluster_og)
         sc.pp.log1p(cluster_og)
-        cluster_og.obs['prefix'] = cluster_og.obs['files'].apply(lambda x: x.split('_')[-1].split('.')[0])
+        cluster_og.obs['prefix'] = cluster_og.obs['files'].apply(lambda x: x.split('graph_')[-1].split('.')[0])
 
     if not os.path.exists(figure_dir) and not os.path.isdir(figure_dir):
         os.makedirs(figure_dir)
