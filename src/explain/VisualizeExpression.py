@@ -88,7 +88,7 @@ def get_patient_ids(label_data, keys):
     if len(keys) != IDs.shape[0]:
         tmp = np.ndarray((len(keys)), dtype=object)
         for i_key in range(len(keys)):
-            tmp[i_key] = str(df[df['ROI']==keys[i_key].split('_')[-1].split('.')[0]]['Patient_ID'].values[0])
+            tmp[i_key] = str(df[df['ROI']==keys[i_key].split('graph_')[-1].split('.')[0]]['Patient_ID'].values[0])
         IDs = tmp
     return IDs, exps
 
