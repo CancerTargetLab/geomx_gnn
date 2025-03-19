@@ -20,8 +20,7 @@ def visualizeImage(raw_subset_dir, name_tiff, figure_dir, vis_name, args):
     """
     path = os.path.join('data/raw', raw_subset_dir.split('/')[0])
     df_path = [os.path.join(path, p) for p in os.listdir(path) if p.endswith(('.csv'))][0]
-    df = pd.read_csv(df_path, header=0, sep=",")
-    df = df[["Image", "Centroid.X.px", "Centroid.Y.px"]] #'Class'
+    df = pd.read_csv(df_path, header=0, sep=",", usecols=["Image", "Centroid.X.px", "Centroid.Y.px"])
     df = df[df["Image"] == name_tiff]
     df = df.drop("Image", axis=1)
     mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
