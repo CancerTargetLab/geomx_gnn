@@ -41,10 +41,11 @@ We can now create `cosmix_measurements.csv` and `cosmix_label.csv` and create th
 ```sh
 python ../../../../src/utils/prepare_cosmix.py
 python ../../../../src/utils/cosmix_label_and_pos_data.py
+python ../../../../src/utils/flip_y_axis.py
 cd ../../../../
 mkdir data/raw/cosmx/train
 mdkir data/raw/cosmx/test
-ln -s path/to/data/raw/cosmx/raw/cosmix_measurements.csv path/to/data/raw/cosmx/
+ln -s path/to/data/raw/cosmx/raw/cosmix_measurements_flipped_y.csv path/to/data/raw/cosmx/
 ln -s path/to/data/raw/cosmx/raw/cosmix_label.csv path/to/data/raw/cosmx/
 ln -s path/to/data/raw/cosmx/raw/Lung6/*/*_Z001.TIF path/to/data/raw/cosmx/test/
 ln -s path/to/data/raw/cosmx/raw/Lung13/*/*_Z001.TIF path/to/data/raw/cosmx/test/
