@@ -231,7 +231,7 @@ def visualize_cell_expression(value_dict, IDs, exps, name, figure_dir, cell_shap
         sc.pp.scale(adata)
         sc.pp.pca(adata,
                   svd_solver='arpack', 
-                  n_comps=np.sum(adata.var['spearman_genes'].values)-1,
+                  n_comps=np.sum(adata.var['spearman_genes'].values)-1 if np.sum(adata.var['spearman_genes'].values)-1<100 else 100,
                   chunked=True,
                   chunk_size=50000,
                   mask_var=adata.var['spearman_genes'].values)
@@ -347,10 +347,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     std_row = pd.DataFrame({'IDs': 'std', **std_values}, index=[0])
     corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
-    plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, f'corr_IDs_{name}.pdf'), bbox_inches='tight')
-    plt.close()
+    corr_df.to_csv(os.path.join(figure_dir, f'corr_IDs_{name}.csv'))
 
     corr_p = np.ndarray(adata_p.obs['files'].unique().shape[0])
     corr_s = np.ndarray(adata_p.obs['files'].unique().shape[0])
@@ -387,10 +384,7 @@ def visualize_graph_accuracy(value_dict, IDs, exps, name, figure_dir):
     std_row = pd.DataFrame({'files': 'std', **std_values}, index=[0])
     corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
-    plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, f'corr_files_{name}.pdf'), bbox_inches='tight')
-    plt.close()
+    corr_df.to_csv(os.path.join(figure_dir, f'corr_files_{name}.csv'))
 
     similarity = torch.nn.CosineSimilarity()
     adata_p.obs['cs'] = similarity(torch.from_numpy(adata_p.X), torch.from_numpy(adata_y.X)).squeeze().detach().numpy()
@@ -477,10 +471,7 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
     corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
-    plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, f'corr_area_{name}.pdf'), bbox_inches='tight')
-    plt.close()
+    corr_df.to_csv(os.path.join(figure_dir, f'corr_area_{name}.csv'))
 
     correlation_data = {
         'Variable': adata_p.var_names.values[p_pval < 0.05],
@@ -495,10 +486,7 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
     corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
-    plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, f'corr_area_pearson_filter_{name}.pdf'), bbox_inches='tight')
-    plt.close()
+    corr_df.to_csv(os.path.join(figure_dir, f'corr_area_pearson_filter_{name}.csv'))
 
     correlation_data = {
         'Variable': adata_p.var_names.values[s_pval < 0.05],
@@ -513,11 +501,7 @@ def visualize_per_gene_corr(value_dict, IDs, exps, name, figure_dir):
     std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
     corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
-    plt.axis('off')
-    plt.savefig(os.path.join(figure_dir, f'corr_area_spearman_filter_{name}.pdf'), bbox_inches='tight')
-    plt.close()
-
+    corr_df.to_csv(os.path.join(figure_dir, f'corr_area_spearman_filter_{name}.csv'))
     return adata_p.var_names.values[s_pval < 0.05]
 
 def visualizeExpression(processed_dir='TMA1_processed',
