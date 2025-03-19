@@ -55,11 +55,7 @@ def correlation(raw_subset_dir='CRC',
     std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
     corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-    plt.figure(figsize=(10, 5))
-    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
-    plt.axis('off')
-    plt.savefig(os.path.join(out, 'corr_'+adata_name+'.pdf'), bbox_inches='tight')
-    plt.close()
+    corr_df.to_csv(os.path.join(out, 'corr_'+adata_name+'.csv'))
 
     corr_p = np.ndarray(adata['files'].unique().shape[0])
     corr_s = np.ndarray(adata['files'].unique().shape[0])
@@ -96,10 +92,7 @@ def correlation(raw_subset_dir='CRC',
     std_row = pd.DataFrame({'ROIs': 'std', **std_values}, index=[0])
     corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-    plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
-    plt.axis('off')
-    plt.savefig(os.path.join(out, 'corr_files_'+adata_name+'.pdf'), bbox_inches='tight')
-    plt.close()
+    corr_df.to_csv(os.path.join(out, 'corr_files_'+adata_name+'.csv'))
 
     out = os.path.join(out, 'cell_corr_per_roi')
     if not os.path.exists(out) and not os.path.isdir(out):
@@ -136,8 +129,4 @@ def correlation(raw_subset_dir='CRC',
         std_row = pd.DataFrame({'Variable': 'std', **std_values}, index=[0])
         corr_df = pd.concat([mean_row, std_row, corr_df], ignore_index=True)
 
-        plt.figure(figsize=(10, 5))
-        plt.table(cellText=corr_df.values, colLabels=corr_df.columns, loc='center')
-        plt.axis('off')
-        plt.savefig(os.path.join(out, f'corr_{id}_'+adata_name+'.pdf'), bbox_inches='tight')
-        plt.close()
+        corr_df.to_csv(os.path.join(out, f'corr_{id}_'+adata_name+'.csv'))
