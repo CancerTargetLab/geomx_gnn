@@ -300,9 +300,9 @@ class GeoMXDataset(Dataset):
         """
         file_prefix = file.split('/')[-1].split('_cells_embed')[0]
         df = df[df['Image']==file_prefix+self.image_ending]
-        # Deduplicate identical cell position: ~ is not op, first selects duplicates, second selects non first duplicates, | is or op
-        mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
-        df = df[mask]
+        # Deduplicate identical cell position
+        # mask = ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep=False) | ~df.duplicated(subset=['Centroid.X.px', 'Centroid.Y.px'], keep='first')
+        # df = df[mask]
         if df.shape[0] < 6:
             raise Exception(f'{file_prefix} has less than 6 cells!')
 
@@ -314,9 +314,9 @@ class GeoMXDataset(Dataset):
         edge_index, edge_attr = torch_geometric.utils.convert.from_scipy_sparse_matrix(edge_matrix)
 
         if self.use_embed_image:
-            node_features = torch.load(file, weights_only=False)[torch.from_numpy(mask.values)]#TODO
+            node_features = torch.load(file, weights_only=False)#[torch.from_numpy(mask.values)]#TODO
         else: 
-            node_features = np.load(file.split('_embed')[0]+'.npy')[mask.values] # Cant select in torch cuz uint16
+            node_features = np.load(file.split('_embed')[0]+'.npy')#[mask.values] # Cant select in torch cuz uint16
 
         label = label[label['ROI']==file_prefix]
         label = torch.from_numpy(label.iloc[:,2:].sum().to_numpy()).to(torch.float32)
