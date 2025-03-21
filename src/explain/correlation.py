@@ -33,6 +33,9 @@ def correlation(raw_subset_dir='CRC',
 
     pred = adata[adata.columns[1:].values].values
     y = df[adata.columns[1:].values].values
+    is_g_zero = np.sum(y, axis=-1) > 0
+    pred = pred[is_g_zero]
+    y = y[is_g_zero]
 
     p_statistic, p_pval = per_gene_corr(pred, y, mean=False, method='PEARSONR')
     s_statistic, s_pval = per_gene_corr(pred, y, mean=False, method='SPEARMANR')
