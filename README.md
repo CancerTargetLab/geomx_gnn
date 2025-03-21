@@ -128,7 +128,7 @@ Probability of Graph Edge dropout during training.
 - `--cell_pos_jitter`:  
 Positional Jittering during training of cells in pixel dist.
 - `-cell_n_knn`:  
-Number of Nearest Neighbours to calculate for each cell in graph.
+Number of Nearest Neighbours to calculate for each cell in graph and the minimum amount of cells per graph/image necessary to use the model.
 - `--subgraphs_per_graph`:  
 Number of Subgraphs per Graph to use for training, should be a quadratic integer. If 0, train with entire graph. Can only be non 0 if `{measurements}.csv` contains Cell count data.
 - `--num_hops_subgraph`:  
