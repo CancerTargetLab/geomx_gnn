@@ -70,4 +70,4 @@ df['cell_ID'] = cell_ID
 df['Centroid.X.px'] = x
 df['Centroid.Y.px'] = y
 df = pd.concat([df, pd.DataFrame(data=cell_expr, columns=gene_names)], axis=1)
-df.to_csv('cosmix_measurements_data.csv', index=False, header=True, sep=',')
+df.to_csv('cosmx_measurements_data.csv', index=False, header=True, sep=',')
