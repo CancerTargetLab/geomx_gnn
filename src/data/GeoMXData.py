@@ -88,7 +88,7 @@ class GeoMXDataset(Dataset):
             self.raw_files = list(set(raw_files).intersection(set(tmp)))
             self.raw_files.sort()
         
-        image_name_split = pd.read_csv(self.cell_pos, header=0, sep=',')['Image'].iloc[0].split('.')
+        image_name_split = pd.read_csv(self.cell_pos, header=0, sep=',', usecols=['Image'])['Image'].iloc[0].split('.')
         self.image_ending = ''
         for i in range(len(image_name_split)-1):
             self.image_ending = self.image_ending + '.' + image_name_split[i+1]

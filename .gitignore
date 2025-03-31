@@ -1,11 +1,14 @@
 *.tif
 *.tiff
+*.TIF
+*.TIFF
 *.csv
 *.tsv
 *.txt
 *.pt
 *.pth
 *.zip
+*.gz
 *.pdf
 *.png
 *.npy
