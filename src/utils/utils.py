@@ -2,7 +2,7 @@ import numpy as np
 import random
 import torch
 import os
-from scipy.stats import pearsonr, spearmanr, kendalltau
+from scipy.stats import pearsonr, spearmanr, kendalltau, false_discovery_control
 
 def per_gene_pcc(x, y, mean=True):
     """
@@ -52,6 +52,7 @@ def per_gene_corr(x, y, mean=True, method='pearsonr'):
     for gene in range(x.shape[-1]):
         pcc = corr(x[:,gene], y[:,gene])
         statistic[gene], pval[gene] = pcc.statistic, pcc.pvalue
+    pval = false_discovery_control(pval, method='bh')
     if mean:
         return np.nanmean(statistic), np.nanmean(pval)
     else:
@@ -73,6 +74,7 @@ def total_corr(x, y, method='pearsonr'):
     corr =  _get_method(method)
     x, y = x.astype(np.float64).squeeze(), y.astype(np.float64).squeeze()
     statistic, pval = corr(x, y)
+    pval = false_discovery_control(np.nan_to_num(pval, nan=1.), method='bh')
     return np.mean(statistic), np.mean(pval)
 
 def corr_all2all(adata, method='pearsonr'):
